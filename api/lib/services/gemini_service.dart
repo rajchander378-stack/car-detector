@@ -1,13 +1,23 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/car_identification.dart';
 
 class GeminiService {
-  static final GeminiService _instance = GeminiService._internal();
-  factory GeminiService() => _instance;
-  GeminiService._internal();
+  final GenerativeModel _model;
+
+  GeminiService({required String apiKey})
+      : _model = GenerativeModel(
+          model: 'gemini-2.5-flash',
+          apiKey: apiKey,
+          systemInstruction: Content.text(_systemPrompt),
+          generationConfig: GenerationConfig(
+            responseMimeType: 'application/json',
+            responseSchema: _carSchema,
+            temperature: 0.1,
+          ),
+        );
 
   static const String _systemPrompt = '''
 You are a vehicle identification system. Analyse the provided
@@ -54,7 +64,8 @@ Only identify trim level if visual evidence supports it.
         nullable: true,
       ),
       'body_style': Schema.string(
-        description: 'Body type: saloon, hatchback, estate, coupe, convertible, suv, mpv, or pickup',
+        description:
+            'Body type: saloon, hatchback, estate, coupe, convertible, suv, mpv, or pickup',
         nullable: true,
       ),
       'colour': Schema.string(
@@ -85,22 +96,7 @@ Only identify trim level if visual evidence supports it.
         nullable: true,
       ),
     },
-    optionalProperties: [
-      'make', 'model', 'year_min', 'year_max', 'generation',
-      'trim', 'body_style', 'colour', 'distinguishing_features',
-      'notes', 'error', 'number_plate'
-    ],
-  );
-
-  late final GenerativeModel _model =
-      FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-2.5-flash',
-    systemInstruction: Content.text(_systemPrompt),
-    generationConfig: GenerationConfig(
-      responseMimeType: 'application/json',
-      responseSchema: _carSchema,
-      temperature: 0.1,
-    ),
+    requiredProperties: ['identified', 'confidence'],
   );
 
   Future<CarIdentification> identifyCar(File imageFile) async {
@@ -112,11 +108,11 @@ Only identify trim level if visual evidence supports it.
 
       final prompt = [
         Content.multi([
-          InlineDataPart(mimeType, imageBytes),
+          DataPart(mimeType, imageBytes),
           TextPart(
             'Identify this car. Be as specific as possible '
             'about make, model, year range, and trim level. '
-            'Also read the number plate if visible and legible.'
+            'Also read the number plate if visible and legible.',
           ),
         ]),
       ];
@@ -132,11 +128,8 @@ Only identify trim level if visual evidence supports it.
         );
       }
 
-      final jsonData = jsonDecode(responseText)
-          as Map<String, dynamic>;
-
+      final jsonData = jsonDecode(responseText) as Map<String, dynamic>;
       return CarIdentification.fromJson(jsonData);
-
     } catch (e) {
       return CarIdentification(
         identified: false,

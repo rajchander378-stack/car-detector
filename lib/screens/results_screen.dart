@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/car_identification.dart';
+import '../models/vehicle_valuation.dart';
+import '../services/valuation_service.dart';
 
-class ResultsScreen extends StatelessWidget {
+class ResultsScreen extends StatefulWidget {
   final String imagePath;
   final CarIdentification identification;
 
@@ -13,6 +15,46 @@ class ResultsScreen extends StatelessWidget {
   });
 
   @override
+  State<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends State<ResultsScreen> {
+  bool _loading = false;
+  VehicleValuation? _valuation;
+  String? _error;
+
+  CarIdentification get identification => widget.identification;
+
+  Future<void> _fetchValuation() async {
+    final plate = identification.numberPlate;
+    if (plate == null || plate.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final valuation =
+          await ValuationService().getValuation(plate);
+      setState(() {
+        _valuation = valuation;
+        _loading = false;
+      });
+    } on ValuationException catch (e) {
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Something went wrong: $e';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Result')),
@@ -21,7 +63,7 @@ class ResultsScreen extends StatelessWidget {
           Expanded(
             flex: 3,
             child: Image.file(
-              File(imagePath),
+              File(widget.imagePath),
               fit: BoxFit.cover,
               width: double.infinity,
             ),
@@ -43,6 +85,8 @@ class ResultsScreen extends StatelessWidget {
   Widget _buildResult() {
     final pct =
         (identification.confidence * 100).toStringAsFixed(0);
+    final hasPlate = identification.numberPlate != null &&
+        identification.numberPlate!.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,6 +115,8 @@ class ResultsScreen extends StatelessWidget {
         ]),
         const SizedBox(height: 16),
 
+        if (identification.numberPlate != null)
+          _row('Reg', identification.numberPlate!),
         if (identification.colour != null)
           _row('Colour', identification.colour!),
         if (identification.bodyStyle != null)
@@ -104,18 +150,50 @@ class ResultsScreen extends StatelessWidget {
 
         const SizedBox(height: 20),
 
+        // Price estimate button
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Connect to pricing API
-            },
-            icon: const Icon(Icons.attach_money),
-            label: const Text('Get Price Estimate'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.all(16)),
+          child: Tooltip(
+            message: hasPlate
+                ? 'Look up valuation by registration'
+                : 'Number plate required for price estimate',
+            child: ElevatedButton.icon(
+              onPressed: hasPlate && !_loading && _valuation == null
+                  ? _fetchValuation
+                  : null,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.attach_money),
+              label: Text(_loading
+                  ? 'Looking up...'
+                  : _valuation != null
+                      ? 'Price loaded'
+                      : 'Get Price Estimate'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16)),
+            ),
           ),
         ),
+
+        // Valuation results
+        if (_valuation != null) _buildValuation(_valuation!),
+
+        // Error message
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _error!,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
 
         const SizedBox(height: 8),
 
@@ -130,6 +208,44 @@ class ResultsScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildValuation(VehicleValuation valuation) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            valuation.displayPrice,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (valuation.retailPrice != null)
+            _row('Dealer', VehicleValuation.formatGbp(valuation.retailPrice!)),
+          if (valuation.privatePrice != null)
+            _row('Private', VehicleValuation.formatGbp(valuation.privatePrice!)),
+          if (valuation.tradePrice != null)
+            _row('Trade', VehicleValuation.formatGbp(valuation.tradePrice!)),
+          if (valuation.mileage != null)
+            _row('Mileage', '${valuation.mileage} miles'),
+          if (valuation.fuelType != null)
+            _row('Fuel', valuation.fuelType!),
+          if (valuation.engineSize != null)
+            _row('Engine', valuation.engineSize!),
+        ],
+      ),
     );
   }
 

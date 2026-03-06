@@ -1,44 +1,8 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:image/image.dart' as img;
-import '../models/vehicle_detection.dart';
 
 class ImageProcessor {
-
-  Future<File> cropToVehicle(
-    File imageFile,
-    VehicleDetection detection,
-    {double marginPercent = 0.1}
-  ) async {
-    final bytes = await imageFile.readAsBytes();
-    final image = img.decodeImage(bytes)!;
-    final box = detection.boundingBox;
-
-    final marginX = (box.width * marginPercent).toInt();
-    final marginY = (box.height * marginPercent).toInt();
-
-    final x = (box.left - marginX)
-        .clamp(0, image.width).toInt();
-    final y = (box.top - marginY)
-        .clamp(0, image.height).toInt();
-    final w = (box.width + marginX * 2)
-        .clamp(1, image.width - x).toInt();
-    final h = (box.height + marginY * 2)
-        .clamp(1, image.height - y).toInt();
-
-    final cropped = img.copyCrop(
-      image, x: x, y: y, width: w, height: h
-    );
-
-    final tempDir = Directory.systemTemp;
-    final croppedFile = File(
-      '${tempDir.path}/cropped_car.jpg'
-    );
-    await croppedFile.writeAsBytes(
-      img.encodeJpg(cropped, quality: 85)
-    );
-    return croppedFile;
-  }
-
   ImageQuality assessQuality(img.Image image) {
     final issues = <String>[];
 
@@ -51,8 +15,7 @@ class ImageProcessor {
     for (int y = 0; y < image.height; y += 10) {
       for (int x = 0; x < image.width; x += 10) {
         final pixel = image.getPixel(x, y);
-        totalBrightness +=
-            (pixel.r + pixel.g + pixel.b) / 3;
+        totalBrightness += (pixel.r + pixel.g + pixel.b) / 3;
         sampleCount++;
       }
     }
@@ -71,9 +34,12 @@ class ImageProcessor {
     );
   }
 
-  Future<OptimiseResult> optimise(File imageFile) async {
+  Future<OptimiseResult> optimise(File imageFile, {String? suffix}) async {
     final bytes = await imageFile.readAsBytes();
-    var image = img.decodeImage(bytes)!;
+    var image = img.decodeImage(bytes);
+    if (image == null) {
+      throw ImageProcessingException('Failed to decode image');
+    }
 
     // 1. Bake EXIF orientation so the image is right-side up
     image = img.bakeOrientation(image);
@@ -96,10 +62,8 @@ class ImageProcessor {
     final avgBrightness = totalBrightness / sampleCount;
 
     if (avgBrightness < 40) {
-      // Too dark — brighten
       image = img.adjustColor(image, brightness: 1.3);
     } else if (avgBrightness > 240) {
-      // Too bright — darken
       image = img.adjustColor(image, brightness: 0.7);
     }
 
@@ -116,13 +80,12 @@ class ImageProcessor {
     // 5. Assess quality
     final quality = assessQuality(image);
 
+    // Use unique suffix to avoid temp file collisions under concurrency
+    final uniqueSuffix = suffix ?? '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
     final tempDir = Directory.systemTemp;
-    final optimised = File(
-      '${tempDir.path}/optimised_car.jpg'
-    );
-    await optimised.writeAsBytes(
-      img.encodeJpg(image, quality: 85)
-    );
+    final optimised = File('${tempDir.path}/optimised_car_$uniqueSuffix.jpg');
+    await optimised.writeAsBytes(img.encodeJpg(image, quality: 85));
+
     return OptimiseResult(file: optimised, quality: quality);
   }
 }
@@ -142,4 +105,16 @@ class ImageQuality {
     required this.isAcceptable,
     required this.issues,
   });
+
+  Map<String, dynamic> toJson() => {
+        'is_acceptable': isAcceptable,
+        'issues': issues,
+      };
+}
+
+class ImageProcessingException implements Exception {
+  final String message;
+  ImageProcessingException(this.message);
+  @override
+  String toString() => message;
 }

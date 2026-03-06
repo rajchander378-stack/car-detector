@@ -1,0 +1,211 @@
+openapi: 3.0.3
+info:
+  title: Car Detector API
+  description: >
+    Upload a photo of any car and get instant AI-powered identification
+    including make, model, year range, trim level, body style, colour,
+    and number plate reading. Optionally fetch UK vehicle valuation data
+    when a plate is detected.
+  version: 1.0.0
+  contact:
+    name: Car Detector Support
+
+servers:
+  - url: https://car-detector-api-HASH-ew2.a.run.app
+    description: Google Cloud Run (production)
+
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      description: Returns 200 if the service is running.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /identify:
+    post:
+      operationId: identifyCar
+      summary: Identify a car from an image
+      description: >
+        Upload a car photo as multipart form-data. Returns AI identification
+        results including make, model, year range, trim, body style, colour,
+        distinguishing features, and number plate (if visible).
+        Set `includeValuation=true` to auto-fetch UK valuation data when a
+        plate is detected.
+      parameters:
+        - name: includeValuation
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['true', 'false']
+            default: 'false'
+          description: >
+            When true and a number plate is detected, fetches UK vehicle
+            valuation data (requires UKVD_API_KEY on server).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG image of a car
+      responses:
+        '200':
+          description: Successful identification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request (missing image or wrong content type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Unauthorized (invalid proxy secret)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            identification:
+              $ref: '#/components/schemas/CarIdentification'
+            image_quality:
+              $ref: '#/components/schemas/ImageQuality'
+            valuation:
+              $ref: '#/components/schemas/VehicleValuation'
+            valuation_error:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+
+    CarIdentification:
+      type: object
+      properties:
+        identified:
+          type: boolean
+        confidence:
+          type: number
+          format: double
+        make:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        year_min:
+          type: integer
+          nullable: true
+        year_max:
+          type: integer
+          nullable: true
+        generation:
+          type: string
+          nullable: true
+        trim:
+          type: string
+          nullable: true
+        body_style:
+          type: string
+          nullable: true
+        colour:
+          type: string
+          nullable: true
+        distinguishing_features:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        number_plate:
+          type: string
+          nullable: true
+
+    ImageQuality:
+      type: object
+      properties:
+        is_acceptable:
+          type: boolean
+        issues:
+          type: array
+          items:
+            type: string
+
+    VehicleValuation:
+      type: object
+      properties:
+        retail_price:
+          type: number
+          nullable: true
+        trade_price:
+          type: number
+          nullable: true
+        private_price:
+          type: number
+          nullable: true
+        mileage:
+          type: integer
+          nullable: true
+        registration_year:
+          type: string
+          nullable: true
+        fuel_type:
+          type: string
+          nullable: true
+        engine_size:
+          type: string
+          nullable: true
+
+  securitySchemes:
+    rapidApiProxy:
+      type: apiKey
+      in: header
+      name: X-RapidAPI-Proxy-Secret
+
+security:
+  - rapidApiProxy: []

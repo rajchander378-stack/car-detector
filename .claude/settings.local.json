@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "WebSearch",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "WebFetch(domain:ukvehicledata.co.uk)",
+      "WebFetch(domain:www.hpi.co.uk)",
+      "WebFetch(domain:developer-portal.driver-vehicle-licensing.api.gov.uk)",
+      "WebFetch(domain:www.motorcheck.co.uk)",
+      "WebFetch(domain:www.motorspecs.co.uk)",
+      "WebFetch(domain:www.oneautoapi.com)",
+      "WebFetch(domain:rapidapi.com)",
+      "WebFetch(domain:www.carcheckfree.co.uk)",
+      "WebFetch(domain:www.checkcardetails.co.uk)",
+      "WebFetch(domain:api.vehicle-search.co.uk)",
+      "WebFetch(domain:www.caranalytics.co.uk)",
+      "WebFetch(domain:brego.io)",
+      "WebFetch(domain:developers.autotrader.co.uk)",
+      "WebFetch(domain:www.cap-hpi.com)",
+      "WebFetch(domain:www.trustradius.com)",
+      "WebFetch(domain:www.rapidcarcheck.co.uk)",
+      "WebFetch(domain:vehicledatabases.com)",
+      "WebFetch(domain:api.cap-hpi.co.uk)",
+      "WebFetch(domain:glass.co.uk)",
+      "WebFetch(domain:go.oneautoapi.com)",
+      "Bash(flutter analyze:*)",
+      "Bash(xargs grep:*)",
+      "Bash(flutter pub:*)",
+      "Bash(dart pub:*)",
+      "Bash(dart analyze:*)",
+      "WebFetch(domain:portal.vehicledataglobal.com)"
+    ]
+  }
+}

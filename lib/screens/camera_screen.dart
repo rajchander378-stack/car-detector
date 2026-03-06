@@ -57,17 +57,30 @@ class _CameraScreenState extends State<CameraScreen> {
       final xFile = await _controller!.takePicture();
       final imageFile = File(xFile.path);
 
-      // Skip ML Kit for now - send directly to Gemini
-      setState(() => _status = 'Identifying car...');
+      // Optimise the image
+      final result = await _processor.optimise(imageFile);
 
-      // Optimise the image before sending
-      final optimised = await _processor.optimise(imageFile);
+      // Quality gate — warn user and abort if image is unacceptable
+      if (!result.quality.isAcceptable) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.quality.issues.join('. ')),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          setState(() => _status = 'Please retake the photo');
+        }
+        return;
+      }
 
-      // Stage 2: Gemini via Firebase AI Logic
+      // TODO: Re-enable vehicle detection gate once a custom
+      // COCO-trained .tflite model is bundled. The default ML Kit
+      // model cannot detect vehicles, so we skip straight to Gemini.
+
+      // Send to Gemini via Firebase AI
       setState(() => _status = 'Asking Gemini...');
-      final identification = await _gemini.identifyCar(
-        optimised
-      );
+      final identification = await _gemini.identifyCar(result.file);
 
       // Navigate to results
       if (mounted) {

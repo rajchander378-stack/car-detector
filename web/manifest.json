@@ -1,11 +1,11 @@
 {
-    "name": "car_detector",
-    "short_name": "car_detector",
+    "name": "AutoSpotter",
+    "short_name": "AutoSpotter",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "AI-powered vehicle identification and valuation",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

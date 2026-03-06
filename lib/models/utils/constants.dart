@@ -1,10 +1,10 @@
 class Constants {
   // No Gemini API key needed - Firebase handles it
 
-  // UK Vehicle Data API (add your key when you sign up)
-  static const String ukVehicleDataApiKey = 'YOUR_UKVD_KEY_HERE';
-  static const String ukVehicleDataUrl =
-      'https://uk1.ukvehicledata.co.uk/api/datapacket';
+  // Vehicle Data Global API
+  static const String vdglApiKey = 'D5D22850-71A0-4523-8DBA-7CE4B5361B3D';
+  static const String vdglBaseUrl = 'https://uk.api.vehicledataglobal.com';
+  static const String vdglPackageName = 'ValuationDetails';
 
   // Thresholds
   static const double minDetectionConfidence = 0.5;
