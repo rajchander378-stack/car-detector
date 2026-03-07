@@ -45,4 +45,20 @@ class UserService {
     if (!doc.exists) return null;
     return AppUser.fromJson(doc.data()! as Map<String, dynamic>);
   }
+
+  Future<void> deleteUserData(String uid) async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Delete AI reports submitted by this user
+    final reports = await firestore
+        .collection('ai_reports')
+        .where('user_id', isEqualTo: uid)
+        .get();
+    for (final doc in reports.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete the user document
+    await _usersCollection.doc(uid).delete();
+  }
 }

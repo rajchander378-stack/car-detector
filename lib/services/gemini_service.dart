@@ -1,8 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../models/car_identification.dart';
+
+class GeminiTimeoutException implements Exception {
+  final String message;
+  GeminiTimeoutException([this.message = 'Request timed out']);
+  @override
+  String toString() => message;
+}
 
 class GeminiService {
   static final GeminiService _instance = GeminiService._internal();
@@ -103,6 +111,8 @@ Only identify trim level if visual evidence supports it.
     ),
   );
 
+  static const Duration requestTimeout = Duration(seconds: 30);
+
   Future<CarIdentification> identifyCar(File imageFile) async {
     try {
       final Uint8List imageBytes = await imageFile.readAsBytes();
@@ -121,7 +131,11 @@ Only identify trim level if visual evidence supports it.
         ]),
       ];
 
-      final response = await _model.generateContent(prompt);
+      final response = await _model
+          .generateContent(prompt)
+          .timeout(requestTimeout, onTimeout: () {
+        throw GeminiTimeoutException();
+      });
 
       final responseText = response.text;
       if (responseText == null || responseText.isEmpty) {
@@ -137,6 +151,8 @@ Only identify trim level if visual evidence supports it.
 
       return CarIdentification.fromJson(jsonData);
 
+    } on GeminiTimeoutException {
+      rethrow;
     } catch (e) {
       return CarIdentification(
         identified: false,

@@ -1,4 +1,4 @@
-package com.example.car_detector
+package com.axiomforgesoftware.autospotter
 
 import io.flutter.embedding.android.FlutterActivity
 

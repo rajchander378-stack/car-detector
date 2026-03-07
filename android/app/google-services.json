@@ -7,12 +7,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:109977431110:android:85de0a8bf0bedc89e66e47",
+        "mobilesdk_app_id": "1:109977431110:android:be193f730cf7c70be66e47",
         "android_client_info": {
-          "package_name": "com.example.car_detector"
+          "package_name": "com.axiomforgesoftware.autospotter"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "109977431110-aup1mal90084jo4hop0fsibv4t0rkncr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.axiomforgesoftware.autospotter",
+            "certificate_hash": "3d4d4c1c7d4881d12d8223ff61548039b40db708"
+          }
+        },
+        {
+          "client_id": "109977431110-utvarfn7pc4ddgbpsmafbtvt36gq635d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBHDbvlEgWDQ4aS8VlDcGBr14-IL6_bLkg"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "109977431110-utvarfn7pc4ddgbpsmafbtvt36gq635d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "109977431110-4hjhtjqfbsiifb3t4km1006mkr412m3g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.carDetector"
+              }
+            }
+          ]
         }
       }
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TermsScreen extends StatelessWidget {
   final VoidCallback onAccept;
@@ -58,6 +59,12 @@ class TermsScreen extends StatelessWidget {
                           'Your Google profile info is stored via Firebase to provide the service. You may request deletion at any time.',
                     ),
                     _buildBullet(
+                      icon: Icons.flag_outlined,
+                      title: 'UK Vehicles Only',
+                      body:
+                          'This app is designed for UK-registered vehicles. Number plate recognition, vehicle identification, and price valuations are based on UK data sources. Results for non-UK vehicles may be inaccurate or unavailable.',
+                    ),
+                    _buildBullet(
                       icon: Icons.gavel_outlined,
                       title: 'Acceptable Use',
                       body:
@@ -70,10 +77,17 @@ class TermsScreen extends StatelessWidget {
                           'These terms are governed by the laws of England & Wales.',
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'Full terms are available in the app repository (TERMS_AND_CONDITIONS.md).',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                    GestureDetector(
+                      onTap: () => launchUrl(
+                        Uri.parse('https://car-detector-833e5.web.app/privacy-policy.html'),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      child: Text(
+                        'View our full Privacy Policy',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ],

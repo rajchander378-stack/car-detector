@@ -1,5 +1,5 @@
 name: car_detector
-description: "A new Flutter project."
+description: "Instant AI car identification and UK vehicle valuation by Axiom Forge Software."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -44,6 +44,9 @@ dependencies:
   permission_handler: ^11.3.0
   google_sign_in: ^6.2.1
   cloud_firestore: ^5.0.0
+  connectivity_plus: ^6.0.0
+  package_info_plus: ^8.0.0
+  url_launcher: ^6.2.0
 
 dev_dependencies:
   flutter_test:

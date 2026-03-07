@@ -1,1 +1,48 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"car-detector-833e5","appId":"1:109977431110:android:85de0a8bf0bedc89e66e47","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"car-detector-833e5","configurations":{"android":"1:109977431110:android:85de0a8bf0bedc89e66e47","ios":"1:109977431110:ios:fd0dfa530fd2e02ee66e47","macos":"1:109977431110:ios:fd0dfa530fd2e02ee66e47","web":"1:109977431110:web:abbe15375a88a443e66e47","windows":"1:109977431110:web:fd426c716474a1a4e66e47"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "car-detector-833e5",
+          "appId": "1:109977431110:android:85de0a8bf0bedc89e66e47",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "car-detector-833e5",
+          "configurations": {
+            "android": "1:109977431110:android:85de0a8bf0bedc89e66e47",
+            "ios": "1:109977431110:ios:fd0dfa530fd2e02ee66e47",
+            "macos": "1:109977431110:ios:fd0dfa530fd2e02ee66e47",
+            "web": "1:109977431110:web:abbe15375a88a443e66e47",
+            "windows": "1:109977431110:web:fd426c716474a1a4e66e47"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          }
+        ]
+      }
+    ]
+  }
+}

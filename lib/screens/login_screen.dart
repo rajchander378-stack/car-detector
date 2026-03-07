@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Sign-in failed: ${e.toString()}';
+          _error = 'Unable to sign in. Please check your connection and try again.';
         });
       }
     } finally {
@@ -70,6 +70,13 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 'Instant AI car identification',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Designed for UK-registered vehicles',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
               ),
