@@ -1,0 +1,56 @@
+==============================
+GOOGLE PLAY STORE LISTING TEXT
+==============================
+Paste these into Google Play Console under Store Listing.
+
+
+SHORT DESCRIPTION (max 80 chars)
+================================
+Point your camera at any car for instant AI identification and UK valuation.
+
+
+FULL DESCRIPTION (max 4000 chars)
+==================================
+Ever spotted a car and wondered what it is? AutoSpotter identifies any vehicle in seconds using advanced AI.
+
+HOW IT WORKS
+Just point your camera at a car — or pick a photo from your gallery — and AutoSpotter will tell you exactly what it is. Powered by Google Gemini AI, you get detailed results including:
+
+• Make and model
+• Year range and generation
+• Trim level and body style
+• Colour identification
+• Confidence score (0–100%)
+• Distinguishing visual features and AI observations
+
+NUMBER PLATE READING & UK VALUATION
+AutoSpotter reads visible number plates automatically. For UK-registered vehicles, tap the valuation button to get current market prices including retail, trade, and private sale estimates — all from one photo.
+
+UPLOAD FROM GALLERY
+Don't have a car in front of you? Upload any car photo from your gallery or camera roll and get the same full identification and valuation.
+
+SAVE & FAVOURITE
+Sign in with your Google account to save your identifications. Bookmark your favourites for quick access later. Your scan history is stored securely and synced across sessions.
+
+SMART IMAGE PROCESSING
+AutoSpotter automatically optimises your photos before analysis — adjusting for exposure, resolution, and framing — so you get accurate results even in tricky conditions.
+
+BUILT FOR THE UK
+Results use UK English spelling and terminology. Body styles are named the British way — saloon, estate, coupé — not the American way. Valuations use UK vehicle data.
+
+FEATURES AT A GLANCE
+✓ Instant AI car identification from camera or gallery
+✓ Make, model, year, trim, body style, and colour
+✓ Confidence score with visual gauge
+✓ Automatic number plate reading
+✓ UK vehicle valuation (retail, trade, and private prices)
+✓ Save scan history to your account
+✓ Favourite and bookmark identifications
+✓ Smart image optimisation for better accuracy
+✓ Beautiful results display with spec chips and price cards
+✓ Google Sign-In for secure, hassle-free accounts
+
+PRIVACY & DATA
+AutoSpotter takes your privacy seriously. Photos are processed transiently and are not stored on our servers. Your account data is secured with Firebase. You can delete your account and all associated data at any time from the Settings screen. Full privacy policy available at https://car-detector-833e5.web.app/privacy-policy.html
+
+AutoSpotter is made by Axiom Forge Software.

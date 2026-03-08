@@ -71,27 +71,9 @@
 - [x] **Real-time alerts** — Dashboard uses `onSnapshot` Firestore listener for real-time updates. New lockout events appear instantly without page refresh.
 - [x] **Lockout database schema** — Firestore collection `lockout_events`: `{ user_id, user_email, timestamp, device_info: { os, os_version, locale }, failure_errors: [String], resolved: bool, resolved_by: String?, resolved_at: Timestamp?, acknowledged: bool, acknowledged_by: String?, acknowledged_at: Timestamp? }`.
 
-## Uncompleted — Admin User Management Dashboard (Flutter Web)
-
-### Setup
-- [ ] **Create Flutter Web admin app** — New Flutter Web target (or separate entry point) in the project for the admin dashboard. Deploy to Firebase Hosting.
-- [ ] **Admin authentication with custom claims** — Set up Firebase Auth custom claims (`admin: true`) via a Cloud Function or Firebase Admin SDK script. Admin login page that rejects non-admin users.
-- [x] **Firestore security rules for admin** — `firestore.rules` added with rules for all collections. Users: own-document only. Saved scans: owner only. Lockout events and AI reports: create by any authenticated user, read/update/delete by admins only. Admin config: readable by authenticated users, writable by admins only (with bootstrap create for first user). Added `firestore` section to `firebase.json`.
-
-### User Management
-- [ ] **User list view** — Paginated table of all users from the `users` Firestore collection showing: display name, email, photo, created date, last login, account status.
-- [ ] **User detail view** — Drill into a user to see full profile, scan history, lockout events, and usage stats.
-- [ ] **Disable/enable user accounts** — Admin action to disable or re-enable a user via Firebase Auth Admin SDK (Cloud Function endpoint).
-- [ ] **User search and filtering** — Search users by email or name. Filter by date range (created/last login), account status.
-
-### Usage & Activity Tracking
-- [ ] **Log scan events to Firestore** — When a user completes a scan, write to a `scan_events` collection: `{ userId, timestamp, imagePath, identified: bool, make, model, numberPlate, confidence, valuationFetched: bool }`.
-- [ ] **Per-user usage stats** — Track total scans, successful identifications, valuations fetched, and last active date. Update a `user_stats` subcollection or fields on the user document.
-- [ ] **Dashboard overview page** — Summary cards showing: total users, active users (last 7/30 days), total scans, scans today, active lockouts.
-
-### Deployment
-- [ ] **Firebase Hosting config** — Configure `firebase.json` with hosting target for the admin app. Set up URL (e.g. `admin.yourdomain.com` or `project-id.web.app/admin`).
-- [ ] **Cloud Functions for admin operations** — Cloud Functions for actions that require Admin SDK (set custom claims, disable users, bulk export). Callable from the admin dashboard.
+## Removed — Admin User Management Dashboard (Flutter Web)
+> Removed — all proposed features (user list, disable/enable accounts, usage stats, search/filtering) are available directly in the Firebase Console. The existing HTML/JS lockout dashboard at `public/admin/` covers the remaining admin need.
+> Firestore security rules for admin are already in place (`firestore.rules`).
 
 ## Uncompleted — Google Play Release Preparation
 
@@ -111,19 +93,19 @@
 ### Technical (we can do these)
 - [ ] **Release signing keystore** — Generate an upload keystore (`keytool -genkey`), create a `key.properties` file, and configure `signingConfigs` in `build.gradle.kts` for release builds. Keep the keystore safe — losing it means you cannot update the app.
 - [x] **Update app metadata** — Changed pubspec.yaml description to "Instant AI car identification and UK vehicle valuation by Axiom Forge Software."
-- [ ] **App icon** — Design and configure a proper launcher icon (adaptive icon for Android). Consider using the `flutter_launcher_icons` package.
-- [ ] **Splash screen** — Configure a branded splash screen using `flutter_native_splash` or native Android splash.
+- [x] **App icon** — Design and configure a proper launcher icon (adaptive icon for Android). Consider using the `flutter_launcher_icons` package.
+- [x] **Splash screen** — Configure a branded splash screen using `flutter_native_splash` or native Android splash.
 - [ ] **Build release APK/AAB** — Run `flutter build appbundle --release` to produce the Android App Bundle for Play Store upload.
 - [ ] **Test release build** — Install and test the release build on a physical device before submission. Verify camera, Google Sign-In, Gemini API, and valuation all work in release mode.
 - [ ] **ProGuard / R8 rules** — Ensure minification doesn't break Firebase, ML Kit, or other plugins. Add keep rules if needed.
 - [ ] **Add SHA-1 for release keystore to Firebase** — The release keystore will have a different SHA-1 from debug. Add it in Firebase Console for Google Sign-In to work in release builds.
 
 ### Policy & Compliance (ask Gemini — see prompt below)
-- [ ] **Privacy policy** — Required by Google Play for apps using camera, user accounts, and network requests. Must be hosted at a public URL.
+- [x] **Privacy policy** — Required by Google Play for apps using camera, user accounts, and network requests. Must be hosted at a public URL.
 - [ ] **Data safety declaration** — Google Play requires you to declare what data is collected, shared, and how it is secured.
 - [ ] **Content rating questionnaire** — Complete the IARC rating questionnaire in Play Console.
-- [ ] **Camera and permissions disclosure** — Ensure compliance with Google Play's photo/video permissions policy.
-- [ ] **Store listing assets** — Screenshots (phone + tablet), feature graphic (1024x500), short description, full description.
+- [x] **Camera and permissions disclosure** — Ensure compliance with Google Play's photo/video permissions policy.
+- [ ] **Store listing assets** — Screenshots (phone + tablet), feature graphic (1024x500). Short and full descriptions drafted in `store_listing.txt`.
 - [ ] **Google Play Developer account** — Register at play.google.com/console (one-time fee).
 
 ### Gemini Prompt for Google Play Policy Guidance
@@ -159,24 +141,31 @@ Please provide current, specific guidance rather than generic advice. Link to re
 ## Uncompleted — Branding & Visual Assets
 
 ### App Icon & Splash
-- [ ] **Design custom app icon** — Replace the default Flutter icon with a branded AutoSpotter icon. Create a 512x512 master PNG and generate all Android densities (mdpi through xxxhdpi) using `flutter_launcher_icons`. This icon is also used for the Play Store listing.
-- [ ] **Adaptive icon for Android** — Create foreground and background layers for Android adaptive icons so it looks correct across different device manufacturers.
-- [ ] **Custom splash screen** — Replace the blank white launch screen with a branded AutoSpotter splash using `flutter_native_splash` or native Android splash config.
+- [x] **Design custom app icon** — Replace the default Flutter icon with a branded AutoSpotter icon. Create a 512x512 master PNG and generate all Android densities (mdpi through xxxhdpi) using `flutter_launcher_icons`. This icon is also used for the Play Store listing.
+- [x] **Adaptive icon for Android** — Create foreground and background layers for Android adaptive icons so it looks correct across different device manufacturers.
+- [x] **Custom splash screen** — Replace the blank white launch screen with a branded AutoSpotter splash using `flutter_native_splash` or native Android splash config.
 - [ ] **Replace web favicon** — Replace `web/favicon.png` and `web/icons/` with the AutoSpotter brand icon.
+  - *Image needed:* The app icon (already generated at `assets/icon/icon.png`) — no new image required, just needs deploying.
 
 ### Google Play Store Listing Assets
 - [ ] **Feature graphic** (1024x500 PNG/JPG) — Banner displayed at the top of the Play Store listing. First thing users see. Should show brand name, tagline, and a visual of the app in action.
+  - *Image needed:* 1024x500 banner with the AutoSpotter logo on the left, tagline "Instant AI Car Identification" in the centre, and a phone mockup showing the results screen on the right. Blue gradient background matching app theme (#1565C0).
 - [ ] **Screenshots** (min 4, phone + optional tablet) — Real app screenshots showing: camera viewfinder, AI identification result, valuation card, and login/terms screen. Blur any real number plates in screenshots.
+  - *Image needed:* 4+ real screenshots captured from the app on a phone. (1) Camera viewfinder with a car in frame, (2) AI identification results screen, (3) Valuation card with prices, (4) Login/terms screen. Blur any visible number plates.
 - [ ] **Short description** (max 80 chars) — Concise tagline for Play Store, e.g. "Point your camera at any car for instant AI identification and UK valuation."
 - [ ] **Full description** (max 4000 chars) — Detailed Play Store description covering features, how it works, and data usage.
 
 ### Website & Social Assets (Firebase Hosting)
 - [ ] **AutoSpotter logo/brand mark** — Logo for the website header, privacy policy page, account deletion page, and admin dashboard. SVG + PNG versions.
+  - *Image needed:* A clean wordmark or logo combining the car/reticle icon with "AutoSpotter" text. White-on-blue and dark-on-white variants. SVG preferred for scalability.
 - [ ] **Open Graph image** (1200x630) — Social sharing preview image for when the site URL is shared on social media, WhatsApp, etc. Without this, shared links look blank.
+  - *Image needed:* 1200x630 card with the AutoSpotter logo, tagline, and a visual of the app (e.g. phone mockup or car silhouette). Blue background. Text should be readable at thumbnail size.
 - [ ] **Landing page hero image** — Phone mockup or illustration showing the app in action, for converting organic visitors into Play Store downloads.
+  - *Image needed:* A phone frame/mockup containing a screenshot of the results screen (car identified with specs visible). Angled or floating style on a transparent or gradient background.
 
 ### In-App Illustrations
 - [ ] **Empty state illustrations** — Custom illustrations for empty history, error screens, and "no result" states instead of plain icons and text.
+  - *Images needed:* 3 simple line-art or flat illustrations (~300x300): (1) Empty history — a car with a clock or magnifying glass, (2) Error state — a car with a warning triangle, (3) No result — a car with a question mark. Use app theme colours (blue #1565C0, white, light grey).
 
 ## Uncompleted — Sharing, Reviews & Growth
 
