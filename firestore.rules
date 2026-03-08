@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper: check if the caller is an admin ---
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/config/admin)
+        && request.auth.token.email in get(/databases/$(database)/documents/config/admin).data.admin_emails;
+    }
+
+    // --- Users ---
+    // Users can read/write their own document only.
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Saved scans subcollection — owner only
+      match /saved_scans/{scanId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // --- Admin config ---
+    // Only admins can read. Only admins can write (except first-time bootstrap).
+    match /config/admin {
+      // Allow read for any authenticated user (needed to check if they are admin).
+      // The admin check itself is done client-side; the sensitive data is just an email list.
+      allow read: if request.auth != null;
+
+      // Allow create if no admin doc exists yet (bootstrap by first user)
+      allow create: if request.auth != null;
+
+      // Only existing admins can update the admin list
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // --- AI Reports ---
+    // Authenticated users can create reports. Only admins can read/update/delete.
+    match /ai_reports/{reportId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // --- Lockout Events ---
+    // Authenticated users can create (the app logs lockouts). Only admins can read/update.
+    match /lockout_events/{eventId} {
+      allow create: if request.auth != null;
+      allow read, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

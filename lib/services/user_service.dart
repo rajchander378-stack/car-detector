@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_user.dart';
+import 'saved_scan_service.dart';
 
 class UserService {
   static final UserService _instance = UserService._internal();
@@ -57,6 +58,9 @@ class UserService {
     for (final doc in reports.docs) {
       await doc.reference.delete();
     }
+
+    // Delete saved scans
+    await SavedScanService().deleteAllScans(uid);
 
     // Delete the user document
     await _usersCollection.doc(uid).delete();

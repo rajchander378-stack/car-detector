@@ -54,29 +54,29 @@
 ## Uncompleted — Other Features
 
 - [x] **Price Estimation** — Get price estimates via UK Vehicle Data API using the number plate. Button on results screen fetches retail/trade/private valuations with loading spinner and error handling. Requires a valid API key in `constants.dart`. Sandbox mode limited to VRMs containing "A".
-- [ ] **Identification History** — Track past identifications. History button exists in camera UI and storage dependency included but not functional.
+- [x] **Identification History** — Track past identifications. History button exists in camera UI and storage dependency included but not functional.
 - [ ] **Manual Edit/Correction** — Allow users to override AI results with manual search and correction. Button present but unconnected.
-- [ ] **Gallery Upload** — Identify cars from existing photos. `image_picker` dependency included but not integrated into the UI.
+- [x] **Gallery Upload** — Identify cars from existing photos. Gallery button on camera screen (bottom-left) and in drawer menu. Uses `image_picker` to select photo, runs through optimise + Gemini pipeline. Also added Sample Images screen with bundled placeholder images for demo/testing (accessible from drawer).
 - [ ] **Extended Vehicle Support** — Full identification support for vans, trucks, and motorcycles (currently marked "coming soon").
 - [x] **User Accounts — Google Sign-In** — Google Sign-In with Firebase Auth and Firestore user profiles. Auth gate in main.dart routes unauthenticated users to login screen.
-- [ ] **Scan History Persistence in Firestore** — Save past identifications to Firestore under each user's account.
-- [ ] **Favourites / Bookmarking** — Allow users to bookmark/favourite car identifications.
+- [x] **Scan History Persistence in Firestore** — Save past identifications to Firestore under each user's account. Saved under `users/{uid}/saved_scans/` with 90-day data retention policy (subject to GDPR review). Save prompt appears when leaving Vehicle Report screen with unsaved valuation data.
+- [x] **Favourites / Bookmarking** — Allow users to bookmark/favourite car identifications. Star toggle on saved scan detail screen. Dedicated Favourites tab in Saved Scans screen. Accessible from drawer menu.
 - [x] **Sign-Out Button on Camera Screen** — Add a sign-out option accessible from the camera screen.
 
 ## Uncompleted — Admin Lockout Dashboard
 
-- [ ] **Lockout event logging** — When a user hits 3 consecutive failures and gets locked out, log the event to a Firestore collection (e.g. `lockout_events`) with user ID, timestamp, device info, and the error messages from each failed attempt.
-- [ ] **Admin web dashboard** — Build a simple web page (Flutter Web or standalone) with authenticated admin access to view all lockout events. Table view with columns: user, timestamp, device, error details, and status (new/acknowledged/resolved).
-- [ ] **Admin authentication** — Restrict dashboard access to admin users only (e.g. via Firebase Auth custom claims or an allow-list of admin email addresses).
-- [ ] **Real-time alerts** — Notify admin of new lockouts in real time (e.g. Firestore listener on the dashboard, or optional email/push notification via Cloud Functions).
-- [ ] **Lockout database schema** — Firestore collection `lockout_events`: `{ userId, userEmail, timestamp, deviceInfo, failureErrors: [String], resolved: bool, resolvedBy: String?, resolvedAt: Timestamp? }`.
+- [x] **Lockout event logging** — `LockoutService` logs to `lockout_events` collection with user ID, email, timestamp, device info (OS, version, locale), and error type list from each failed attempt. Integrated in `camera_screen.dart` lockout flow.
+- [x] **Admin web dashboard** — Standalone HTML/JS page at `public/admin/index.html` using Firebase JS SDK (compat). Table view with user, timestamp, device, error details, and status columns. Stats cards for total/new/today/resolved. Filter buttons for all/new/acknowledged/resolved. Acknowledge and resolve actions per event. Deployed via Firebase Hosting at `/admin/`.
+- [x] **Admin authentication** — Google Sign-In on dashboard, checked against `config/admin` Firestore document `admin_emails` array. First sign-in auto-creates the admin config. Non-admin users see "Access denied".
+- [x] **Real-time alerts** — Dashboard uses `onSnapshot` Firestore listener for real-time updates. New lockout events appear instantly without page refresh.
+- [x] **Lockout database schema** — Firestore collection `lockout_events`: `{ user_id, user_email, timestamp, device_info: { os, os_version, locale }, failure_errors: [String], resolved: bool, resolved_by: String?, resolved_at: Timestamp?, acknowledged: bool, acknowledged_by: String?, acknowledged_at: Timestamp? }`.
 
 ## Uncompleted — Admin User Management Dashboard (Flutter Web)
 
 ### Setup
 - [ ] **Create Flutter Web admin app** — New Flutter Web target (or separate entry point) in the project for the admin dashboard. Deploy to Firebase Hosting.
 - [ ] **Admin authentication with custom claims** — Set up Firebase Auth custom claims (`admin: true`) via a Cloud Function or Firebase Admin SDK script. Admin login page that rejects non-admin users.
-- [ ] **Firestore security rules for admin** — Add Firestore rules that allow read/write on admin collections only for users with the `admin` custom claim.
+- [x] **Firestore security rules for admin** — `firestore.rules` added with rules for all collections. Users: own-document only. Saved scans: owner only. Lockout events and AI reports: create by any authenticated user, read/update/delete by admins only. Admin config: readable by authenticated users, writable by admins only (with bootstrap create for first user). Added `firestore` section to `firebase.json`.
 
 ### User Management
 - [ ] **User list view** — Paginated table of all users from the `users` Firestore collection showing: display name, email, photo, created date, last login, account status.

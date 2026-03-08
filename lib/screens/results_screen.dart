@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/car_identification.dart';
 import '../models/vehicle_valuation.dart';
+import '../services/saved_scan_service.dart';
 import '../services/valuation_service.dart';
 
 class ResultsScreen extends StatefulWidget {
@@ -26,8 +27,63 @@ class _ResultsScreenState extends State<ResultsScreen> {
   VehicleValuation? _valuation;
   String? _error;
   bool _reportSubmitted = false;
+  bool _saved = false;
 
   CarIdentification get identification => widget.identification;
+
+  Future<void> _saveScan() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await SavedScanService().saveScan(
+        uid: user.uid,
+        identification: identification,
+        valuation: _valuation,
+      );
+      if (mounted) {
+        setState(() => _saved = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report saved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save report. Please try again.')),
+        );
+      }
+    }
+  }
+
+  Future<bool> _onWillPop() async {
+    if (_saved || _valuation == null || !identification.identified) return true;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save Report?'),
+        content: const Text(
+          'You have valuation data that will be lost if you leave. '
+          'Would you like to save this vehicle report?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await _saveScan();
+              if (context.mounted) Navigator.pop(context, true);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
 
   Future<void> _fetchValuation() async {
     final plate = identification.numberPlate;
@@ -60,12 +116,27 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
+        actions: [
+          if (identification.identified)
+            IconButton(
+              icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border),
+              tooltip: _saved ? 'Saved' : 'Save report',
+              onPressed: _saved ? null : _saveScan,
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -113,6 +184,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

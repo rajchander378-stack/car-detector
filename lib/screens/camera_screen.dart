@@ -1,14 +1,19 @@
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/detector_service.dart';
 import '../services/gemini_service.dart';
 import '../services/image_processor.dart';
+import '../services/lockout_service.dart';
 import 'results_screen.dart';
+import 'sample_images_screen.dart';
+import 'saved_scans_screen.dart';
 import 'settings_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -24,6 +29,7 @@ class _CameraScreenState extends State<CameraScreen>
   final DetectorService _detector = DetectorService();
   final GeminiService _gemini = GeminiService();
   final ImageProcessor _processor = ImageProcessor();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _isProcessing = false;
   String _status = 'Point at a UK car and tap capture';
@@ -31,6 +37,7 @@ class _CameraScreenState extends State<CameraScreen>
   bool _lockedOut = false;
   bool _cameraPermissionGranted = false;
   bool _showFlash = false;
+  final List<String> _recentErrors = [];
 
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
@@ -216,6 +223,7 @@ class _CameraScreenState extends State<CameraScreen>
 
       // Success — reset failure counter
       _consecutiveFailures = 0;
+      _recentErrors.clear();
 
       // Navigate to results with hero transition
       if (mounted) {
@@ -237,7 +245,9 @@ class _CameraScreenState extends State<CameraScreen>
 
     } on GeminiTimeoutException {
       _consecutiveFailures++;
+      _recentErrors.add('GeminiTimeoutException');
       if (_consecutiveFailures >= 3) {
+        _logLockout();
         setState(() {
           _lockedOut = true;
           _status = '';
@@ -249,11 +259,105 @@ class _CameraScreenState extends State<CameraScreen>
       }
     } catch (e) {
       _consecutiveFailures++;
+      _recentErrors.add(e.runtimeType.toString());
       if (_consecutiveFailures >= 3) {
+        _logLockout();
         setState(() {
           _lockedOut = true;
           _status = '';
         });
+      } else {
+        setState(() => _status =
+            'Something went wrong. Please try again. '
+            '(${_consecutiveFailures}/3)');
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    if (_isProcessing || _lockedOut) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+    );
+    if (picked == null) return;
+
+    if (!await _hasConnectivity()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No internet connection. Please check your connection and try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _status = 'Optimising image...';
+    });
+
+    try {
+      final imageFile = File(picked.path);
+      final result = await _processor.optimise(imageFile);
+
+      if (!result.quality.isAcceptable) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.quality.issues.join('. ')),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          setState(() => _status = 'Please choose a clearer photo');
+        }
+        return;
+      }
+
+      setState(() => _status = 'Asking AI to identify...');
+      final identification = await _gemini.identifyCar(result.file);
+
+      _consecutiveFailures = 0;
+      _recentErrors.clear();
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => ResultsScreen(
+              imagePath: picked.path,
+              identification: identification,
+            ),
+            transitionsBuilder: (_, animation, __, child) =>
+                FadeTransition(opacity: animation, child: child),
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        );
+        setState(() => _status = 'Point at a UK car and tap capture');
+      }
+    } on GeminiTimeoutException {
+      _consecutiveFailures++;
+      _recentErrors.add('GeminiTimeoutException');
+      if (_consecutiveFailures >= 3) {
+        _logLockout();
+        setState(() { _lockedOut = true; _status = ''; });
+      } else {
+        setState(() => _status =
+            'Request timed out. Please try again. '
+            '(${_consecutiveFailures}/3)');
+      }
+    } catch (e) {
+      _consecutiveFailures++;
+      _recentErrors.add(e.runtimeType.toString());
+      if (_consecutiveFailures >= 3) {
+        _logLockout();
+        setState(() { _lockedOut = true; _status = ''; });
       } else {
         setState(() => _status =
             'Something went wrong. Please try again. '
@@ -296,6 +400,8 @@ class _CameraScreenState extends State<CameraScreen>
     }
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildDrawer(context),
       body: Stack(
         children: [
           // Camera preview
@@ -443,50 +549,171 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-          // History button
+          // Gallery button (left of capture)
           if (!_isProcessing)
             Positioned(
-              bottom: 50, right: 30,
+              bottom: 55, left: 40,
               child: Semantics(
                 button: true,
-                label: 'View scan history',
+                label: 'Pick photo from gallery',
                 child: IconButton(
-                  onPressed: () {
-                    // TODO: Navigate to history screen
-                  },
+                  onPressed: _pickFromGallery,
                   icon: const Icon(
-                    Icons.history,
+                    Icons.photo_library_outlined,
                     color: Colors.white,
-                    size: 32,
+                    size: 30,
                   ),
                 ),
               ),
             ),
 
-          // Settings button
+          // Saved scans button (right of capture)
           if (!_isProcessing)
             Positioned(
-              bottom: 50, left: 30,
+              bottom: 55, right: 40,
               child: Semantics(
                 button: true,
-                label: 'Open settings',
+                label: 'View saved scans',
                 child: IconButton(
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const SettingsScreen(),
+                        builder: (_) => const SavedScansScreen(),
                       ),
                     );
                   },
                   icon: const Icon(
-                    Icons.settings,
+                    Icons.bookmark_outline,
                     color: Colors.white,
-                    size: 32,
+                    size: 30,
                   ),
                 ),
               ),
             ),
+
+          // Menu button (top left)
+          if (!_isProcessing)
+            Positioned(
+              top: 0, left: 0,
+              child: SafeArea(
+                child: Semantics(
+                  button: true,
+                  label: 'Open menu',
+                  child: IconButton(
+                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                    icon: const Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _logLockout() {
+    LockoutService().logLockout(failureErrors: List.from(_recentErrors));
+    _recentErrors.clear();
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final theme = Theme.of(context);
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+            ),
+            accountName: Text(user?.displayName ?? 'User'),
+            accountEmail: Text(user?.email ?? ''),
+            currentAccountPicture: CircleAvatar(
+              backgroundImage: user?.photoURL != null
+                  ? NetworkImage(user!.photoURL!)
+                  : null,
+              child: user?.photoURL == null
+                  ? const Icon(Icons.person, size: 36)
+                  : null,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Camera'),
+            selected: true,
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Pick from Gallery'),
+            onTap: () {
+              Navigator.pop(context);
+              _pickFromGallery();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome),
+            title: const Text('Sample Images'),
+            subtitle: const Text('Try without a car nearby'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SampleImagesScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.bookmark_outline),
+            title: const Text('Saved Scans'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SavedScansScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.star_outline),
+            title: const Text('Favourites'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const SavedScansScreen(showFavouritesTab: true),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -524,6 +751,7 @@ class _CameraScreenState extends State<CameraScreen>
                   setState(() {
                     _lockedOut = false;
                     _consecutiveFailures = 0;
+                    _recentErrors.clear();
                     _status = 'Point at a UK car and tap capture';
                   });
                 },

@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoSpotter Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #1565c0;
+      --primary-light: #e3f2fd;
+      --text: #212121;
+      --text-secondary: #616161;
+      --bg: #f5f5f5;
+      --card-bg: #ffffff;
+      --border: #e0e0e0;
+      --danger: #c62828;
+      --success: #2e7d32;
+      --warning: #f57f17;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: var(--primary);
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar h1 { font-size: 18px; font-weight: 600; }
+    .topbar .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .topbar img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+    }
+    .topbar button {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .topbar button:hover { background: rgba(255,255,255,0.3); }
+
+    /* Container */
+    .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+    /* Stats row */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .stat-card .label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-btn {
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .filter-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .filter-btn:hover:not(.active) {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Table */
+    .table-wrap {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    thead { background: #fafafa; }
+    th {
+      text-align: left;
+      padding: 12px 14px;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: #fafafa; }
+
+    /* Status badges */
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-new { background: #ffebee; color: var(--danger); }
+    .status-acknowledged { background: #fff3e0; color: #e65100; }
+    .status-resolved { background: #e8f5e9; color: var(--success); }
+
+    /* Action buttons */
+    .action-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+      font-size: 12px;
+      margin-right: 4px;
+      transition: all 0.15s;
+    }
+    .action-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .action-btn.resolve { border-color: var(--success); color: var(--success); }
+    .action-btn.resolve:hover { background: #e8f5e9; }
+
+    /* Errors list in cell */
+    .error-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .error-list li {
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 1px 0;
+    }
+    .error-list li::before {
+      content: "\2022 ";
+      color: var(--danger);
+    }
+
+    /* Device info */
+    .device-info {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Login screen */
+    .login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 20px;
+    }
+    .login-screen h1 { font-size: 24px; color: var(--primary); }
+    .login-screen p { color: var(--text-secondary); font-size: 15px; }
+    .google-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 24px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      transition: box-shadow 0.15s;
+    }
+    .google-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .google-btn img { width: 20px; height: 20px; }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    /* Error banner */
+    .error-banner {
+      background: #ffebee;
+      border: 1px solid #ef9a9a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--danger);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-secondary);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .table-wrap { overflow-x: auto; }
+      table { min-width: 700px; }
+      .topbar h1 { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen" class="login-screen" style="display:none;">
+  <h1>AutoSpotter Admin</h1>
+  <p>Sign in with your admin Google account</p>
+  <button class="google-btn" onclick="signIn()">
+    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    Sign in with Google
+  </button>
+  <div id="login-error" class="error-banner" style="display:none;"></div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" style="display:none;">
+  <div class="topbar">
+    <h1>AutoSpotter Admin</h1>
+    <div class="user-info">
+      <img id="user-photo" src="" alt="" style="display:none;">
+      <span id="user-name"></span>
+      <button onclick="signOutUser()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="number" id="stat-total">-</div>
+        <div class="label">Total Lockouts</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-new" style="color:var(--danger)">-</div>
+        <div class="label">New</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-today">-</div>
+        <div class="label">Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-resolved" style="color:var(--success)">-</div>
+        <div class="label">Resolved</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" data-filter="new" onclick="setFilter('new',this)">New</button>
+      <button class="filter-btn" data-filter="acknowledged" onclick="setFilter('acknowledged',this)">Acknowledged</button>
+      <button class="filter-btn" data-filter="resolved" onclick="setFilter('resolved',this)">Resolved</button>
+    </div>
+
+    <!-- Table -->
+    <div id="loading" class="loading">Loading lockout events...</div>
+    <div id="table-section" style="display:none;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Timestamp</th>
+              <th>Device</th>
+              <th>Errors</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="events-body"></tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="empty" style="display:none;">
+        <div class="empty-icon">&#128274;</div>
+        <p>No lockout events found</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat for simplicity with Firestore + Auth) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // Firebase config (same project as the app)
+  firebase.initializeApp({
+    apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+    authDomain: 'car-detector-833e5.firebaseapp.com',
+    projectId: 'car-detector-833e5',
+    storageBucket: 'car-detector-833e5.firebasestorage.app',
+    messagingSenderId: '109977431110',
+    appId: '1:109977431110:web:abbe15375a88a443e66e47',
+  });
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  let currentFilter = 'all';
+  let allEvents = [];
+  let unsubscribe = null;
+
+  // --- Auth ---
+
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      const isAdmin = await checkAdmin(user.email);
+      if (!isAdmin) {
+        document.getElementById('login-error').textContent =
+          'Access denied. ' + user.email + ' is not an admin.';
+        document.getElementById('login-error').style.display = 'block';
+        await auth.signOut();
+        return;
+      }
+      showDashboard(user);
+    } else {
+      showLogin();
+    }
+  });
+
+  async function checkAdmin(email) {
+    try {
+      const doc = await db.collection('config').doc('admin').get();
+      if (!doc.exists) {
+        // If no admin config exists yet, allow the first user and create the config
+        await db.collection('config').doc('admin').set({
+          admin_emails: [email],
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        return true;
+      }
+      const emails = doc.data().admin_emails || [];
+      return emails.includes(email);
+    } catch (e) {
+      console.error('Admin check failed:', e);
+      return false;
+    }
+  }
+
+  async function signIn() {
+    const errorEl = document.getElementById('login-error');
+    const btn = document.querySelector('.google-btn');
+    errorEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+
+    try {
+      // Try popup first
+      await auth.signInWithPopup(provider);
+    } catch (err) {
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+        // Fallback to redirect if popup was blocked
+        try {
+          await auth.signInWithRedirect(provider);
+        } catch (redirectErr) {
+          errorEl.textContent = 'Sign-in failed: ' + redirectErr.message;
+          errorEl.style.display = 'block';
+        }
+      } else {
+        errorEl.textContent = 'Sign-in failed: ' + err.message + ' (' + err.code + ')';
+        errorEl.style.display = 'block';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Sign in with Google';
+    }
+  }
+
+  // Handle redirect result on page load
+  auth.getRedirectResult().catch((err) => {
+    if (err.code && err.code !== 'auth/no-auth-event') {
+      const errorEl = document.getElementById('login-error');
+      errorEl.textContent = 'Sign-in failed: ' + err.message;
+      errorEl.style.display = 'block';
+    }
+  });
+
+  function signOutUser() {
+    if (unsubscribe) unsubscribe();
+    auth.signOut();
+  }
+
+  function showLogin() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+  }
+
+  function showDashboard(user) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    if (user.photoURL) {
+      const photo = document.getElementById('user-photo');
+      photo.src = user.photoURL;
+      photo.style.display = 'block';
+    }
+    startListening();
+  }
+
+  // --- Real-time data ---
+
+  function startListening() {
+    unsubscribe = db.collection('lockout_events')
+      .orderBy('timestamp', 'desc')
+      .limit(200)
+      .onSnapshot((snapshot) => {
+        allEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateStats();
+        renderTable();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('table-section').style.display = 'block';
+      }, (err) => {
+        console.error('Firestore listener error:', err);
+        document.getElementById('loading').textContent = 'Failed to load events. Check Firestore rules.';
+      });
+  }
+
+  // --- Stats ---
+
+  function updateStats() {
+    const total = allEvents.length;
+    const newCount = allEvents.filter(e => getStatus(e) === 'new').length;
+    const resolvedCount = allEvents.filter(e => e.resolved).length;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = allEvents.filter(e => {
+      if (!e.timestamp) return false;
+      return e.timestamp.toDate() >= today;
+    }).length;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-new').textContent = newCount;
+    document.getElementById('stat-today').textContent = todayCount;
+    document.getElementById('stat-resolved').textContent = resolvedCount;
+  }
+
+  // --- Filter ---
+
+  function setFilter(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  function getStatus(event) {
+    if (event.resolved) return 'resolved';
+    if (event.acknowledged) return 'acknowledged';
+    return 'new';
+  }
+
+  // --- Table ---
+
+  function renderTable() {
+    const tbody = document.getElementById('events-body');
+    const empty = document.getElementById('empty-state');
+
+    let filtered = allEvents;
+    if (currentFilter !== 'all') {
+      filtered = allEvents.filter(e => getStatus(e) === currentFilter);
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = filtered.map(event => {
+      const status = getStatus(event);
+      const ts = event.timestamp ? formatTimestamp(event.timestamp.toDate()) : 'Pending...';
+      const email = escapeHtml(event.user_email || 'Unknown');
+      const userId = event.user_id ? event.user_id.substring(0, 8) + '...' : '-';
+      const device = formatDevice(event.device_info);
+      const errors = formatErrors(event.failure_errors);
+      const statusBadge = '<span class="status status-' + status + '">' + status + '</span>';
+
+      let actions = '';
+      if (status === 'new') {
+        actions = '<button class="action-btn" onclick="acknowledge(\'' + event.id + '\')">Ack</button>'
+                + '<button class="action-btn resolve" onclick="resolve(\'' + event.id + '\')">Resolve</button>';
+      } else if (status === 'acknowledged') {
+        actions = '<button class="action-btn resolve" onclick="resolve(\'' + event.id + '\')">Resolve</button>';
+      } else {
+        const resolvedBy = event.resolved_by ? escapeHtml(event.resolved_by) : '';
+        actions = '<span style="font-size:12px;color:var(--text-secondary);">' + resolvedBy + '</span>';
+      }
+
+      return '<tr>'
+        + '<td><strong>' + email + '</strong><br><span style="font-size:11px;color:var(--text-secondary);">' + userId + '</span></td>'
+        + '<td style="white-space:nowrap;">' + ts + '</td>'
+        + '<td>' + device + '</td>'
+        + '<td>' + errors + '</td>'
+        + '<td>' + statusBadge + '</td>'
+        + '<td>' + actions + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function formatTimestamp(date) {
+    const now = new Date();
+    const diff = now - date;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const mins = date.getMinutes().toString().padStart(2, '0');
+    return day + '/' + month + '/' + date.getFullYear() + ' ' + hours + ':' + mins;
+  }
+
+  function formatDevice(info) {
+    if (!info) return '<span class="device-info">-</span>';
+    const parts = [];
+    if (info.os) parts.push(info.os);
+    if (info.os_version) parts.push(info.os_version);
+    if (info.locale) parts.push(info.locale);
+    return '<span class="device-info">' + escapeHtml(parts.join(', ')) + '</span>';
+  }
+
+  function formatErrors(errors) {
+    if (!errors || errors.length === 0) return '-';
+    return '<ul class="error-list">' + errors.map(e =>
+      '<li>' + escapeHtml(e) + '</li>'
+    ).join('') + '</ul>';
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // --- Actions ---
+
+  async function acknowledge(eventId) {
+    const user = auth.currentUser;
+    try {
+      await db.collection('lockout_events').doc(eventId).update({
+        acknowledged: true,
+        acknowledged_by: user.email,
+        acknowledged_at: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      alert('Failed to acknowledge: ' + e.message);
+    }
+  }
+
+  async function resolve(eventId) {
+    const user = auth.currentUser;
+    try {
+      await db.collection('lockout_events').doc(eventId).update({
+        resolved: true,
+        resolved_by: user.email,
+        resolved_at: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      alert('Failed to resolve: ' + e.message);
+    }
+  }
+</script>
+</body>
+</html>
