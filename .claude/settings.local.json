@@ -35,7 +35,9 @@
       "Bash(export:*)",
       "Bash(firebase:*)",
       "Bash(echo exit: $?:*)",
-      "Bash(dart run:*)"
+      "Bash(dart run:*)",
+      "Bash(grep:*)",
+      "Bash(git log:*)"
     ]
   }
 }

@@ -251,6 +251,212 @@
     }
     .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
 
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border);
+    }
+    .tab-btn {
+      padding: 10px 24px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* User row */
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    .online-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .online-dot.recent { background: var(--success); }
+    .online-dot.away { background: var(--warning); }
+    .online-dot.offline { background: #bdbdbd; }
+
+    /* Priority badges */
+    .priority {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .priority-urgent { background: #ffebee; color: var(--danger); }
+    .priority-high { background: #fff3e0; color: #e65100; }
+    .priority-normal { background: #f5f5f5; color: var(--text-secondary); }
+
+    /* Reply area */
+    .reply-area {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .reply-area textarea {
+      flex: 1;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 36px;
+    }
+    .reply-area button {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--success);
+      background: var(--success);
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .reply-area button:hover { opacity: 0.9; }
+    .admin-reply-text {
+      font-size: 12px;
+      color: var(--success);
+      margin-top: 4px;
+      padding: 4px 8px;
+      background: #e8f5e9;
+      border-radius: 6px;
+    }
+    .msg-body-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lockout-count {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .lockout-count.has-lockouts { background: #ffebee; color: var(--danger); }
+    .lockout-count.no-lockouts { background: #e8f5e9; color: var(--success); }
+
+    /* Clickable user links */
+    .user-link {
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .user-link:hover { text-decoration: underline; }
+
+    /* User detail panel */
+    .user-detail-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+    }
+    .user-detail-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 520px;
+      max-width: 100%;
+      height: 100vh;
+      background: var(--card-bg);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+      z-index: 201;
+      overflow-y: auto;
+      padding: 20px;
+      display: none;
+    }
+    .user-detail-panel .close-btn {
+      float: right;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0 4px;
+    }
+    .user-detail-panel .close-btn:hover { color: var(--text); }
+    .user-detail-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      padding-top: 8px;
+    }
+    .user-detail-header img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+    }
+    .user-detail-header .placeholder-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--primary);
+    }
+    .detail-section {
+      margin-bottom: 20px;
+    }
+    .detail-section h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 6px 12px;
+      font-size: 14px;
+    }
+    .detail-grid .label { color: var(--text-secondary); font-weight: 500; }
+    .detail-item-list {
+      list-style: none;
+      padding: 0;
+      font-size: 13px;
+    }
+    .detail-item-list li {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .table-wrap { overflow-x: auto; }
@@ -284,57 +490,173 @@
   </div>
 
   <div class="container">
-    <!-- Stats -->
-    <div class="stats">
-      <div class="stat-card">
-        <div class="number" id="stat-total">-</div>
-        <div class="label">Total Lockouts</div>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('lockouts',this)">Lockouts</button>
+      <button class="tab-btn" onclick="switchTab('users',this)">Users</button>
+      <button class="tab-btn" onclick="switchTab('messages',this)">Messages <span id="msg-badge" style="display:none;background:var(--danger);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;"></span></button>
+    </div>
+
+    <!-- Lockouts Tab -->
+    <div id="tab-lockouts" class="tab-content active">
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat-card">
+          <div class="number" id="stat-total">-</div>
+          <div class="label">Total Lockouts</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-new" style="color:var(--danger)">-</div>
+          <div class="label">New</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-today">-</div>
+          <div class="label">Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-resolved" style="color:var(--success)">-</div>
+          <div class="label">Resolved</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="number" id="stat-new" style="color:var(--danger)">-</div>
-        <div class="label">New</div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+        <button class="filter-btn" data-filter="new" onclick="setFilter('new',this)">New</button>
+        <button class="filter-btn" data-filter="acknowledged" onclick="setFilter('acknowledged',this)">Acknowledged</button>
+        <button class="filter-btn" data-filter="resolved" onclick="setFilter('resolved',this)">Resolved</button>
       </div>
-      <div class="stat-card">
-        <div class="number" id="stat-today">-</div>
-        <div class="label">Today</div>
-      </div>
-      <div class="stat-card">
-        <div class="number" id="stat-resolved" style="color:var(--success)">-</div>
-        <div class="label">Resolved</div>
+
+      <!-- Table -->
+      <div id="loading" class="loading">Loading lockout events...</div>
+      <div id="table-section" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Timestamp</th>
+                <th>Device</th>
+                <th>Errors</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="events-body"></tbody>
+          </table>
+        </div>
+        <div id="empty-state" class="empty" style="display:none;">
+          <div class="empty-icon">&#128274;</div>
+          <p>No lockout events found</p>
+        </div>
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="filters">
-      <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
-      <button class="filter-btn" data-filter="new" onclick="setFilter('new',this)">New</button>
-      <button class="filter-btn" data-filter="acknowledged" onclick="setFilter('acknowledged',this)">Acknowledged</button>
-      <button class="filter-btn" data-filter="resolved" onclick="setFilter('resolved',this)">Resolved</button>
+    <!-- Users Tab -->
+    <div id="tab-users" class="tab-content">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="number" id="stat-total-users">-</div>
+          <div class="label">Total Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-active-today" style="color:var(--success)">-</div>
+          <div class="label">Active Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-active-week">-</div>
+          <div class="label">Active This Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-new-users" style="color:var(--primary)">-</div>
+          <div class="label">New This Week</div>
+        </div>
+      </div>
+
+      <div id="users-loading" class="loading">Loading users...</div>
+      <div id="users-table-section" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Joined</th>
+                <th>Last Login</th>
+                <th>Time Since Login</th>
+                <th>Lockouts</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="users-body"></tbody>
+          </table>
+        </div>
+        <div id="users-empty" class="empty" style="display:none;">
+          <div class="empty-icon">&#128100;</div>
+          <p>No users found</p>
+        </div>
+      </div>
     </div>
 
-    <!-- Table -->
-    <div id="loading" class="loading">Loading lockout events...</div>
-    <div id="table-section" style="display:none;">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Timestamp</th>
-              <th>Device</th>
-              <th>Errors</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="events-body"></tbody>
-        </table>
+    <!-- Messages Tab -->
+    <div id="tab-messages" class="tab-content">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="number" id="stat-total-msgs">-</div>
+          <div class="label">Total Messages</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-unreplied" style="color:var(--danger)">-</div>
+          <div class="label">Awaiting Reply</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-urgent" style="color:var(--warning)">-</div>
+          <div class="label">Urgent</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="stat-replied" style="color:var(--success)">-</div>
+          <div class="label">Replied</div>
+        </div>
       </div>
-      <div id="empty-state" class="empty" style="display:none;">
-        <div class="empty-icon">&#128274;</div>
-        <p>No lockout events found</p>
+
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all" onclick="setMsgFilter('all',this)">All</button>
+        <button class="filter-btn" data-filter="unreplied" onclick="setMsgFilter('unreplied',this)">Awaiting Reply</button>
+        <button class="filter-btn" data-filter="urgent" onclick="setMsgFilter('urgent',this)">Urgent</button>
+        <button class="filter-btn" data-filter="high" onclick="setMsgFilter('high',this)">High</button>
+        <button class="filter-btn" data-filter="replied" onclick="setMsgFilter('replied',this)">Replied</button>
+      </div>
+
+      <div id="msgs-loading" class="loading">Loading messages...</div>
+      <div id="msgs-table-section" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Priority</th>
+                <th>From</th>
+                <th>Subject</th>
+                <th>Message</th>
+                <th>Received</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="msgs-body"></tbody>
+          </table>
+        </div>
+        <div id="msgs-empty" class="empty" style="display:none;">
+          <div class="empty-icon">&#128172;</div>
+          <p>No messages found</p>
+        </div>
       </div>
     </div>
+  </div>
+
+  <!-- User Detail Panel -->
+  <div id="user-detail-overlay" class="user-detail-overlay" onclick="closeUserDetail()"></div>
+  <div id="user-detail-panel" class="user-detail-panel">
+    <button class="close-btn" onclick="closeUserDetail()">&times;</button>
+    <div id="user-detail-content"></div>
   </div>
 </div>
 
@@ -359,8 +681,13 @@
   const provider = new firebase.auth.GoogleAuthProvider();
 
   let currentFilter = 'all';
+  let currentMsgFilter = 'all';
   let allEvents = [];
+  let allUsers = [];
+  let allMessages = [];
   let unsubscribe = null;
+  let unsubscribeUsers = null;
+  let unsubscribeMessages = null;
 
   // --- Auth ---
 
@@ -381,18 +708,19 @@
   });
 
   async function checkAdmin(email) {
+    const emailLower = email.toLowerCase();
     try {
       const doc = await db.collection('config').doc('admin').get();
       if (!doc.exists) {
         // If no admin config exists yet, allow the first user and create the config
         await db.collection('config').doc('admin').set({
-          admin_emails: [email],
+          admin_emails: [emailLower],
           created_at: firebase.firestore.FieldValue.serverTimestamp(),
         });
         return true;
       }
       const emails = doc.data().admin_emails || [];
-      return emails.includes(email);
+      return emails.some(e => e.toLowerCase() === emailLower);
     } catch (e) {
       console.error('Admin check failed:', e);
       return false;
@@ -439,6 +767,8 @@
 
   function signOutUser() {
     if (unsubscribe) unsubscribe();
+    if (unsubscribeUsers) unsubscribeUsers();
+    if (unsubscribeMessages) unsubscribeMessages();
     auth.signOut();
   }
 
@@ -457,6 +787,8 @@
       photo.style.display = 'block';
     }
     startListening();
+    startListeningUsers();
+    startListeningMessages();
   }
 
   // --- Real-time data ---
@@ -550,8 +882,12 @@
         actions = '<span style="font-size:12px;color:var(--text-secondary);">' + resolvedBy + '</span>';
       }
 
+      const userLink = event.user_id
+        ? '<span class="user-link" onclick="showUserDetail(\'' + event.user_id + '\')">' + email + '</span>'
+        : '<strong>' + email + '</strong>';
+
       return '<tr>'
-        + '<td><strong>' + email + '</strong><br><span style="font-size:11px;color:var(--text-secondary);">' + userId + '</span></td>'
+        + '<td>' + userLink + '<br><span style="font-size:11px;color:var(--text-secondary);">' + userId + '</span></td>'
         + '<td style="white-space:nowrap;">' + ts + '</td>'
         + '<td>' + device + '</td>'
         + '<td>' + errors + '</td>'
@@ -623,6 +959,369 @@
     } catch (e) {
       alert('Failed to resolve: ' + e.message);
     }
+  }
+
+  // --- Tabs ---
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  // --- Users ---
+
+  function startListeningUsers() {
+    unsubscribeUsers = db.collection('users')
+      .orderBy('last_login_at', 'desc')
+      .limit(500)
+      .onSnapshot((snapshot) => {
+        allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateUserStats();
+        renderUsersTable();
+        document.getElementById('users-loading').style.display = 'none';
+        document.getElementById('users-table-section').style.display = 'block';
+      }, (err) => {
+        console.error('Users listener error:', err);
+        document.getElementById('users-loading').textContent = 'Failed to load users. Check Firestore rules.';
+      });
+  }
+
+  function updateUserStats() {
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(now.getTime() - 7 * 86400000);
+
+    const total = allUsers.length;
+    const activeToday = allUsers.filter(u => {
+      if (!u.last_login_at) return false;
+      return u.last_login_at.toDate() >= todayStart;
+    }).length;
+    const activeWeek = allUsers.filter(u => {
+      if (!u.last_login_at) return false;
+      return u.last_login_at.toDate() >= weekAgo;
+    }).length;
+    const newThisWeek = allUsers.filter(u => {
+      if (!u.created_at) return false;
+      return u.created_at.toDate() >= weekAgo;
+    }).length;
+
+    document.getElementById('stat-total-users').textContent = total;
+    document.getElementById('stat-active-today').textContent = activeToday;
+    document.getElementById('stat-active-week').textContent = activeWeek;
+    document.getElementById('stat-new-users').textContent = newThisWeek;
+  }
+
+  function getUserLockoutCount(userId) {
+    return allEvents.filter(e => e.user_id === userId).length;
+  }
+
+  function getUserUnresolvedLockouts(userId) {
+    return allEvents.filter(e => e.user_id === userId && !e.resolved).length;
+  }
+
+  function renderUsersTable() {
+    const tbody = document.getElementById('users-body');
+    const empty = document.getElementById('users-empty');
+
+    if (allUsers.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = allUsers.map(user => {
+      const name = escapeHtml(user.display_name || 'Unknown');
+      const email = escapeHtml(user.email || '-');
+      const photoHtml = user.photo_url
+        ? '<img class="user-avatar" src="' + escapeHtml(user.photo_url) + '" alt="">'
+        : '';
+
+      const joinedDate = user.created_at ? formatTimestamp(user.created_at.toDate()) : '-';
+      const lastLogin = user.last_login_at ? formatTimestamp(user.last_login_at.toDate()) : '-';
+      const timeSince = user.last_login_at ? formatTimeSince(user.last_login_at.toDate()) : '-';
+      const activityStatus = user.last_login_at ? getActivityStatus(user.last_login_at.toDate()) : 'offline';
+
+      const dotClass = activityStatus === 'online' ? 'recent'
+        : activityStatus === 'recent' ? 'away'
+        : 'offline';
+      const statusLabel = activityStatus === 'online' ? 'Online now'
+        : activityStatus === 'recent' ? 'Recently active'
+        : 'Offline';
+
+      const totalLockouts = getUserLockoutCount(user.id);
+      const unresolvedLockouts = getUserUnresolvedLockouts(user.id);
+      const lockoutClass = totalLockouts > 0 ? 'has-lockouts' : 'no-lockouts';
+      const lockoutText = totalLockouts === 0 ? '0'
+        : unresolvedLockouts > 0 ? totalLockouts + ' (' + unresolvedLockouts + ' active)'
+        : totalLockouts.toString();
+
+      return '<tr>'
+        + '<td>' + photoHtml + '<span class="user-link" onclick="showUserDetail(\'' + user.id + '\')">' + name + '</span></td>'
+        + '<td>' + email + '</td>'
+        + '<td style="white-space:nowrap;">' + joinedDate + '</td>'
+        + '<td style="white-space:nowrap;">' + lastLogin + '</td>'
+        + '<td style="white-space:nowrap;">' + timeSince + '</td>'
+        + '<td><span class="lockout-count ' + lockoutClass + '">' + lockoutText + '</span></td>'
+        + '<td><span class="online-dot ' + dotClass + '"></span>' + statusLabel + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function formatTimeSince(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHr / 24);
+
+    if (diffSec < 60) return 'Just now';
+    if (diffMin < 60) return diffMin + (diffMin === 1 ? ' minute ago' : ' minutes ago');
+    if (diffHr < 24) return diffHr + (diffHr === 1 ? ' hour ago' : ' hours ago');
+    if (diffDays < 7) return diffDays + (diffDays === 1 ? ' day ago' : ' days ago');
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return weeks + (weeks === 1 ? ' week ago' : ' weeks ago');
+    }
+    const months = Math.floor(diffDays / 30);
+    return months + (months === 1 ? ' month ago' : ' months ago');
+  }
+
+  function getActivityStatus(lastLoginDate) {
+    const diffMs = new Date() - lastLoginDate;
+    if (diffMs < 5 * 60000) return 'online';       // within 5 minutes
+    if (diffMs < 24 * 3600000) return 'recent';     // within 24 hours
+    return 'offline';
+  }
+
+  // --- Messages ---
+
+  function startListeningMessages() {
+    unsubscribeMessages = db.collection('messages')
+      .orderBy('created_at', 'desc')
+      .limit(200)
+      .onSnapshot((snapshot) => {
+        allMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateMsgStats();
+        renderMsgsTable();
+        document.getElementById('msgs-loading').style.display = 'none';
+        document.getElementById('msgs-table-section').style.display = 'block';
+      }, (err) => {
+        console.error('Messages listener error:', err);
+        document.getElementById('msgs-loading').textContent = 'Failed to load messages. Check Firestore rules.';
+      });
+  }
+
+  function updateMsgStats() {
+    const total = allMessages.length;
+    const unreplied = allMessages.filter(m => !m.admin_reply).length;
+    const urgent = allMessages.filter(m => m.priority === 'urgent' && !m.admin_reply).length;
+    const replied = allMessages.filter(m => m.admin_reply).length;
+
+    document.getElementById('stat-total-msgs').textContent = total;
+    document.getElementById('stat-unreplied').textContent = unreplied;
+    document.getElementById('stat-urgent').textContent = urgent;
+    document.getElementById('stat-replied').textContent = replied;
+
+    // Update badge on tab
+    const badge = document.getElementById('msg-badge');
+    if (unreplied > 0) {
+      badge.textContent = unreplied;
+      badge.style.display = 'inline';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function setMsgFilter(filter, btn) {
+    currentMsgFilter = filter;
+    document.querySelectorAll('#tab-messages .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderMsgsTable();
+  }
+
+  function renderMsgsTable() {
+    const tbody = document.getElementById('msgs-body');
+    const empty = document.getElementById('msgs-empty');
+
+    let filtered = allMessages;
+    if (currentMsgFilter === 'unreplied') {
+      filtered = allMessages.filter(m => !m.admin_reply);
+    } else if (currentMsgFilter === 'urgent') {
+      filtered = allMessages.filter(m => m.priority === 'urgent');
+    } else if (currentMsgFilter === 'high') {
+      filtered = allMessages.filter(m => m.priority === 'high');
+    } else if (currentMsgFilter === 'replied') {
+      filtered = allMessages.filter(m => m.admin_reply);
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = filtered.map(msg => {
+      const priority = msg.priority || 'normal';
+      const priorityBadge = '<span class="priority priority-' + priority + '">' + priority + '</span>';
+      const from = escapeHtml(msg.user_name || msg.user_email || 'Unknown');
+      const email = escapeHtml(msg.user_email || '');
+      const subject = escapeHtml(msg.subject || '-');
+      const body = escapeHtml(msg.body || '');
+      const ts = msg.created_at ? formatTimestamp(msg.created_at.toDate()) : 'Pending...';
+
+      let actionsHtml;
+      if (msg.admin_reply) {
+        actionsHtml = '<div class="admin-reply-text"><strong>Replied:</strong> '
+          + escapeHtml(msg.admin_reply) + '</div>';
+        if (msg.replied_by) {
+          actionsHtml += '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">'
+            + escapeHtml(msg.replied_by) + '</div>';
+        }
+      } else {
+        actionsHtml = '<div class="reply-area">'
+          + '<textarea id="reply-' + msg.id + '" placeholder="Type your reply..."></textarea>'
+          + '<button onclick="replyToMessage(\'' + msg.id + '\')">Reply</button>'
+          + '</div>';
+      }
+
+      const fromLink = msg.user_id
+        ? '<span class="user-link" onclick="showUserDetail(\'' + msg.user_id + '\')">' + from + '</span>'
+        : '<strong>' + from + '</strong>';
+
+      return '<tr>'
+        + '<td>' + priorityBadge + '</td>'
+        + '<td>' + fromLink + '<br><span style="font-size:11px;color:var(--text-secondary);">' + email + '</span></td>'
+        + '<td><strong>' + subject + '</strong></td>'
+        + '<td><div class="msg-body-text" title="' + body + '">' + body + '</div></td>'
+        + '<td style="white-space:nowrap;">' + ts + '</td>'
+        + '<td style="min-width:200px;">' + actionsHtml + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  async function replyToMessage(msgId) {
+    const textarea = document.getElementById('reply-' + msgId);
+    const replyText = textarea.value.trim();
+    if (!replyText) {
+      alert('Please type a reply before sending.');
+      return;
+    }
+
+    const user = auth.currentUser;
+    try {
+      await db.collection('messages').doc(msgId).update({
+        admin_reply: replyText,
+        replied_at: firebase.firestore.FieldValue.serverTimestamp(),
+        replied_by: user.email,
+      });
+    } catch (e) {
+      alert('Failed to send reply: ' + e.message);
+    }
+  }
+
+  // --- User Detail Panel ---
+
+  function showUserDetail(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    const userLockouts = allEvents.filter(e => e.user_id === userId);
+    const userMessages = allMessages.filter(m => m.user_id === userId);
+    const content = document.getElementById('user-detail-content');
+
+    // Header
+    let html = '<div class="user-detail-header">';
+    if (user && user.photo_url) {
+      html += '<img src="' + escapeHtml(user.photo_url) + '" alt="">';
+    } else {
+      html += '<div class="placeholder-avatar">&#128100;</div>';
+    }
+    html += '<div>';
+    html += '<div style="font-size:20px;font-weight:700;">' + escapeHtml(user ? user.display_name || 'Unknown' : 'Unknown') + '</div>';
+    html += '<div style="color:var(--text-secondary);font-size:14px;">' + escapeHtml(user ? user.email || '' : '') + '</div>';
+    html += '</div></div>';
+
+    // Profile section
+    html += '<div class="detail-section"><h3>Profile</h3><div class="detail-grid">';
+    html += '<span class="label">User ID</span><span style="font-size:12px;word-break:break-all;">' + escapeHtml(userId) + '</span>';
+    if (user && user.created_at) {
+      html += '<span class="label">Joined</span><span>' + formatTimestamp(user.created_at.toDate()) + '</span>';
+    }
+    if (user && user.last_login_at) {
+      html += '<span class="label">Last login</span><span>' + formatTimestamp(user.last_login_at.toDate()) + '</span>';
+      html += '<span class="label">Time since</span><span>' + formatTimeSince(user.last_login_at.toDate()) + '</span>';
+      const status = getActivityStatus(user.last_login_at.toDate());
+      const dotClass = status === 'online' ? 'recent' : status === 'recent' ? 'away' : 'offline';
+      const statusLabel = status === 'online' ? 'Online now' : status === 'recent' ? 'Recently active' : 'Offline';
+      html += '<span class="label">Status</span><span><span class="online-dot ' + dotClass + '"></span>' + statusLabel + '</span>';
+    }
+    html += '</div></div>';
+
+    // Lockouts section
+    html += '<div class="detail-section"><h3>Lockouts (' + userLockouts.length + ')</h3>';
+    if (userLockouts.length === 0) {
+      html += '<p style="color:var(--text-secondary);font-size:13px;">No lockout events</p>';
+    } else {
+      html += '<ul class="detail-item-list">';
+      userLockouts.forEach(evt => {
+        const ts = evt.timestamp ? formatTimestamp(evt.timestamp.toDate()) : 'Pending';
+        const status = getStatus(evt);
+        const errors = (evt.failure_errors || []).map(e => escapeHtml(e)).join(', ');
+        html += '<li>';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+        html += '<span style="font-weight:600;">' + ts + '</span>';
+        html += '<span class="status status-' + status + '">' + status + '</span>';
+        html += '</div>';
+        if (errors) {
+          html += '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Errors: ' + errors + '</div>';
+        }
+        const device = formatDevice(evt.device_info);
+        html += '<div style="margin-top:2px;">' + device + '</div>';
+        html += '</li>';
+      });
+      html += '</ul>';
+    }
+    html += '</div>';
+
+    // Messages section
+    html += '<div class="detail-section"><h3>Messages (' + userMessages.length + ')</h3>';
+    if (userMessages.length === 0) {
+      html += '<p style="color:var(--text-secondary);font-size:13px;">No messages</p>';
+    } else {
+      html += '<ul class="detail-item-list">';
+      userMessages.forEach(msg => {
+        const ts = msg.created_at ? formatTimestamp(msg.created_at.toDate()) : 'Pending';
+        const priority = msg.priority || 'normal';
+        html += '<li>';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+        html += '<span style="font-weight:600;">' + escapeHtml(msg.subject || '-') + '</span>';
+        html += '<span class="priority priority-' + priority + '">' + priority + '</span>';
+        html += '</div>';
+        html += '<div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">' + escapeHtml(msg.body || '') + '</div>';
+        html += '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + ts + '</div>';
+        if (msg.admin_reply) {
+          html += '<div class="admin-reply-text" style="margin-top:6px;"><strong>Reply:</strong> ' + escapeHtml(msg.admin_reply) + '</div>';
+        } else {
+          html += '<div style="font-size:12px;color:var(--warning);margin-top:4px;font-style:italic;">Awaiting reply</div>';
+        }
+        html += '</li>';
+      });
+      html += '</ul>';
+    }
+    html += '</div>';
+
+    content.innerHTML = html;
+    document.getElementById('user-detail-overlay').style.display = 'block';
+    document.getElementById('user-detail-panel').style.display = 'block';
+  }
+
+  function closeUserDetail() {
+    document.getElementById('user-detail-overlay').style.display = 'none';
+    document.getElementById('user-detail-panel').style.display = 'none';
   }
 </script>
 </body>

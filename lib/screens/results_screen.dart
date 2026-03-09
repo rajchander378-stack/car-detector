@@ -28,12 +28,24 @@ class _ResultsScreenState extends State<ResultsScreen> {
   String? _error;
   bool _reportSubmitted = false;
   bool _saved = false;
+  bool _saving = false;
+  late CarIdentification _identification;
 
-  CarIdentification get identification => widget.identification;
+  CarIdentification get identification => _identification;
+
+  @override
+  void initState() {
+    super.initState();
+    _identification = widget.identification;
+  }
 
   Future<void> _saveScan() async {
+    if (_saved || _saving) return;
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    setState(() => _saving = true);
 
     try {
       await SavedScanService().saveScan(
@@ -42,13 +54,17 @@ class _ResultsScreenState extends State<ResultsScreen> {
         valuation: _valuation,
       );
       if (mounted) {
-        setState(() => _saved = true);
+        setState(() {
+          _saved = true;
+          _saving = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Report saved')),
         );
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to save report. Please try again.')),
         );
@@ -59,9 +75,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
   Future<bool> _onWillPop() async {
     if (_saved || _valuation == null || !identification.identified) return true;
 
-    final result = await showDialog<bool>(
+    final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Save Report?'),
         content: const Text(
           'You have valuation data that will be lost if you leave. '
@@ -69,20 +85,22 @@ class _ResultsScreenState extends State<ResultsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, 'discard'),
             child: const Text('Discard'),
           ),
           FilledButton(
-            onPressed: () async {
-              await _saveScan();
-              if (context.mounted) Navigator.pop(context, true);
-            },
+            onPressed: () => Navigator.pop(dialogContext, 'save'),
             child: const Text('Save'),
           ),
         ],
       ),
     );
-    return result ?? false;
+
+    if (result == 'save') {
+      await _saveScan();
+      return true;
+    }
+    return result == 'discard';
   }
 
   Future<void> _fetchValuation() async {
@@ -134,7 +152,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
             IconButton(
               icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border),
               tooltip: _saved ? 'Saved' : 'Save report',
-              onPressed: _saved ? null : _saveScan,
+              onPressed: _saved || _saving ? null : _saveScan,
             ),
         ],
       ),
@@ -321,14 +339,40 @@ class _ResultsScreenState extends State<ResultsScreen> {
         // Error banner
         if (_error != null) _buildErrorBanner(_error!),
 
+        // Save button
+        if (identification.identified) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _saved || _saving ? null : _saveScan,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(_saved ? Icons.check : Icons.save),
+              label: Text(_saving
+                  ? 'Saving...'
+                  : _saved
+                      ? 'Saved'
+                      : 'Save Report'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.all(14)),
+            ),
+          ),
+        ],
+
         const SizedBox(height: 8),
 
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Manual search screen
-            },
+            onPressed: _showEditSheet,
             icon: const Icon(Icons.edit),
             label: const Text('Not correct? Edit'),
           ),
@@ -441,6 +485,183 @@ class _ResultsScreenState extends State<ResultsScreen> {
         );
       }
     }
+  }
+
+  Future<void> _showEditSheet() async {
+    final makeCtl = TextEditingController(text: identification.make ?? '');
+    final modelCtl = TextEditingController(text: identification.model ?? '');
+    final yearMinCtl = TextEditingController(
+        text: identification.yearMin?.toString() ?? '');
+    final yearMaxCtl = TextEditingController(
+        text: identification.yearMax?.toString() ?? '');
+    final generationCtl =
+        TextEditingController(text: identification.generation ?? '');
+    final trimCtl = TextEditingController(text: identification.trim ?? '');
+    final bodyStyleCtl =
+        TextEditingController(text: identification.bodyStyle ?? '');
+    final colourCtl = TextEditingController(text: identification.colour ?? '');
+    final plateCtl =
+        TextEditingController(text: identification.numberPlate ?? '');
+
+    final result = await showModalBottomSheet<CarIdentification>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Edit Identification',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                        child: _editField('Make', makeCtl)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: _editField('Model', modelCtl)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                        child: _editField('Year From', yearMinCtl,
+                            keyboard: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: _editField('Year To', yearMaxCtl,
+                            keyboard: TextInputType.number)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                        child: _editField('Generation', generationCtl)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _editField('Trim', trimCtl)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                        child: _editField('Body Style', bodyStyleCtl)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: _editField('Colour', colourCtl)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _editField('Number Plate', plateCtl,
+                    capitalization: TextCapitalization.characters),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {
+                          final edited = identification.copyWith(
+                            identified: true,
+                            make: makeCtl.text.isEmpty
+                                ? null
+                                : makeCtl.text.trim(),
+                            model: modelCtl.text.isEmpty
+                                ? null
+                                : modelCtl.text.trim(),
+                            yearMin: int.tryParse(yearMinCtl.text),
+                            yearMax: int.tryParse(yearMaxCtl.text),
+                            generation: generationCtl.text.isEmpty
+                                ? null
+                                : generationCtl.text.trim(),
+                            trim: trimCtl.text.isEmpty
+                                ? null
+                                : trimCtl.text.trim(),
+                            bodyStyle: bodyStyleCtl.text.isEmpty
+                                ? null
+                                : bodyStyleCtl.text.trim(),
+                            colour: colourCtl.text.isEmpty
+                                ? null
+                                : colourCtl.text.trim(),
+                            numberPlate: plateCtl.text.isEmpty
+                                ? null
+                                : plateCtl.text.trim(),
+                          );
+                          Navigator.pop(context, edited);
+                        },
+                        child: const Text('Save'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    makeCtl.dispose();
+    modelCtl.dispose();
+    yearMinCtl.dispose();
+    yearMaxCtl.dispose();
+    generationCtl.dispose();
+    trimCtl.dispose();
+    bodyStyleCtl.dispose();
+    colourCtl.dispose();
+    plateCtl.dispose();
+
+    if (result != null && mounted) {
+      setState(() {
+        _identification = result;
+        _valuation = null;
+        _error = null;
+        _saved = false;
+      });
+    }
+  }
+
+  Widget _editField(String label, TextEditingController controller,
+      {TextInputType? keyboard,
+      TextCapitalization capitalization = TextCapitalization.words}) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboard,
+      textCapitalization: capitalization,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+    );
   }
 
   Widget _buildValuationShimmer() {

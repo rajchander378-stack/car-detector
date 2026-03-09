@@ -55,7 +55,7 @@
 
 - [x] **Price Estimation** — Get price estimates via UK Vehicle Data API using the number plate. Button on results screen fetches retail/trade/private valuations with loading spinner and error handling. Requires a valid API key in `constants.dart`. Sandbox mode limited to VRMs containing "A".
 - [x] **Identification History** — Track past identifications. History button exists in camera UI and storage dependency included but not functional.
-- [ ] **Manual Edit/Correction** — Allow users to override AI results with manual search and correction. Button present but unconnected.
+- [x] **Manual Edit/Correction** — Allow users to override AI results with manual search and correction. Bottom sheet form on results screen lets users edit make, model, year range, generation, trim, body style, colour, and number plate. Saving resets valuation so the user can re-fetch with corrected data.
 - [x] **Gallery Upload** — Identify cars from existing photos. Gallery button on camera screen (bottom-left) and in drawer menu. Uses `image_picker` to select photo, runs through optimise + Gemini pipeline. Also added Sample Images screen with bundled placeholder images for demo/testing (accessible from drawer).
 - [ ] **Extended Vehicle Support** — Full identification support for vans, trucks, and motorcycles (currently marked "coming soon").
 - [x] **User Accounts — Google Sign-In** — Google Sign-In with Firebase Auth and Firestore user profiles. Auth gate in main.dart routes unauthenticated users to login screen.
@@ -137,6 +137,35 @@ Based on the CURRENT Google Play Developer policies and requirements as of today
 
 Please provide current, specific guidance rather than generic advice. Link to relevant Google Play policy pages where possible.
 ```
+
+## Release & Update Checklist
+
+Use this checklist each time you release a new version to Google Play.
+
+### First-Time Setup (do once)
+- [ ] **Push to GitHub** — Create a private repo on GitHub and push. `git remote add origin https://github.com/yourname/autospotter.git && git push -u origin main`
+- [ ] **Generate release signing keystore** — See "Release signing keystore" task above. Store the keystore file and passwords somewhere safe (e.g. USB drive, password manager). If you lose it, you can never update the app.
+- [ ] **Add release SHA-1 to Firebase** — Add the release keystore's SHA-1 fingerprint in Firebase Console so Google Sign-In works in release builds.
+
+### Every Release
+1. [ ] **Bump version** in `pubspec.yaml` — Increment the version name and build number. Example: `1.0.0+1` → `1.1.0+2`. The build number (`+N`) must always go up; Play Console rejects duplicates.
+2. [ ] **Commit changes** — `git add . && git commit -m "v1.1.0 - description of changes"`
+3. [ ] **Push to GitHub** — `git push`
+4. [ ] **Build release bundle** — `flutter build appbundle --release` (produces `build/app/outputs/bundle/release/app-release.aab`)
+5. [ ] **Test on a real device** — Install the release build and verify camera, sign-in, Gemini, and valuation all work.
+6. [ ] **Upload to Play Console** — Go to Google Play Console → your app → Production (or testing track) → "Create new release" → upload the `.aab` file.
+7. [ ] **Fill in release notes** — Write "What's new" text for users (e.g. "Bug fixes and performance improvements" or specific feature notes).
+8. [ ] **Submit for review** — Google reviews typically take a few hours to a few days.
+
+### Version Numbering Guide
+| Change type | Example | When to use |
+|---|---|---|
+| Major (`2.0.0`) | Complete redesign, breaking changes | Rare — major overhaul |
+| Minor (`1.1.0`) | New feature (e.g. sharing, new screen) | Each feature release |
+| Patch (`1.0.1`) | Bug fix, small tweak | Quick fixes between features |
+| Build number (`+N`) | `+1`, `+2`, `+3`... | Must increment every Play Store upload |
+
+---
 
 ## Uncompleted — Branding & Visual Assets
 

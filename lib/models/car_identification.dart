@@ -71,6 +71,40 @@ class CarIdentification {
     };
   }
 
+  CarIdentification copyWith({
+    bool? identified,
+    double? confidence,
+    String? make,
+    String? model,
+    int? yearMin,
+    int? yearMax,
+    String? generation,
+    String? trim,
+    String? bodyStyle,
+    String? colour,
+    List<String>? distinguishingFeatures,
+    String? notes,
+    String? error,
+    String? numberPlate,
+  }) {
+    return CarIdentification(
+      identified: identified ?? this.identified,
+      confidence: confidence ?? this.confidence,
+      make: make ?? this.make,
+      model: model ?? this.model,
+      yearMin: yearMin ?? this.yearMin,
+      yearMax: yearMax ?? this.yearMax,
+      generation: generation ?? this.generation,
+      trim: trim ?? this.trim,
+      bodyStyle: bodyStyle ?? this.bodyStyle,
+      colour: colour ?? this.colour,
+      distinguishingFeatures: distinguishingFeatures ?? this.distinguishingFeatures,
+      notes: notes ?? this.notes,
+      error: error ?? this.error,
+      numberPlate: numberPlate ?? this.numberPlate,
+    );
+  }
+
   String get displayName {
     if (!identified) return 'Unknown Vehicle';
     final parts = <String>[];

@@ -11,6 +11,7 @@ import '../services/detector_service.dart';
 import '../services/gemini_service.dart';
 import '../services/image_processor.dart';
 import '../services/lockout_service.dart';
+import 'messages_screen.dart';
 import 'results_screen.dart';
 import 'sample_images_screen.dart';
 import 'saved_scans_screen.dart';
@@ -221,26 +222,59 @@ class _CameraScreenState extends State<CameraScreen>
       setState(() => _status = 'Asking AI to identify...');
       final identification = await _gemini.identifyCar(result.file);
 
-      // Success — reset failure counter
-      _consecutiveFailures = 0;
-      _recentErrors.clear();
+      if (!identification.identified) {
+        // Failed recognition counts toward lockout
+        _consecutiveFailures++;
+        _recentErrors.add(identification.error ?? 'Vehicle not recognised');
+        if (_consecutiveFailures >= 3) {
+          _logLockout();
+          setState(() {
+            _lockedOut = true;
+            _status = '';
+          });
+        } else {
+          // Show result screen so user sees the reason, but track the failure
+          if (mounted) {
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => ResultsScreen(
+                  imagePath: xFile.path,
+                  identification: identification,
+                ),
+                transitionsBuilder: (_, animation, __, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                transitionDuration: const Duration(milliseconds: 400),
+              ),
+            );
+            setState(() => _status =
+                'Recognition failed. Please try again. '
+                '(${_consecutiveFailures}/3)');
+          }
+        }
+      } else {
+        // Success — reset failure counter
+        _consecutiveFailures = 0;
+        _recentErrors.clear();
 
-      // Navigate to results with hero transition
-      if (mounted) {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => ResultsScreen(
-              imagePath: xFile.path,
-              identification: identification,
+        // Navigate to results with hero transition
+        if (mounted) {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => ResultsScreen(
+                imagePath: xFile.path,
+                identification: identification,
+              ),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 400),
             ),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 400),
-          ),
-        );
-        setState(() => _status = 'Point at a UK car and tap capture');
+          );
+          setState(() => _status = 'Point at a UK car and tap capture');
+        }
       }
 
     } on GeminiTimeoutException {
@@ -323,23 +357,50 @@ class _CameraScreenState extends State<CameraScreen>
       setState(() => _status = 'Asking AI to identify...');
       final identification = await _gemini.identifyCar(result.file);
 
-      _consecutiveFailures = 0;
-      _recentErrors.clear();
+      if (!identification.identified) {
+        _consecutiveFailures++;
+        _recentErrors.add(identification.error ?? 'Vehicle not recognised');
+        if (_consecutiveFailures >= 3) {
+          _logLockout();
+          setState(() { _lockedOut = true; _status = ''; });
+        } else {
+          if (mounted) {
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => ResultsScreen(
+                  imagePath: picked.path,
+                  identification: identification,
+                ),
+                transitionsBuilder: (_, animation, __, child) =>
+                    FadeTransition(opacity: animation, child: child),
+                transitionDuration: const Duration(milliseconds: 400),
+              ),
+            );
+            setState(() => _status =
+                'Recognition failed. Please try again. '
+                '(${_consecutiveFailures}/3)');
+          }
+        }
+      } else {
+        _consecutiveFailures = 0;
+        _recentErrors.clear();
 
-      if (mounted) {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => ResultsScreen(
-              imagePath: picked.path,
-              identification: identification,
+        if (mounted) {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => ResultsScreen(
+                imagePath: picked.path,
+                identification: identification,
+              ),
+              transitionsBuilder: (_, animation, __, child) =>
+                  FadeTransition(opacity: animation, child: child),
+              transitionDuration: const Duration(milliseconds: 400),
             ),
-            transitionsBuilder: (_, animation, __, child) =>
-                FadeTransition(opacity: animation, child: child),
-            transitionDuration: const Duration(milliseconds: 400),
-          ),
-        );
-        setState(() => _status = 'Point at a UK car and tap capture');
+          );
+          setState(() => _status = 'Point at a UK car and tap capture');
+        }
       }
     } on GeminiTimeoutException {
       _consecutiveFailures++;
@@ -696,6 +757,20 @@ class _CameraScreenState extends State<CameraScreen>
                 MaterialPageRoute(
                   builder: (_) =>
                       const SavedScansScreen(showFavouritesTab: true),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.message_outlined),
+            title: const Text('Messages'),
+            subtitle: const Text('Contact admin'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MessagesScreen(),
                 ),
               );
             },

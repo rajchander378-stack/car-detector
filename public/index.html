@@ -19,6 +19,7 @@
     <a href="/">Home</a>
     <a href="/privacy-policy.html">Privacy Policy</a>
     <a href="/delete-account.html">Delete Account</a>
+    <a id="admin-link" href="/admin/" style="display:none; font-weight:600;">Admin Dashboard</a>
   </nav>
   <div class="container">
     <div class="card" style="text-align:center; margin-top:32px;">
@@ -54,5 +55,28 @@
     &copy; 2026 Axiom Forge Software. All rights reserved.<br>
     <a href="/privacy-policy.html">Privacy Policy</a> &middot; <a href="/delete-account.html">Delete Account</a>
   </footer>
+
+  <!-- Show Admin Dashboard link if signed-in user is an admin -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+      authDomain: 'car-detector-833e5.firebaseapp.com',
+      projectId: 'car-detector-833e5',
+    });
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (!user) return;
+      try {
+        const doc = await firebase.firestore().collection('config').doc('admin').get();
+        if (!doc.exists) return;
+        const emails = doc.data().admin_emails || [];
+        if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
+          document.getElementById('admin-link').style.display = 'inline';
+        }
+      } catch (e) { /* not admin or no config */ }
+    });
+  </script>
 </body>
 </html>
