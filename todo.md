@@ -167,6 +167,19 @@ Use this checklist each time you release a new version to Google Play.
 
 ---
 
+## Uncompleted — Bulk Image Processing (Stripe + RapidAPI)
+
+- [ ] **Stripe integration for bulk processing** — Integrate Stripe on the website for upfront payment before processing. Options: per-batch pricing (e.g. £X for N images), credit top-ups, or pay-per-scan. Use Stripe Checkout or Payment Intents. Only begin processing once payment is confirmed via Stripe webhook or redirect. This bypasses Google Play billing entirely (no 15-30% cut).
+- [ ] **Bulk upload page on website** — Add a page (e.g. `/bulk.html`) where users can upload multiple car images at once. After Stripe payment is validated, each image is sent to the existing `POST /identify?includeValuation=true` RapidAPI endpoint. RapidAPI is a cost to us (metering our requests to the API) — not the billing channel. Results are displayed in a table as they complete and can be downloaded as CSV/Excel/JSON.
+- [ ] **Progress UI for bulk uploads** — Show per-image progress (queued, processing, complete, failed) with results appearing in real-time. Allow retry on failed images. Show a summary at the end.
+- [ ] **Pricing model** — Stripe's fixed 20p per transaction means single-scan sales at 30p are a loss. Enforce a minimum batch purchase (e.g. 10 scans for £3.00). At 30p/scan in a batch of 10+, estimated profit is ~18-19p/scan after Stripe (1.5% + 20p per transaction), Gemini (~0.02p), and valuation API (~5-15p) costs. Consider volume tiers: 10 scans £3.00, 25 scans £7.00 (28p each), 50 scans £12.50 (25p each). Stripe fee is amortised across the batch so larger purchases yield better margins.
+- [ ] **Call Cloud Run directly, not via RapidAPI** — For bulk uploads from our own website, call the Cloud Run endpoint directly instead of routing through RapidAPI. RapidAPI is a marketplace for third-party API consumers — using it for our own site just adds unnecessary cost. Reserve RapidAPI for external developers who want to integrate the AutoSpotter API into their own products.
+- [ ] **Link bulk upload from main site** — Add a nav link or CTA for "Bulk Processing" aimed at dealers and fleet managers who want to process many vehicles at once without using the mobile app.
+
+## Uncompleted — Trader Export Feature
+
+- [ ] **Export scanned data (Trader plan only)** — Allow Trader plan users to download their saved scan data in CSV, Excel (.xlsx), or JSON format. Should include all identification fields (make, model, year range, generation, trim, body style, colour, number plate) and valuation data (dealer, private, trade prices, mileage). Add an "Export" button to the Saved Scans screen (visible only for Trader users). Consider using the `csv` and `excel` (or `syncfusion_flutter_xlsio`) packages. Web dashboard should also offer export via a download button on the user's scans section.
+
 ## Uncompleted — Branding & Visual Assets
 
 ### App Icon & Splash

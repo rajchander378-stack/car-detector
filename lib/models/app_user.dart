@@ -7,6 +7,9 @@ class AppUser {
   final String? photoUrl;
   final DateTime createdAt;
   final DateTime lastLoginAt;
+  final String plan;
+  final DateTime? planStartedAt;
+  final DateTime? planExpiresAt;
 
   AppUser({
     required this.uid,
@@ -15,7 +18,12 @@ class AppUser {
     this.photoUrl,
     required this.createdAt,
     required this.lastLoginAt,
+    this.plan = 'free',
+    this.planStartedAt,
+    this.planExpiresAt,
   });
+
+  bool get isTrader => plan == 'trader';
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
@@ -25,6 +33,13 @@ class AppUser {
       photoUrl: json['photo_url'],
       createdAt: (json['created_at'] as Timestamp).toDate(),
       lastLoginAt: (json['last_login_at'] as Timestamp).toDate(),
+      plan: json['plan'] ?? 'free',
+      planStartedAt: json['plan_started_at'] != null
+          ? (json['plan_started_at'] as Timestamp).toDate()
+          : null,
+      planExpiresAt: json['plan_expires_at'] != null
+          ? (json['plan_expires_at'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -36,6 +51,11 @@ class AppUser {
       'photo_url': photoUrl,
       'created_at': Timestamp.fromDate(createdAt),
       'last_login_at': Timestamp.fromDate(lastLoginAt),
+      'plan': plan,
+      if (planStartedAt != null)
+        'plan_started_at': Timestamp.fromDate(planStartedAt!),
+      if (planExpiresAt != null)
+        'plan_expires_at': Timestamp.fromDate(planExpiresAt!),
     };
   }
 }

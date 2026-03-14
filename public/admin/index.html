@@ -571,6 +571,10 @@
           <div class="number" id="stat-new-users" style="color:var(--primary)">-</div>
           <div class="label">New This Week</div>
         </div>
+        <div class="stat-card">
+          <div class="number" id="stat-trader-users" style="color:#d4a017">-</div>
+          <div class="label">Trader Plans</div>
+        </div>
       </div>
 
       <div id="users-loading" class="loading">Loading users...</div>
@@ -581,6 +585,7 @@
               <tr>
                 <th>User</th>
                 <th>Email</th>
+                <th>Plan</th>
                 <th>Joined</th>
                 <th>Last Login</th>
                 <th>Time Since Login</th>
@@ -696,9 +701,10 @@
       const isAdmin = await checkAdmin(user.email);
       if (!isAdmin) {
         document.getElementById('login-error').textContent =
-          'Access denied. ' + user.email + ' is not an admin.';
+          'Access denied. ' + user.email + ' is not an admin. Redirecting...';
         document.getElementById('login-error').style.display = 'block';
-        await auth.signOut();
+        // Don't sign out — just redirect non-admins to the main site
+        setTimeout(() => { window.location.href = '/'; }, 2000);
         return;
       }
       showDashboard(user);
@@ -1008,10 +1014,13 @@
       return u.created_at.toDate() >= weekAgo;
     }).length;
 
+    const traderCount = allUsers.filter(u => u.plan === 'trader').length;
+
     document.getElementById('stat-total-users').textContent = total;
     document.getElementById('stat-active-today').textContent = activeToday;
     document.getElementById('stat-active-week').textContent = activeWeek;
     document.getElementById('stat-new-users').textContent = newThisWeek;
+    document.getElementById('stat-trader-users').textContent = traderCount;
   }
 
   function getUserLockoutCount(userId) {
@@ -1059,9 +1068,17 @@
         : unresolvedLockouts > 0 ? totalLockouts + ' (' + unresolvedLockouts + ' active)'
         : totalLockouts.toString();
 
+      const plan = user.plan || 'free';
+      const planBadge = plan === 'trader'
+        ? '<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">Trader</span>'
+        : plan === 'basic'
+        ? '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">Basic</span>'
+        : '<span style="background:#f5f5f5;color:#616161;padding:2px 8px;border-radius:10px;font-size:12px;">Free</span>';
+
       return '<tr>'
         + '<td>' + photoHtml + '<span class="user-link" onclick="showUserDetail(\'' + user.id + '\')">' + name + '</span></td>'
         + '<td>' + email + '</td>'
+        + '<td>' + planBadge + '</td>'
         + '<td style="white-space:nowrap;">' + joinedDate + '</td>'
         + '<td style="white-space:nowrap;">' + lastLogin + '</td>'
         + '<td style="white-space:nowrap;">' + timeSince + '</td>'

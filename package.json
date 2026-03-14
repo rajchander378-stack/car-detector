@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "@js-sdsl/ordered-map": "^4.4.2",
+    "firebase-admin": "^13.7.0"
+  }
+}

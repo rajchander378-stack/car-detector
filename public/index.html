@@ -9,54 +9,369 @@
   <meta property="og:description" content="Point your camera at any car for instant AI identification and UK vehicle valuation.">
   <meta property="og:type" content="website">
   <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Landing page overrides */
+    body { background: #fff; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #0d47a1 0%, #1565c0 40%, #1e88e5 100%);
+      color: white; padding: 80px 20px 60px; text-align: center; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -60%; right: -20%; width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%); border-radius: 50%;
+    }
+    .hero::after {
+      content: ''; position: absolute; bottom: -40%; left: -10%; width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%); border-radius: 50%;
+    }
+    .hero-inner { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+    .hero-icon { width: 88px; height: 88px; border-radius: 22px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); margin-bottom: 24px; }
+    .hero h1 { font-size: 42px; font-weight: 800; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.5px; }
+    .hero h1 span { background: linear-gradient(90deg, #fff 0%, #bbdefb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p.tagline { font-size: 18px; opacity: 0.9; max-width: 520px; margin: 0 auto 32px; line-height: 1.5; }
+    .hero-cta { display: inline-flex; align-items: center; gap: 12px; background: #fff; color: #0d47a1; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 20px rgba(0,0,0,0.15); transition: transform 0.2s, box-shadow 0.2s; }
+    .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.2); text-decoration: none; }
+    .hero-cta svg { flex-shrink: 0; }
+    .hero-badge { display: inline-block; background: rgba(255,255,255,0.15); backdrop-filter: blur(4px); color: white; font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 20px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.2); }
+
+    /* Phone mockup */
+    .phone-mockup {
+      width: 220px; height: 440px; background: #111; border-radius: 32px; margin: 40px auto 0;
+      border: 4px solid #333; position: relative; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+    }
+    .phone-notch { width: 100px; height: 22px; background: #111; border-radius: 0 0 14px 14px; position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 2; }
+    .phone-screen { width: 100%; height: 100%; background: linear-gradient(180deg, #1565c0 0%, #0d47a1 50%, #0a3570 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px 20px; }
+    .phone-screen .viewfinder { width: 140px; height: 100px; border: 2px solid rgba(255,255,255,0.6); border-radius: 8px; position: relative; margin-bottom: 16px; }
+    .phone-screen .vf-corner { position: absolute; width: 16px; height: 16px; border-color: #fff; border-style: solid; }
+    .phone-screen .vf-tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .phone-screen .vf-tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+    .phone-screen .vf-bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+    .phone-screen .vf-br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+    .phone-screen .car-icon { font-size: 48px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)); }
+    .phone-screen .result-card { background: rgba(255,255,255,0.95); border-radius: 10px; padding: 10px 14px; width: 100%; margin-top: 12px; }
+    .phone-screen .result-card .car-name { font-size: 13px; font-weight: 700; color: #212121; }
+    .phone-screen .result-card .car-detail { font-size: 10px; color: #616161; margin-top: 2px; }
+    .phone-screen .result-card .plate { display: inline-block; background: #F2C10F; color: #000; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 3px; margin-top: 4px; letter-spacing: 1px; border: 1px solid #000; }
+    .phone-screen .result-card .price { color: #2e7d32; font-size: 12px; font-weight: 700; margin-top: 4px; }
+
+    /* Nav */
+    .landing-nav {
+      text-align: center; padding: 14px 20px; background: #fff; border-bottom: 1px solid var(--border);
+      font-size: 14px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);
+      background: rgba(255,255,255,0.95);
+    }
+    .landing-nav a { margin: 0 14px; color: var(--text-secondary); font-weight: 500; }
+    .landing-nav a:hover { color: var(--primary); text-decoration: none; }
+
+    /* Sections */
+    .section { max-width: 900px; margin: 0 auto; padding: 64px 24px; }
+    .section-title { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 8px; color: var(--text); }
+    .section-subtitle { font-size: 16px; text-align: center; color: var(--text-secondary); margin-bottom: 40px; max-width: 560px; margin-left: auto; margin-right: auto; }
+
+    /* How it works */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+    .step { text-align: center; }
+    .step-num { width: 52px; height: 52px; border-radius: 50%; background: var(--primary-light); color: var(--primary); font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .step p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+
+    /* Features */
+    .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .feature-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 24px;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); transform: translateY(-2px); }
+    .feature-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .feature-card p { font-size: 14px; color: var(--text-secondary); margin-bottom: 0; line-height: 1.5; }
+
+    /* Pricing preview */
+    .pricing-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 640px; margin: 0 auto; }
+    .price-card { background: #fff; border: 2px solid var(--border); border-radius: 14px; padding: 28px; text-align: center; }
+    .price-card.featured { border-color: #d4a017; }
+    .price-card .plan-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .price-card .price { font-size: 32px; font-weight: 800; color: var(--primary); }
+    .price-card .price .mo { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
+    .price-card .feat { font-size: 14px; color: var(--text-secondary); margin: 16px 0 20px; line-height: 1.7; }
+    .price-card .price-btn { display: block; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; border: none; cursor: pointer; width: 100%; }
+    .price-btn-basic { background: var(--primary-light); color: var(--primary); }
+    .price-btn-trader { background: #d4a017; color: white; }
+
+    /* Social proof */
+    .stats-row { display: flex; justify-content: center; gap: 48px; padding: 32px 0; }
+    .stat-item { text-align: center; }
+    .stat-item .num { font-size: 32px; font-weight: 800; color: var(--primary); }
+    .stat-item .label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* CTA banner */
+    .cta-banner {
+      background: linear-gradient(135deg, #0d47a1, #1e88e5); color: white; border-radius: 16px;
+      padding: 48px 32px; text-align: center; margin: 0 auto; max-width: 640px;
+    }
+    .cta-banner h2 { font-size: 26px; font-weight: 800; margin-bottom: 12px; color: white; }
+    .cta-banner p { font-size: 15px; opacity: 0.9; margin-bottom: 24px; }
+
+    /* Auth area in nav */
+    .auth-area { float: right; margin-right: 8px; }
+
+    /* User scans section */
+    .scans-section { max-width: 720px; margin: 0 auto; padding: 0 24px 48px; }
+
+    /* Footer */
+    .landing-footer { text-align: center; padding: 40px 20px; font-size: 13px; color: var(--text-secondary); border-top: 1px solid var(--border); background: #fafafa; }
+    .landing-footer a { color: var(--text-secondary); margin: 0 8px; }
+
+    @media (max-width: 700px) {
+      .hero h1 { font-size: 30px; }
+      .hero { padding: 56px 16px 40px; }
+      .steps { grid-template-columns: 1fr; gap: 24px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .pricing-preview { grid-template-columns: 1fr !important; }
+      .stats-row { gap: 24px; flex-wrap: wrap; }
+      .phone-mockup { width: 180px; height: 360px; }
+      .landing-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 10px 12px; }
+      .landing-nav a { margin: 0 6px; font-size: 13px; }
+      .auth-area { float: none !important; width: 100%; text-align: center; margin-top: 8px; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>AutoSpotter</h1>
-    <p>Instant AI car identification for UK vehicles</p>
-  </header>
-  <nav>
+
+  <!-- Navigation -->
+  <nav class="landing-nav">
     <a href="/">Home</a>
-    <a href="/privacy-policy.html">Privacy Policy</a>
-    <a href="/delete-account.html">Delete Account</a>
-    <a id="admin-link" href="/admin/" style="display:none; font-weight:600;">Admin Dashboard</a>
+    <a href="#features">Features</a>
+    <a href="/pricing.html">Pricing</a>
+    <a id="contact-link" href="/contact.html" style="display:none;">Contact</a>
+    <a href="/privacy-policy.html">Privacy</a>
+    <a id="admin-link" href="/admin/" style="display:none; font-weight:600; color:var(--primary);">Admin</a>
+    <span class="auth-area" id="auth-area">
+      <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
+      <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
+        <img id="user-photo" src="" alt="" style="width:26px; height:26px; border-radius:50%; vertical-align:middle;">
+        <span id="user-name" style="vertical-align:middle;"></span>
+        <button class="btn" style="padding:4px 12px; font-size:12px; background:var(--border); color:var(--text);" onclick="doSignOut()">Sign out</button>
+      </span>
+    </span>
   </nav>
-  <div class="container">
-    <div class="card" style="text-align:center; margin-top:32px;">
-      <span class="badge">Coming soon to Google Play</span>
-      <h2 style="margin-top:8px;">Identify any car instantly</h2>
-      <p>Point your phone camera at any car to get an instant AI-powered identification — make, model, year, trim, and UK valuation.</p>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <img src="/icon.png" alt="AutoSpotter" class="hero-icon">
+      <div class="hero-badge">Coming soon to Google Play</div>
+      <h1><span>Identify any car</span><br>in seconds</h1>
+      <p class="tagline">Point your camera at any vehicle for instant AI-powered identification, UK number plate reading, and real-time valuations.</p>
+      <a href="/pricing.html" class="hero-cta">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H7V4h10v16zm-5-1c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z" fill="#0d47a1"/></svg>
+        Get the App
+      </a>
+
+      <!-- Phone mockup -->
+      <div class="phone-mockup">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="viewfinder">
+            <div class="vf-corner vf-tl"></div>
+            <div class="vf-corner vf-tr"></div>
+            <div class="vf-corner vf-bl"></div>
+            <div class="vf-corner vf-br"></div>
+            <div style="display:flex; align-items:center; justify-content:center; height:100%;">
+              <span class="car-icon">&#128663;</span>
+            </div>
+          </div>
+          <div class="result-card">
+            <div class="car-name">BMW 3 Series (G20)</div>
+            <div class="car-detail">2019 - 2025 &middot; M Sport &middot; Saloon</div>
+            <div><span class="plate">AB12 CDE</span></div>
+            <div class="price">&pound;18,500 - &pound;24,200</div>
+          </div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <h2>How it works</h2>
-    <ul>
-      <li>Capture a photo of any vehicle using your phone camera</li>
-      <li>AI identifies the make, model, year range, generation, and trim level</li>
-      <li>Number plate is read automatically if visible</li>
-      <li>Get an instant UK price valuation based on the registration</li>
-    </ul>
-
-    <h2>Designed for the UK</h2>
-    <p>AutoSpotter is built specifically for UK-registered vehicles. Number plate recognition, vehicle identification, and price valuations are all based on UK data sources.</p>
-
-    <div class="card">
-      <h3>Features</h3>
-      <ul>
-        <li>AI-powered car identification using Google Gemini</li>
-        <li>Automatic UK number plate reading</li>
-        <li>Dealer, private, and trade price valuations</li>
-        <li>Confidence scoring for every identification</li>
-        <li>Works with cars, vans, trucks, and motorcycles</li>
-      </ul>
+  <!-- Social proof stats -->
+  <div style="background:#f8f9fa; border-bottom:1px solid var(--border);">
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="num">AI</div>
+        <div class="label">Powered by Gemini</div>
+      </div>
+      <div class="stat-item">
+        <div class="num">UK</div>
+        <div class="label">Built for UK Vehicles</div>
+      </div>
+      <div class="stat-item">
+        <div class="num">3</div>
+        <div class="label">Valuation Types</div>
+      </div>
+      <div class="stat-item">
+        <div class="num">&lt;5s</div>
+        <div class="label">Identification Time</div>
+      </div>
     </div>
   </div>
 
-  <footer>
-    &copy; 2026 Axiom Forge Software. All rights reserved.<br>
-    <a href="/privacy-policy.html">Privacy Policy</a> &middot; <a href="/delete-account.html">Delete Account</a>
+  <!-- How it works -->
+  <section class="section">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-subtitle">Three simple steps from photo to full vehicle report.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Snap a Photo</h3>
+        <p>Open the app and take a photo of any vehicle — cars, vans, trucks, or motorcycles.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>AI Identifies It</h3>
+        <p>Our AI analyses the image and identifies the make, model, year, generation, trim, and reads the number plate.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Get a Valuation</h3>
+        <p>Instantly receive dealer, private, and trade price valuations based on the UK registration.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features" style="background:#f8f9fa;">
+    <h2 class="section-title">Everything You Need</h2>
+    <p class="section-subtitle">Whether you're a car enthusiast or a professional trader, AutoSpotter has you covered.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#e3f2fd;">&#129302;</div>
+        <h3>AI-Powered Identification</h3>
+        <p>Google Gemini analyses your photo to identify the exact make, model, generation, trim level, colour, and body style.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fff3e0;">&#127468;&#127463;</div>
+        <h3>UK Number Plate Reading</h3>
+        <p>Number plates are read automatically from the photo. No need to type anything — just point and shoot.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#e8f5e9;">&#163;</div>
+        <h3>Real-Time Valuations</h3>
+        <p>Get dealer, private, and trade prices instantly. Know what any vehicle is worth before you buy or sell.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fce4ec;">&#128200;</div>
+        <h3>Confidence Scoring</h3>
+        <p>Every identification comes with a confidence score so you know how reliable the result is.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#f3e5f5;">&#128190;</div>
+        <h3>Save &amp; Review</h3>
+        <p>Save your scan history and review past identifications anytime — on the app or on the web.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#e0f2f1;">&#9878;&#65039;</div>
+        <h3>Edit &amp; Report</h3>
+        <p>Not quite right? Edit the AI result or report inaccuracies to help improve future identifications.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Who it's for -->
+  <section class="section">
+    <h2 class="section-title">Who It's For</h2>
+    <p class="section-subtitle">AutoSpotter works for everyone — from casual car spotters to professional dealers.</p>
+    <div class="features-grid">
+      <div class="feature-card" style="border-left: 4px solid var(--primary);">
+        <h3>Car Enthusiasts</h3>
+        <p>Spot a car you like? Snap a photo and instantly find out exactly what it is, what year, and what it's worth.</p>
+      </div>
+      <div class="feature-card" style="border-left: 4px solid #d4a017;">
+        <h3>Used Car Dealers</h3>
+        <p>Value stock quickly at auctions, on the forecourt, or on the road. 100 valuation scans per month on the Trader plan.</p>
+      </div>
+      <div class="feature-card" style="border-left: 4px solid #2e7d32;">
+        <h3>Private Buyers &amp; Sellers</h3>
+        <p>Check a fair price before buying or selling. Know the dealer, private, and trade values before you negotiate.</p>
+      </div>
+      <div class="feature-card" style="border-left: 4px solid #c62828;">
+        <h3>Insurance &amp; Fleet</h3>
+        <p>Quickly identify and value vehicles for claims, inspections, or fleet management.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing preview -->
+  <section class="section" style="background:#f8f9fa;">
+    <h2 class="section-title">Simple, Transparent Pricing</h2>
+    <p class="section-subtitle">Start free. Upgrade when you need more.</p>
+    <div class="pricing-preview" style="grid-template-columns:1fr 1fr 1fr; max-width:900px;">
+      <div class="price-card">
+        <div class="plan-name">Free</div>
+        <div class="price">Free</div>
+        <div class="feat">
+          5 AI scans/month<br>
+          Number plate reading<br>
+          No valuations
+        </div>
+        <a href="/pricing.html" class="price-btn price-btn-basic">Get Started</a>
+      </div>
+      <div class="price-card">
+        <div class="plan-name">Basic</div>
+        <div class="price">&pound;5 <span class="mo">/ mo</span></div>
+        <div class="feat">
+          10 valuation scans/month<br>
+          Unlimited AI identification<br>
+          40p per extra scan
+        </div>
+        <a href="/pricing.html" class="price-btn price-btn-basic">View Basic</a>
+      </div>
+      <div class="price-card featured">
+        <div class="plan-name">Trader</div>
+        <div class="price">&pound;14.99 <span class="mo">/ mo</span></div>
+        <div class="feat">
+          75 valuation scans/month<br>
+          Export to CSV/Excel<br>
+          Priority support
+        </div>
+        <a href="/pricing.html" class="price-btn price-btn-trader">View Trader</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section">
+    <div class="cta-banner">
+      <h2>Ready to identify your first car?</h2>
+      <p>Download AutoSpotter and start scanning vehicles today. It's free to get started.</p>
+      <a href="/pricing.html" class="hero-cta" style="display:inline-flex;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M17 2H7C5.9 2 5 2.9 5 4v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H7V4h10v16zm-5-1c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z" fill="#0d47a1"/></svg>
+        Get Started
+      </a>
+    </div>
+  </section>
+
+  <!-- User scans (shown when signed in) -->
+  <div class="scans-section" id="user-section" style="display:none;">
+    <h2 class="section-title" style="font-size:22px;">Your Saved Scans</h2>
+    <p id="scans-loading" style="color:var(--text-secondary); text-align:center;">Loading your scans...</p>
+    <p id="scans-empty" style="display:none; color:var(--text-secondary); text-align:center;">You have no saved scans yet. Use the AutoSpotter app to scan vehicles and they will appear here.</p>
+    <div id="scans-list"></div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <div style="margin-bottom:12px;">
+      <a href="/">Home</a> &middot;
+      <a href="/pricing.html">Pricing</a> &middot;
+      <a href="/contact.html">Contact</a> &middot;
+      <a href="/privacy-policy.html">Privacy Policy</a> &middot;
+      <a href="/delete-account.html">Delete Account</a>
+    </div>
+    &copy; 2026 Axiom Forge Software. All rights reserved.
   </footer>
 
-  <!-- Show Admin Dashboard link if signed-in user is an admin -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -66,16 +381,124 @@
       authDomain: 'car-detector-833e5.firebaseapp.com',
       projectId: 'car-detector-833e5',
     });
-    firebase.auth().onAuthStateChanged(async (user) => {
-      if (!user) return;
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    let scansUnsubscribe = null;
+
+    async function doSignIn() {
       try {
-        const doc = await firebase.firestore().collection('config').doc('admin').get();
-        if (!doc.exists) return;
-        const emails = doc.data().admin_emails || [];
-        if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
-          document.getElementById('admin-link').style.display = 'inline';
+        await auth.signInWithPopup(provider);
+      } catch (err) {
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+          await auth.signInWithRedirect(provider);
         }
-      } catch (e) { /* not admin or no config */ }
+      }
+    }
+
+    function doSignOut() {
+      if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
+      auth.signOut();
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function renderScans(snapshot) {
+      const list = document.getElementById('scans-list');
+      const empty = document.getElementById('scans-empty');
+      const loading = document.getElementById('scans-loading');
+      loading.style.display = 'none';
+
+      if (snapshot.empty) {
+        empty.style.display = 'block';
+        list.innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+
+      list.innerHTML = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const id = data.identification || {};
+        const val = data.valuation || null;
+        const fav = data.is_favourite ? ' &#9733;' : '';
+        const date = formatDate(data.saved_at);
+
+        let html = '<div style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px;">';
+        html += '<strong>' + (id.make || '') + ' ' + (id.model || '') + '</strong>' + fav;
+        if (id.year_range) html += ' <span style="color:var(--text-secondary); font-size:13px;">(' + id.year_range + ')</span>';
+        html += '<br><span style="font-size:13px; color:var(--text-secondary);">';
+        if (id.generation) html += id.generation + ' &middot; ';
+        if (id.trim_level) html += id.trim_level + ' &middot; ';
+        html += date + '</span>';
+
+        if (id.number_plate) {
+          html += '<br><span style="font-size:13px; background:#ffdc00; color:#000; padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:1px;">' + id.number_plate + '</span>';
+        }
+
+        if (val) {
+          html += '<div style="margin-top:6px; font-size:13px; color:var(--text-secondary);">';
+          if (val.dealer_price) html += 'Dealer: &pound;' + Number(val.dealer_price).toLocaleString() + ' &middot; ';
+          if (val.private_price) html += 'Private: &pound;' + Number(val.private_price).toLocaleString() + ' &middot; ';
+          if (val.trade_price) html += 'Trade: &pound;' + Number(val.trade_price).toLocaleString();
+          html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+      }).join('');
+    }
+
+    function loadUserScans(uid) {
+      if (scansUnsubscribe) scansUnsubscribe();
+      scansUnsubscribe = db.collection('users').doc(uid).collection('saved_scans')
+        .orderBy('saved_at', 'desc')
+        .onSnapshot(renderScans, () => {
+          document.getElementById('scans-loading').textContent = 'Unable to load scans.';
+        });
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      const signInBtn = document.getElementById('sign-in-btn');
+      const userInfo = document.getElementById('user-info');
+      const userSection = document.getElementById('user-section');
+
+      if (user) {
+        signInBtn.style.display = 'none';
+        userInfo.style.display = 'inline-flex';
+        document.getElementById('user-photo').src = user.photoURL || '';
+        document.getElementById('user-name').textContent = user.displayName || user.email;
+
+        userSection.style.display = 'block';
+        loadUserScans(user.uid);
+
+        let isAdmin = false;
+        try {
+          const doc = await db.collection('config').doc('admin').get();
+          if (doc.exists) {
+            const emails = doc.data().admin_emails || [];
+            if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
+              document.getElementById('admin-link').style.display = 'inline';
+              isAdmin = true;
+            }
+          }
+        } catch (e) {}
+
+        if (!isAdmin) {
+          document.getElementById('contact-link').style.display = 'inline';
+        }
+      } else {
+        signInBtn.style.display = 'inline-block';
+        userInfo.style.display = 'none';
+        userSection.style.display = 'none';
+        document.getElementById('admin-link').style.display = 'none';
+        document.getElementById('contact-link').style.display = 'none';
+        if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
+      }
     });
   </script>
 </body>

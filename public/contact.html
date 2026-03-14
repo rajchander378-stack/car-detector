@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact Us — AutoSpotter</title>
+  <meta name="description" content="Send a message to the AutoSpotter team.">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .msg-form label { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .msg-form input, .msg-form select, .msg-form textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; font-family: inherit; margin-bottom: 14px; background: var(--card-bg);
+    }
+    .msg-form textarea { min-height: 120px; resize: vertical; }
+    .msg-form input:focus, .msg-form select:focus, .msg-form textarea:focus {
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .success-banner { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: none; }
+    .error-banner { background: var(--danger-light); color: var(--danger); border: 1px solid #ef9a9a; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: none; }
+    .sign-in-prompt { text-align: center; padding: 40px 20px; }
+    .msg-thread { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    .msg-thread .subject { font-weight: 600; font-size: 15px; }
+    .msg-thread .meta { font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px; }
+    .msg-thread .body { font-size: 14px; color: var(--text-secondary); white-space: pre-wrap; }
+    .msg-thread .reply { margin-top: 10px; padding: 10px; background: var(--primary-light); border-radius: 6px; font-size: 14px; }
+    .msg-thread .reply-label { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+    .priority-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+    .priority-high { background: #fff3e0; color: #e65100; }
+    .priority-urgent { background: #fce4ec; color: #c62828; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AutoSpotter</h1>
+    <p>Instant AI car identification for UK vehicles</p>
+  </header>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/contact.html" style="font-weight:600;">Contact</a>
+    <a href="/privacy-policy.html">Privacy Policy</a>
+    <a id="admin-link" href="/admin/" style="display:none; font-weight:600;">Admin Dashboard</a>
+  </nav>
+
+  <div class="container">
+    <!-- Sign-in prompt (shown when not logged in) -->
+    <div id="sign-in-prompt" class="sign-in-prompt" style="display:none;">
+      <h2>Sign in to contact us</h2>
+      <p>You need to be signed in to send messages and view your conversation history.</p>
+      <button class="btn btn-primary" onclick="doSignIn()" style="margin-top:16px;">Sign in with Google</button>
+    </div>
+
+    <!-- Message form (shown when logged in) -->
+    <div id="contact-section" style="display:none;">
+      <h2>Send a Message</h2>
+      <div id="success-banner" class="success-banner">Your message has been sent. We'll get back to you as soon as possible.</div>
+      <div id="error-banner" class="error-banner"></div>
+
+      <div class="card">
+        <form class="msg-form" id="msg-form" onsubmit="sendMessage(event)">
+          <label for="msg-subject">Subject</label>
+          <input type="text" id="msg-subject" required placeholder="What's this about?">
+
+          <label for="msg-priority">Priority</label>
+          <select id="msg-priority">
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+
+          <label for="msg-body">Message</label>
+          <textarea id="msg-body" required placeholder="Describe your question, issue, or feedback..."></textarea>
+
+          <button type="submit" id="send-btn" class="btn btn-primary" style="width:100%; margin-top:4px;">Send Message</button>
+        </form>
+      </div>
+
+      <h2>Your Messages</h2>
+      <p id="msgs-loading" style="color:var(--text-secondary);">Loading your messages...</p>
+      <p id="msgs-empty" style="display:none; color:var(--text-secondary);">You haven't sent any messages yet.</p>
+      <div id="msgs-list"></div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 Axiom Forge Software. All rights reserved.<br>
+    <a href="/privacy-policy.html">Privacy Policy</a> &middot; <a href="/delete-account.html">Delete Account</a>
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+      authDomain: 'car-detector-833e5.firebaseapp.com',
+      projectId: 'car-detector-833e5',
+    });
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    let msgsUnsubscribe = null;
+
+    async function doSignIn() {
+      try {
+        await auth.signInWithPopup(provider);
+      } catch (err) {
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+          await auth.signInWithRedirect(provider);
+        }
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function sendMessage(e) {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const subject = document.getElementById('msg-subject').value.trim();
+      const body = document.getElementById('msg-body').value.trim();
+      const priority = document.getElementById('msg-priority').value;
+      if (!subject || !body) return;
+
+      const btn = document.getElementById('send-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      document.getElementById('success-banner').style.display = 'none';
+      document.getElementById('error-banner').style.display = 'none';
+
+      try {
+        await db.collection('messages').add({
+          user_id: user.uid,
+          user_email: user.email || '',
+          user_name: user.displayName || '',
+          subject: subject,
+          body: body,
+          priority: priority,
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+          admin_reply: null,
+          replied_at: null,
+          replied_by: null,
+        });
+        document.getElementById('msg-form').reset();
+        document.getElementById('success-banner').style.display = 'block';
+      } catch (err) {
+        const errorBanner = document.getElementById('error-banner');
+        errorBanner.textContent = 'Failed to send message. Please try again.';
+        errorBanner.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Message';
+      }
+    }
+
+    function renderMessages(snapshot) {
+      const list = document.getElementById('msgs-list');
+      const empty = document.getElementById('msgs-empty');
+      const loading = document.getElementById('msgs-loading');
+      loading.style.display = 'none';
+
+      if (snapshot.empty) {
+        empty.style.display = 'block';
+        list.innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+
+      list.innerHTML = snapshot.docs.map(doc => {
+        const d = doc.data();
+        const date = formatDate(d.created_at);
+        let priorityHtml = '';
+        if (d.priority === 'high') priorityHtml = '<span class="priority-badge priority-high">High</span>';
+        if (d.priority === 'urgent') priorityHtml = '<span class="priority-badge priority-urgent">Urgent</span>';
+
+        let html = '<div class="msg-thread">';
+        html += '<div class="subject">' + escapeHtml(d.subject || '') + priorityHtml + '</div>';
+        html += '<div class="meta">' + date + '</div>';
+        html += '<div class="body">' + escapeHtml(d.body || '') + '</div>';
+
+        if (d.admin_reply) {
+          const replyDate = d.replied_at ? formatDate(d.replied_at) : '';
+          html += '<div class="reply">';
+          html += '<div class="reply-label">Admin Reply' + (replyDate ? ' &middot; ' + replyDate : '') + '</div>';
+          html += escapeHtml(d.admin_reply);
+          html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+      }).join('');
+    }
+
+    function loadMessages(uid) {
+      if (msgsUnsubscribe) msgsUnsubscribe();
+      msgsUnsubscribe = db.collection('messages')
+        .where('user_id', '==', uid)
+        .orderBy('created_at', 'desc')
+        .onSnapshot(renderMessages, () => {
+          document.getElementById('msgs-loading').textContent = 'Unable to load messages.';
+        });
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      const prompt = document.getElementById('sign-in-prompt');
+      const section = document.getElementById('contact-section');
+
+      if (user) {
+        prompt.style.display = 'none';
+        section.style.display = 'block';
+        loadMessages(user.uid);
+
+        // Check admin — hide contact for admins, show admin link
+        try {
+          const doc = await db.collection('config').doc('admin').get();
+          if (doc.exists) {
+            const emails = doc.data().admin_emails || [];
+            if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
+              document.getElementById('admin-link').style.display = 'inline';
+            }
+          }
+        } catch (e) {}
+      } else {
+        prompt.style.display = 'block';
+        section.style.display = 'none';
+        if (msgsUnsubscribe) { msgsUnsubscribe(); msgsUnsubscribe = null; }
+      }
+    });
+  </script>
+</body>
+</html>

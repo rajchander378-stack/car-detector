@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/usage_record.dart';
 import '../services/auth_service.dart';
+import '../services/plan_service.dart';
 import '../services/user_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,17 +17,43 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
+  String _plan = 'basic';
+  UsageRecord? _usage;
+  PlanConfig? _planConfig;
 
   @override
   void initState() {
     super.initState();
     _loadVersion();
+    _loadPlanInfo();
   }
 
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
     if (mounted) {
       setState(() => _version = '${info.version} (${info.buildNumber})');
+    }
+  }
+
+  Future<void> _loadPlanInfo() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final planService = PlanService();
+    final allowance = await planService.checkValuationAllowance(user.uid);
+    final usage = await planService.getCurrentUsage(user.uid);
+    final appUser = await UserService().getUser(user.uid);
+
+    if (mounted) {
+      setState(() {
+        _plan = appUser?.plan ?? 'basic';
+        _usage = usage;
+        _planConfig = PlanConfig(
+          monthlyScans: allowance.monthlyLimit,
+          overagePricePence: allowance.overagePricePence,
+          pricePence: 0,
+        );
+      });
     }
   }
 
@@ -74,6 +102,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+
+          const Divider(),
+
+          // Plan & Usage
+          ListTile(
+            leading: Icon(
+              _plan == 'trader' ? Icons.diamond
+                  : _plan == 'basic' ? Icons.workspace_premium
+                  : Icons.person,
+              color: _plan == 'trader' ? Colors.amber[700]
+                  : _plan == 'basic' ? Colors.blue : null,
+            ),
+            title: Text(
+              _plan == 'trader' ? 'Trader Plan'
+                  : _plan == 'basic' ? 'Basic Plan'
+                  : 'Free Plan',
+            ),
+            subtitle: _usage != null && _planConfig != null
+                ? Text(_plan == 'free'
+                    ? '${_usage!.aiOnlyScans} AI scans this month (no valuations)'
+                    : '${_usage!.valuationScans} of ${_planConfig!.monthlyScans} '
+                      'valuation scans used this month')
+                : const Text('Loading usage...'),
+            trailing: _plan != 'trader'
+                ? TextButton(
+                    onPressed: () => _showUpgradeSheet(context),
+                    child: const Text('Upgrade'),
+                  )
+                : null,
+            onTap: () => _showPlanDetails(context),
+          ),
+          if (_usage != null && _planConfig != null && _plan != 'free')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: (_usage!.valuationScans / _planConfig!.monthlyScans)
+                      .clamp(0.0, 1.0),
+                  backgroundColor: Colors.grey[200],
+                  color: _usage!.valuationScans >= _planConfig!.monthlyScans
+                      ? Colors.orange
+                      : theme.colorScheme.primary,
+                  minHeight: 6,
+                ),
+              ),
+            ),
+          if (_usage != null && _usage!.overageScans > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Text(
+                '${_usage!.overageScans} overage scan${_usage!.overageScans == 1 ? '' : 's'} this month',
+                style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+              ),
+            ),
+          const SizedBox(height: 8),
 
           const Divider(),
 
@@ -165,6 +249,180 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: TextStyle(fontSize: 13),
         ),
       ],
+    );
+  }
+
+  void _showPlanDetails(BuildContext context) {
+    final planLabel = _plan == 'trader' ? 'Trader Plan'
+        : _plan == 'basic' ? 'Basic Plan'
+        : 'Free Plan';
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              planLabel,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            if (_plan == 'free') ...[
+              _planDetailRow('AI identification scans', '5/month'),
+              _planDetailRow('Price valuations', 'Not included'),
+              _planDetailRow('AI identification', 'Unlimited'),
+            ] else ...[
+              _planDetailRow('Monthly valuation scans',
+                  '${_planConfig?.monthlyScans ?? "-"} included'),
+              _planDetailRow('Overage cost',
+                  '\u00a3${((_planConfig?.overagePricePence ?? 0) / 100).toStringAsFixed(2)} per scan'),
+              _planDetailRow('AI identification', 'Unlimited'),
+            ],
+            if (_plan == 'trader') ...[
+              _planDetailRow('Priority support', 'Included'),
+              _planDetailRow('Export to CSV/Excel', 'Included'),
+            ],
+            const SizedBox(height: 16),
+            if (_usage != null) ...[
+              const Text('This Month',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              _planDetailRow('Valuation scans', '${_usage!.valuationScans}'),
+              _planDetailRow('AI-only scans', '${_usage!.aiOnlyScans}'),
+              if (_usage!.overageScans > 0)
+                _planDetailRow('Overage scans', '${_usage!.overageScans}'),
+            ],
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _planDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[700])),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  void _showUpgradeSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Upgrade Your Plan',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
+            // Basic plan
+            if (_plan == 'free') ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue[300]!),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.workspace_premium, color: Colors.blue[700]),
+                        const SizedBox(width: 8),
+                        const Text('Basic', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        Text('\u00a35/mo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue[700])),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _planDetailRow('Valuation scans', '10/month'),
+                    _planDetailRow('Overage cost', '\u00a30.40 per scan'),
+                    _planDetailRow('AI identification', 'Unlimited'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Trader plan
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.amber[600]!, width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.diamond, color: Colors.amber[700]),
+                      const SizedBox(width: 8),
+                      const Text('Trader', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      Text('\u00a314.99/mo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber[700])),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _planDetailRow('Valuation scans', '75/month'),
+                  _planDetailRow('Overage cost', '\u00a30.30 per scan'),
+                  _planDetailRow('Priority support', 'Included'),
+                  _planDetailRow('Export to CSV/Excel', 'Included'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Payments coming soon. Contact us to upgrade.'),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.all(14),
+                  backgroundColor: Colors.amber[700],
+                ),
+                child: const Text('Contact Us to Upgrade'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Contact: privacy@axiomforgesoftware.com',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 

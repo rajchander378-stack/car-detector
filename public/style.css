@@ -150,4 +150,7 @@ nav a {
   header { padding: 28px 16px 24px; }
   header h1 { font-size: 24px; }
   .container { padding: 16px 16px 48px; }
+  nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  nav a { margin: 0 4px; }
+  #auth-area { float: none !important; width: 100%; text-align: center; margin-top: 8px; }
 }

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../models/car_identification.dart';
 import '../models/vehicle_valuation.dart';
 import '../services/saved_scan_service.dart';
+import '../services/plan_service.dart';
 import '../services/valuation_service.dart';
 
 class ResultsScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   bool _saved = false;
   bool _saving = false;
   late CarIdentification _identification;
+  ScanAllowance? _allowance;
 
   CarIdentification get identification => _identification;
 
@@ -37,6 +39,14 @@ class _ResultsScreenState extends State<ResultsScreen> {
   void initState() {
     super.initState();
     _identification = widget.identification;
+    _loadAllowance();
+  }
+
+  Future<void> _loadAllowance() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final allowance = await PlanService().checkValuationAllowance(user.uid);
+    if (mounted) setState(() => _allowance = allowance);
   }
 
   Future<void> _saveScan() async {
@@ -107,18 +117,75 @@ class _ResultsScreenState extends State<ResultsScreen> {
     final plate = identification.numberPlate;
     if (plate == null || plate.isEmpty) return;
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Check plan allowance
+    final allowance = await PlanService().checkValuationAllowance(user.uid);
+
+    // Free plan — valuations disabled
+    if (!allowance.valuationEnabled) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Upgrade Required'),
+          content: const Text(
+            'Price valuations are available on the Basic plan (\u00a35/month, 10 scans) '
+            'and Trader plan (\u00a314.99/month, 75 scans).\n\n'
+            'Upgrade in Settings to unlock valuation estimates.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (allowance.isOverage) {
+      if (!mounted) return;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Scan Limit Reached'),
+          content: Text(
+            'You\u2019ve used all ${allowance.monthlyLimit} valuation scans '
+            'this month.\n\nThis scan will cost ${allowance.overagePriceFormatted}. '
+            'Continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      final valuation =
-          await ValuationService().getValuation(plate);
+      final valuation = await ValuationService().getValuation(plate);
+      await PlanService().recordValuationScan(user.uid);
       setState(() {
         _valuation = valuation;
         _loading = false;
       });
+      // Refresh allowance for button hint
+      _loadAllowance();
     } on ValuationException catch (e) {
       setState(() {
         _error = e.message;
@@ -305,27 +372,48 @@ class _ResultsScreenState extends State<ResultsScreen> {
             message: hasPlate
                 ? 'Look up UK valuation by registration'
                 : 'UK number plate required for price estimate',
-            child: ElevatedButton.icon(
-              onPressed: hasPlate && !_loading && _valuation == null
-                  ? _fetchValuation
-                  : null,
-              icon: _loading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+            child: Column(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: hasPlate && !_loading && _valuation == null
+                      ? _fetchValuation
+                      : null,
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.attach_money),
+                  label: Text(_loading
+                      ? 'Looking up...'
+                      : _valuation != null
+                          ? 'Price loaded'
+                          : 'Get Price Estimate'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.all(14),
+                    minimumSize: const Size(double.infinity, 0),
+                  ),
+                ),
+                if (_allowance != null && _valuation == null && hasPlate)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      !_allowance!.valuationEnabled
+                          ? 'Upgrade to Basic or Trader to unlock valuations'
+                          : _allowance!.isOverage
+                              ? '${_allowance!.overagePriceFormatted} per scan (allowance used)'
+                              : '${_allowance!.remainingFree} of ${_allowance!.monthlyLimit} scans remaining',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: !_allowance!.valuationEnabled ? Colors.orange[700] : Colors.grey[600],
                       ),
-                    )
-                  : const Icon(Icons.attach_money),
-              label: Text(_loading
-                  ? 'Looking up...'
-                  : _valuation != null
-                      ? 'Price loaded'
-                      : 'Get Price Estimate'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(14)),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

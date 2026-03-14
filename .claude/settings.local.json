@@ -37,7 +37,14 @@
       "Bash(echo exit: $?:*)",
       "Bash(dart run:*)",
       "Bash(grep:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(node -e \"\nconst { initializeApp, cert } = require\\('firebase-admin/app'\\);\nconst { getFirestore } = require\\('firebase-admin/firestore'\\);\ninitializeApp\\({ projectId: 'car-detector-833e5' }\\);\nconst db = getFirestore\\(\\);\ndb.collection\\('config'\\).doc\\('plans'\\).set\\({\n  basic: {\n    monthly_scans: 5,\n    overage_price_pence: 30,\n    price_pence: 0\n  },\n  trader: {\n    monthly_scans: 100,\n    overage_price_pence: 20,\n    price_pence: 1499\n  }\n}\\).then\\(\\(\\) => console.log\\('config/plans created successfully'\\)\\)\n  .catch\\(err => console.error\\('Error:', err.message\\)\\);\n\" 2>&1)",
+      "Bash(npm list:*)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"\nconst { initializeApp, applicationDefault } = require\\('firebase-admin/app'\\);\nconst { getFirestore } = require\\('firebase-admin/firestore'\\);\ninitializeApp\\({ projectId: 'car-detector-833e5' }\\);\nconst db = getFirestore\\(\\);\ndb.collection\\('config'\\).doc\\('plans'\\).set\\({\n  basic: {\n    monthly_scans: 5,\n    overage_price_pence: 30,\n    price_pence: 0\n  },\n  trader: {\n    monthly_scans: 100,\n    overage_price_pence: 20,\n    price_pence: 1499\n  }\n}\\).then\\(\\(\\) => console.log\\('config/plans created successfully'\\)\\)\n  .catch\\(err => console.error\\('Error:', err.message\\)\\);\n\" 2>&1)",
+      "Bash(node -e \"\nconst { initializeApp } = require\\('firebase-admin/app'\\);\nconst { getFirestore } = require\\('firebase-admin/firestore'\\);\ninitializeApp\\({ projectId: 'car-detector-833e5' }\\);\nconst db = getFirestore\\(\\);\ndb.collection\\('config'\\).doc\\('plans'\\).set\\({\n  basic: {\n    monthly_scans: 5,\n    overage_price_pence: 30,\n    price_pence: 0\n  },\n  trader: {\n    monthly_scans: 100,\n    overage_price_pence: 20,\n    price_pence: 1499\n  }\n}\\).then\\(\\(\\) => console.log\\('config/plans created successfully'\\)\\)\n  .catch\\(err => console.error\\('Error:', err.message\\)\\);\n\" 2>&1)",
+      "Bash(gcloud auth:*)",
+      "Bash(node -e \"\n// Use firebase-admin with the Firebase CLI's refresh token\nconst { execSync } = require\\('child_process'\\);\nconst fs = require\\('fs'\\);\nconst path = require\\('path'\\);\nconst os = require\\('os'\\);\n\n// Find Firebase CLI config to get the refresh token\nconst configDir = path.join\\(os.homedir\\(\\), '.config', 'configstore'\\);\nlet configPath = path.join\\(configDir, 'firebase-tools.json'\\);\nif \\(!fs.existsSync\\(configPath\\)\\) {\n  // Windows alternative\n  const winPath = path.join\\(os.homedir\\(\\), '.config', 'configstore', 'firebase-tools.json'\\);\n  if \\(fs.existsSync\\(winPath\\)\\) configPath = winPath;\n}\nconsole.log\\('Config path:', configPath\\);\nconsole.log\\('Exists:', fs.existsSync\\(configPath\\)\\);\n\" 2>&1)"
     ]
   }
 }
