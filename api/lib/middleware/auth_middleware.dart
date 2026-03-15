@@ -5,8 +5,8 @@ import '../config.dart';
 Middleware authMiddleware() {
   return (Handler innerHandler) {
     return (Request request) {
-      // Always allow health checks
-      if (request.url.path == 'health') {
+      // Always allow health checks and Stripe webhooks
+      if (request.url.path == 'health' || request.url.path == 'stripe-webhook') {
         return innerHandler(request);
       }
 

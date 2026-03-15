@@ -164,6 +164,59 @@
       </table>
     </div>
 
+    <!-- Scan Packs -->
+    <div id="scan-packs-section" style="margin-top:32px;">
+      <h2 style="text-align:center; margin-top:0;">Need More Scans?</h2>
+      <p style="text-align:center; color:var(--text-secondary); margin-bottom:20px;">Buy scan credit packs — no subscription required. Credits never expire.</p>
+
+      <!-- Credit balance (shown when signed in) -->
+      <div id="credit-balance" style="display:none; text-align:center; margin-bottom:20px;">
+        <span style="font-size:14px; color:var(--text-secondary);">Your balance: </span>
+        <span id="credit-count" style="font-size:18px; font-weight:800; color:var(--primary);">0</span>
+        <span style="font-size:14px; color:var(--text-secondary);"> scan credits</span>
+      </div>
+
+      <div class="plans">
+        <div class="plan-card" style="border-color:#e8f5e9;">
+          <div class="plan-name">10 Pack</div>
+          <div class="plan-desc">Try it out</div>
+          <div class="plan-price" style="color:#2e7d32;">&pound;3</div>
+          <ul class="plan-features">
+            <li>10 scan credits</li>
+            <li>30p per scan</li>
+            <li>Credits never expire</li>
+          </ul>
+          <button class="plan-btn" style="background:#e8f5e9; color:#2e7d32;" onclick="buyPack('pack_10')">Buy 10 Scans</button>
+        </div>
+
+        <div class="plan-card" style="border-color:#2e7d32;">
+          <div class="plan-name">50 Pack</div>
+          <div class="plan-desc">Best value</div>
+          <div class="plan-price" style="color:#2e7d32;">&pound;12</div>
+          <ul class="plan-features">
+            <li>50 scan credits</li>
+            <li>24p per scan</li>
+            <li>Save 20% vs 10 Pack</li>
+            <li>Credits never expire</li>
+          </ul>
+          <button class="plan-btn" style="background:#2e7d32; color:white;" onclick="buyPack('pack_50')">Buy 50 Scans</button>
+        </div>
+
+        <div class="plan-card" style="border-color:#e8f5e9;">
+          <div class="plan-name">100 Pack</div>
+          <div class="plan-desc">For power users</div>
+          <div class="plan-price" style="color:#2e7d32;">&pound;20</div>
+          <ul class="plan-features">
+            <li>100 scan credits</li>
+            <li>20p per scan</li>
+            <li>Save 33% vs 10 Pack</li>
+            <li>Credits never expire</li>
+          </ul>
+          <button class="plan-btn" style="background:#e8f5e9; color:#2e7d32;" onclick="buyPack('pack_100')">Buy 100 Scans</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card" style="text-align:center;">
       <h3>Questions?</h3>
       <p>Get in touch with our team for help choosing the right plan.</p>
@@ -173,7 +226,7 @@
 
   <footer>
     &copy; 2026 Axiom Forge Software. All rights reserved.<br>
-    <a href="/privacy-policy.html">Privacy Policy</a> &middot; <a href="/delete-account.html">Delete Account</a>
+    <a href="/privacy-policy.html">Privacy Policy</a> &middot; <a href="/disclaimer.html">Data Disclaimer</a> &middot; <a href="/delete-account.html">Delete Account</a>
   </footer>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -193,6 +246,56 @@
     function currentMonthKey() {
       const now = new Date();
       return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    }
+
+    // Cloud Run API URL — update this to your Cloud Run service URL
+    const API_URL = 'https://car-detector-api-109977431110.europe-west2.run.app';
+
+    async function buyPack(packId) {
+      const user = auth.currentUser;
+      if (!user) { doSignIn(); return; }
+
+      // Find the button and show loading state
+      const btns = document.querySelectorAll('.plan-btn');
+      btns.forEach(b => b.disabled = true);
+
+      try {
+        const response = await fetch(API_URL + '/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pack_id: packId,
+            user_uid: user.uid,
+            user_email: user.email,
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Failed to create checkout');
+        }
+
+        const data = await response.json();
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
+      } catch (err) {
+        alert('Unable to start checkout: ' + err.message);
+        btns.forEach(b => b.disabled = false);
+      }
+    }
+
+    async function loadCreditBalance(user) {
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          const credits = userDoc.data().scan_credits || 0;
+          document.getElementById('credit-count').textContent = credits;
+          document.getElementById('credit-balance').style.display = 'block';
+        }
+      } catch (e) {}
     }
 
     async function loadMembership(user) {
@@ -307,9 +410,11 @@
     auth.onAuthStateChanged(async (user) => {
       if (user) {
         await loadMembership(user);
+        await loadCreditBalance(user);
         document.getElementById('delete-link').style.display = 'inline';
       } else {
         document.getElementById('delete-link').style.display = 'none';
+        document.getElementById('credit-balance').style.display = 'none';
       }
     });
   </script>

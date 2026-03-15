@@ -457,6 +457,36 @@
       margin-bottom: 6px;
     }
 
+    /* Admin action buttons in user detail */
+    .admin-action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .admin-action-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .admin-action-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .admin-action-btn.danger { border-color: var(--danger); color: var(--danger); }
+    .admin-action-btn.danger:hover { background: #ffebee; }
+    .admin-action-btn.success { border-color: var(--success); color: var(--success); }
+    .admin-action-btn.success:hover { background: #e8f5e9; }
+    .plan-select {
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .table-wrap { overflow-x: auto; }
@@ -1251,8 +1281,10 @@
     html += '</div></div>';
 
     // Profile section
+    const plan = user ? (user.plan || 'free') : 'free';
     html += '<div class="detail-section"><h3>Profile</h3><div class="detail-grid">';
     html += '<span class="label">User ID</span><span style="font-size:12px;word-break:break-all;">' + escapeHtml(userId) + '</span>';
+    html += '<span class="label">Plan</span><span id="detail-plan-display">' + plan.charAt(0).toUpperCase() + plan.slice(1) + '</span>';
     if (user && user.created_at) {
       html += '<span class="label">Joined</span><span>' + formatTimestamp(user.created_at.toDate()) + '</span>';
     }
@@ -1265,6 +1297,29 @@
       html += '<span class="label">Status</span><span><span class="online-dot ' + dotClass + '"></span>' + statusLabel + '</span>';
     }
     html += '</div></div>';
+
+    // Plan management section
+    html += '<div class="detail-section"><h3>Plan Management</h3>';
+    html += '<div class="detail-grid">';
+    html += '<span class="label">Change Plan</span>';
+    html += '<span>';
+    html += '<select class="plan-select" id="plan-select-' + userId + '">';
+    html += '<option value="free"' + (plan === 'free' ? ' selected' : '') + '>Free</option>';
+    html += '<option value="basic"' + (plan === 'basic' ? ' selected' : '') + '>Basic</option>';
+    html += '<option value="trader"' + (plan === 'trader' ? ' selected' : '') + '>Trader</option>';
+    html += '</select> ';
+    html += '<button class="admin-action-btn success" onclick="changeUserPlan(\'' + userId + '\')">Apply</button>';
+    html += '</span>';
+    html += '</div></div>';
+
+    // Usage section (loaded async)
+    html += '<div class="detail-section"><h3>Usage This Month</h3>';
+    html += '<div id="usage-detail-' + userId + '" style="color:var(--text-secondary);font-size:13px;">Loading usage data...</div>';
+    html += '<div class="admin-action-row" style="margin-top:12px;">';
+    html += '<button class="admin-action-btn danger" onclick="resetUsage(\'' + userId + '\')">Reset Usage Counters</button>';
+    html += '<button class="admin-action-btn" onclick="addScanCredits(\'' + userId + '\')">Add Scan Credits</button>';
+    html += '</div>';
+    html += '</div>';
 
     // Lockouts section
     html += '<div class="detail-section"><h3>Lockouts (' + userLockouts.length + ')</h3>';
@@ -1322,11 +1377,127 @@
     content.innerHTML = html;
     document.getElementById('user-detail-overlay').style.display = 'block';
     document.getElementById('user-detail-panel').style.display = 'block';
+
+    // Load usage data async
+    loadUserUsage(userId);
   }
 
   function closeUserDetail() {
     document.getElementById('user-detail-overlay').style.display = 'none';
     document.getElementById('user-detail-panel').style.display = 'none';
+  }
+
+  // --- Admin: Usage Management ---
+
+  function currentMonthKey() {
+    const now = new Date();
+    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  }
+
+  async function loadUserUsage(userId) {
+    const el = document.getElementById('usage-detail-' + userId);
+    if (!el) return;
+
+    try {
+      const monthKey = currentMonthKey();
+      const usageDoc = await db.collection('users').doc(userId)
+        .collection('usage').doc(monthKey).get();
+
+      const userDoc = await db.collection('users').doc(userId).get();
+      const credits = (userDoc.exists && userDoc.data().scan_credits) || 0;
+
+      if (!usageDoc.exists) {
+        el.innerHTML = '<div class="detail-grid">'
+          + '<span class="label">Month</span><span>' + monthKey + '</span>'
+          + '<span class="label">AI Scans</span><span>0</span>'
+          + '<span class="label">Valuations</span><span>0</span>'
+          + '<span class="label">Overage</span><span>0</span>'
+          + '<span class="label">Scan Credits</span><span style="color:var(--success);font-weight:600;">' + credits + '</span>'
+          + '</div>';
+        return;
+      }
+
+      const data = usageDoc.data();
+      const aiScans = data.ai_only_scans || 0;
+      const valScans = data.valuation_scans || 0;
+      const overage = data.overage_scans || 0;
+      const lastScan = data.last_scan_at ? formatTimestamp(data.last_scan_at.toDate()) : '-';
+
+      el.innerHTML = '<div class="detail-grid">'
+        + '<span class="label">Month</span><span>' + monthKey + '</span>'
+        + '<span class="label">AI Scans</span><span>' + aiScans + '</span>'
+        + '<span class="label">Valuations</span><span>' + valScans + '</span>'
+        + '<span class="label">Overage</span><span>' + overage + '</span>'
+        + '<span class="label">Scan Credits</span><span style="color:var(--success);font-weight:600;">' + credits + '</span>'
+        + '<span class="label">Last Scan</span><span>' + lastScan + '</span>'
+        + '</div>';
+    } catch (e) {
+      el.textContent = 'Failed to load usage: ' + e.message;
+    }
+  }
+
+  async function resetUsage(userId) {
+    if (!confirm('Reset all usage counters for this user for the current month? This will set AI scans, valuations, and overage to 0.')) return;
+
+    try {
+      const monthKey = currentMonthKey();
+      await db.collection('users').doc(userId)
+        .collection('usage').doc(monthKey).set({
+          ai_only_scans: 0,
+          valuation_scans: 0,
+          overage_scans: 0,
+          reset_at: firebase.firestore.FieldValue.serverTimestamp(),
+          reset_by: auth.currentUser.email,
+        }, { merge: true });
+
+      alert('Usage counters reset successfully.');
+      loadUserUsage(userId);
+    } catch (e) {
+      alert('Failed to reset usage: ' + e.message);
+    }
+  }
+
+  async function changeUserPlan(userId) {
+    const select = document.getElementById('plan-select-' + userId);
+    const newPlan = select.value;
+
+    if (!confirm('Change this user\'s plan to "' + newPlan.charAt(0).toUpperCase() + newPlan.slice(1) + '"?')) return;
+
+    try {
+      await db.collection('users').doc(userId).update({
+        plan: newPlan,
+        plan_changed_at: firebase.firestore.FieldValue.serverTimestamp(),
+        plan_changed_by: auth.currentUser.email,
+      });
+
+      const display = document.getElementById('detail-plan-display');
+      if (display) display.textContent = newPlan.charAt(0).toUpperCase() + newPlan.slice(1);
+
+      alert('Plan updated to ' + newPlan.charAt(0).toUpperCase() + newPlan.slice(1) + '.');
+    } catch (e) {
+      alert('Failed to change plan: ' + e.message);
+    }
+  }
+
+  async function addScanCredits(userId) {
+    const amount = prompt('How many scan credits to add?', '10');
+    if (!amount) return;
+    const credits = parseInt(amount, 10);
+    if (isNaN(credits) || credits <= 0) {
+      alert('Please enter a valid positive number.');
+      return;
+    }
+
+    try {
+      await db.collection('users').doc(userId).update({
+        scan_credits: firebase.firestore.FieldValue.increment(credits),
+      });
+
+      alert(credits + ' scan credits added successfully.');
+      loadUserUsage(userId);
+    } catch (e) {
+      alert('Failed to add credits: ' + e.message);
+    }
   }
 </script>
 </body>

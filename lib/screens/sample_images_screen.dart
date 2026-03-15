@@ -73,11 +73,11 @@ class _SampleImagesScreenState extends State<SampleImagesScreen> {
         Navigator.push(
           context,
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => ResultsScreen(
+            pageBuilder: (_, _, _) => ResultsScreen(
               imagePath: tempFile.path,
               identification: identification,
             ),
-            transitionsBuilder: (_, animation, __, child) =>
+            transitionsBuilder: (_, animation, _, child) =>
                 FadeTransition(opacity: animation, child: child),
             transitionDuration: const Duration(milliseconds: 400),
           ),

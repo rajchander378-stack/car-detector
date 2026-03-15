@@ -208,6 +208,10 @@
           <div class="stat-value" id="stat-remaining">—</div>
           <div class="stat-label" id="stat-remaining-label">Remaining</div>
         </div>
+        <div class="dash-stat-card">
+          <div class="stat-value" id="stat-credits" style="color:#2e7d32;">—</div>
+          <div class="stat-label">Scan Credits</div>
+        </div>
       </div>
 
       <!-- Quick actions -->
@@ -232,6 +236,11 @@
           <h4>Bulk Upload</h4>
           <p>Upload 100+ car images for AI identification</p>
         </a>
+        <a href="/pricing.html#scan-packs-section" class="dash-action-card">
+          <div class="action-icon" style="color:#2e7d32;">&#128176;</div>
+          <h4>Buy Scan Credits</h4>
+          <p>Top up with 10, 50, or 100 scan packs</p>
+        </a>
         <a href="/delete-account.html" class="dash-action-card">
           <div class="action-icon">&#9881;&#65039;</div>
           <h4>Account Settings</h4>
@@ -253,7 +262,8 @@
     <a href="/">Home</a> &middot;
     <a href="/pricing.html">Pricing</a> &middot;
     <a href="/contact.html">Contact</a> &middot;
-    <a href="/privacy-policy.html">Privacy Policy</a>
+    <a href="/privacy-policy.html">Privacy Policy</a> &middot;
+    <a href="/disclaimer.html">Data Disclaimer</a>
     <br>&copy; 2026 Axiom Forge Software. All rights reserved.
   </footer>
 
@@ -335,6 +345,7 @@
           if (val.private_price) html += 'Private: &pound;' + Number(val.private_price).toLocaleString() + ' &middot; ';
           if (val.trade_price) html += 'Trade: &pound;' + Number(val.trade_price).toLocaleString();
           html += '</div>';
+          html += '<div style="margin-top:2px; font-size:11px; color:#bdbdbd;">Estimate &mdash; <a href="/disclaimer.html" style="color:#bdbdbd;">see data disclaimer</a></div>';
         }
 
         html += '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">';
@@ -560,6 +571,24 @@
         totalScans = scansSnap.size;
       } catch (e) {}
       document.getElementById('stat-scans').textContent = totalScans;
+
+      // Scan credits
+      try {
+        const credDoc = await db.collection('users').doc(user.uid).get();
+        const credits = (credDoc.exists && credDoc.data().scan_credits) || 0;
+        document.getElementById('stat-credits').textContent = credits;
+      } catch (e) {}
+
+      // Show purchase success message
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('purchase') === 'success') {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background:#e8f5e9; border:1px solid #2e7d32; border-radius:10px; padding:14px 20px; margin-bottom:16px; text-align:center; color:#2e7d32; font-weight:600;';
+        banner.textContent = 'Payment successful! Your scan credits have been added.';
+        document.querySelector('.dash-container').insertBefore(banner, document.querySelector('.dash-container').firstChild);
+        // Clean URL
+        window.history.replaceState({}, '', '/dashboard.html');
+      }
 
       if (plan === 'free') {
         document.getElementById('stat-used').textContent = aiOnlyScans;

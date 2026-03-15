@@ -8,12 +8,46 @@ class ValuationService {
   factory ValuationService() => _instance;
   ValuationService._internal();
 
-  Future<VehicleValuation> getValuation(String vrm, {int? mileage}) async {
+  static const int _maxAttempts = 3;
+  static const Duration _retryDelay = Duration(seconds: 3);
+
+  /// Callback to report retry progress to the UI.
+  /// Called with (attemptNumber, maxAttempts) on each retry.
+  Future<VehicleValuation> getValuation(
+    String vrm, {
+    int? mileage,
+    void Function(int attempt, int total)? onRetry,
+  }) async {
     final cleanVrm = vrm.replaceAll(RegExp(r'\s+'), '').toUpperCase();
     if (cleanVrm.isEmpty) {
       throw ValuationException('No registration number provided');
     }
 
+    ValuationException? lastError;
+
+    for (int attempt = 1; attempt <= _maxAttempts; attempt++) {
+      try {
+        return await _attemptValuation(cleanVrm, mileage: mileage);
+      } on ValuationException catch (e) {
+        lastError = e;
+
+        // Don't retry on auth failures or "no data" — these won't change
+        if (e.message.contains('authentication') ||
+            e.message.contains('No valuation data')) {
+          rethrow;
+        }
+
+        if (attempt < _maxAttempts) {
+          onRetry?.call(attempt + 1, _maxAttempts);
+          await Future.delayed(_retryDelay);
+        }
+      }
+    }
+
+    throw lastError ?? ValuationException('Valuation failed after $_maxAttempts attempts');
+  }
+
+  Future<VehicleValuation> _attemptValuation(String cleanVrm, {int? mileage}) async {
     final queryParams = {
       'ApiKey': Constants.vdglApiKey,
       'PackageName': Constants.vdglPackageName,

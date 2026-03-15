@@ -117,8 +117,9 @@ class ImageProcessor {
     final quality = assessQuality(image);
 
     final tempDir = Directory.systemTemp;
+    final stamp = DateTime.now().millisecondsSinceEpoch;
     final optimised = File(
-      '${tempDir.path}/optimised_car.jpg'
+      '${tempDir.path}/optimised_car_$stamp.jpg'
     );
     await optimised.writeAsBytes(
       img.encodeJpg(image, quality: 85)

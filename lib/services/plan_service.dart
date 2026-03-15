@@ -111,7 +111,7 @@ class PlanService {
     return UsageRecord.empty(_currentMonthKey());
   }
 
-  Future<String> _getUserPlan(String uid) async {
+  Future<String> getUserPlan(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
     if (!doc.exists) return 'free';
     final data = doc.data()!;
@@ -119,7 +119,7 @@ class PlanService {
   }
 
   Future<ScanAllowance> checkValuationAllowance(String uid) async {
-    final plan = await _getUserPlan(uid);
+    final plan = await getUserPlan(uid);
     final config = await getPlanConfig(plan);
     final usage = await getCurrentUsage(uid);
 
@@ -139,7 +139,7 @@ class PlanService {
   }
 
   Future<void> recordValuationScan(String uid) async {
-    final plan = await _getUserPlan(uid);
+    final plan = await getUserPlan(uid);
     final config = await getPlanConfig(plan);
     final usage = await getCurrentUsage(uid);
 

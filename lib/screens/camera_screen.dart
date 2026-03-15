@@ -11,6 +11,8 @@ import '../services/detector_service.dart';
 import '../services/gemini_service.dart';
 import '../services/image_processor.dart';
 import '../services/lockout_service.dart';
+import '../services/plan_service.dart';
+import 'bulk_gallery_screen.dart';
 import 'messages_screen.dart';
 import 'results_screen.dart';
 import 'sample_images_screen.dart';
@@ -238,11 +240,11 @@ class _CameraScreenState extends State<CameraScreen>
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder: (_, __, ___) => ResultsScreen(
+                pageBuilder: (_, _, _) => ResultsScreen(
                   imagePath: xFile.path,
                   identification: identification,
                 ),
-                transitionsBuilder: (_, animation, __, child) {
+                transitionsBuilder: (_, animation, _, child) {
                   return FadeTransition(opacity: animation, child: child);
                 },
                 transitionDuration: const Duration(milliseconds: 400),
@@ -250,7 +252,7 @@ class _CameraScreenState extends State<CameraScreen>
             );
             setState(() => _status =
                 'Recognition failed. Please try again. '
-                '(${_consecutiveFailures}/3)');
+                '($_consecutiveFailures/3)');
           }
         }
       } else {
@@ -258,16 +260,22 @@ class _CameraScreenState extends State<CameraScreen>
         _consecutiveFailures = 0;
         _recentErrors.clear();
 
+        // Record AI scan usage
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          PlanService().recordAiOnlyScan(user.uid);
+        }
+
         // Navigate to results with hero transition
         if (mounted) {
           Navigator.push(
             context,
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => ResultsScreen(
+              pageBuilder: (_, _, _) => ResultsScreen(
                 imagePath: xFile.path,
                 identification: identification,
               ),
-              transitionsBuilder: (_, animation, __, child) {
+              transitionsBuilder: (_, animation, _, child) {
                 return FadeTransition(opacity: animation, child: child);
               },
               transitionDuration: const Duration(milliseconds: 400),
@@ -289,7 +297,7 @@ class _CameraScreenState extends State<CameraScreen>
       } else {
         setState(() => _status =
             'Request timed out. Please try again. '
-            '(${_consecutiveFailures}/3)');
+            '($_consecutiveFailures/3)');
       }
     } catch (e) {
       _consecutiveFailures++;
@@ -303,7 +311,7 @@ class _CameraScreenState extends State<CameraScreen>
       } else {
         setState(() => _status =
             'Something went wrong. Please try again. '
-            '(${_consecutiveFailures}/3)');
+            '($_consecutiveFailures/3)');
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -368,33 +376,39 @@ class _CameraScreenState extends State<CameraScreen>
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder: (_, __, ___) => ResultsScreen(
+                pageBuilder: (_, _, _) => ResultsScreen(
                   imagePath: picked.path,
                   identification: identification,
                 ),
-                transitionsBuilder: (_, animation, __, child) =>
+                transitionsBuilder: (_, animation, _, child) =>
                     FadeTransition(opacity: animation, child: child),
                 transitionDuration: const Duration(milliseconds: 400),
               ),
             );
             setState(() => _status =
                 'Recognition failed. Please try again. '
-                '(${_consecutiveFailures}/3)');
+                '($_consecutiveFailures/3)');
           }
         }
       } else {
         _consecutiveFailures = 0;
         _recentErrors.clear();
 
+        // Record AI scan usage
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          PlanService().recordAiOnlyScan(user.uid);
+        }
+
         if (mounted) {
           Navigator.push(
             context,
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => ResultsScreen(
+              pageBuilder: (_, _, _) => ResultsScreen(
                 imagePath: picked.path,
                 identification: identification,
               ),
-              transitionsBuilder: (_, animation, __, child) =>
+              transitionsBuilder: (_, animation, _, child) =>
                   FadeTransition(opacity: animation, child: child),
               transitionDuration: const Duration(milliseconds: 400),
             ),
@@ -411,7 +425,7 @@ class _CameraScreenState extends State<CameraScreen>
       } else {
         setState(() => _status =
             'Request timed out. Please try again. '
-            '(${_consecutiveFailures}/3)');
+            '($_consecutiveFailures/3)');
       }
     } catch (e) {
       _consecutiveFailures++;
@@ -422,7 +436,7 @@ class _CameraScreenState extends State<CameraScreen>
       } else {
         setState(() => _status =
             'Something went wrong. Please try again. '
-            '(${_consecutiveFailures}/3)');
+            '($_consecutiveFailures/3)');
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -611,15 +625,24 @@ class _CameraScreenState extends State<CameraScreen>
             ),
 
           // Gallery button (left of capture)
+          // Tap: pick one photo. Long-press: bulk gallery scan.
           if (!_isProcessing)
             Positioned(
               bottom: 55, left: 40,
               child: Semantics(
                 button: true,
-                label: 'Pick photo from gallery',
-                child: IconButton(
-                  onPressed: _pickFromGallery,
-                  icon: const Icon(
+                label: 'Pick photo from gallery. Long press for bulk scan.',
+                child: GestureDetector(
+                  onTap: _pickFromGallery,
+                  onLongPress: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BulkGalleryScreen(),
+                      ),
+                    );
+                  },
+                  child: const Icon(
                     Icons.photo_library_outlined,
                     color: Colors.white,
                     size: 30,
@@ -717,6 +740,20 @@ class _CameraScreenState extends State<CameraScreen>
             onTap: () {
               Navigator.pop(context);
               _pickFromGallery();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.burst_mode_outlined),
+            title: const Text('Bulk Gallery Scan'),
+            subtitle: const Text('Trader plan only'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BulkGalleryScreen(),
+                ),
+              );
             },
           ),
           ListTile(

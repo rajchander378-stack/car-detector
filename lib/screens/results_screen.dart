@@ -27,6 +27,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   bool _loading = false;
   VehicleValuation? _valuation;
   String? _error;
+  String? _retryStatus;
   bool _reportSubmitted = false;
   bool _saved = false;
   bool _saving = false;
@@ -175,14 +176,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _retryStatus = null;
     });
 
     try {
-      final valuation = await ValuationService().getValuation(plate);
+      final valuation = await ValuationService().getValuation(
+        plate,
+        onRetry: (attempt, total) {
+          if (mounted) {
+            setState(() {
+              _retryStatus = 'Attempt $attempt of $total...';
+            });
+          }
+        },
+      );
       await PlanService().recordValuationScan(user.uid);
       setState(() {
         _valuation = valuation;
         _loading = false;
+        _retryStatus = null;
       });
       // Refresh allowance for button hint
       _loadAllowance();
@@ -190,11 +202,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
       setState(() {
         _error = e.message;
         _loading = false;
+        _retryStatus = null;
       });
     } catch (e) {
       setState(() {
         _error = 'Unable to fetch valuation. Please check your connection and try again.';
         _loading = false;
+        _retryStatus = null;
       });
     }
   }
@@ -389,7 +403,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         )
                       : const Icon(Icons.attach_money),
                   label: Text(_loading
-                      ? 'Looking up...'
+                      ? (_retryStatus ?? 'Looking up...')
                       : _valuation != null
                           ? 'Price loaded'
                           : 'Get Price Estimate'),
@@ -879,6 +893,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ],
             ),
           ],
+          const SizedBox(height: 10),
+          Text(
+            'Estimate generated from market data \u2014 not guaranteed.',
+            style: TextStyle(fontSize: 11, color: Colors.green[400]),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
