@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/saved_scan.dart';
 import '../models/car_identification.dart';
 import '../models/vehicle_valuation.dart';
+import '../models/vehicle_report.dart';
 
 class SavedScanService {
   static final SavedScanService _instance = SavedScanService._internal();
@@ -18,12 +19,18 @@ class SavedScanService {
     required String uid,
     required CarIdentification identification,
     VehicleValuation? valuation,
+    VehicleReport? report,
   }) async {
     final scan = SavedScan(
       id: '',
       identification: identification,
-      valuation: valuation,
+      valuation: report?.valuation ?? valuation,
+      vehicleDetails: report?.vehicleDetails,
+      modelDetails: report?.modelDetails,
+      motHistory: report?.motHistory,
+      tyreDetails: report?.tyreDetails,
       savedAt: DateTime.now(),
+      reportVersion: report != null ? 2 : 1,
     );
     final docRef = await _scansCollection(uid).add(scan.toFirestore());
     return docRef.id;
@@ -68,6 +75,43 @@ class SavedScanService {
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => SavedScan.fromFirestore(doc)).toList());
+  }
+
+  /// Find the most recent saved scan matching a number plate.
+  Future<SavedScan?> findByPlate(String uid, String plate) async {
+    final cleanPlate = plate.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+    if (cleanPlate.isEmpty) return null;
+
+    final scans = await fetchAllScans(uid);
+    for (final scan in scans) {
+      final scanPlate = scan.identification.numberPlate
+          ?.replaceAll(RegExp(r'\s+'), '')
+          .toUpperCase();
+      if (scanPlate == cleanPlate) return scan;
+    }
+    return null;
+  }
+
+  /// Overwrite an existing scan with fresh data.
+  Future<void> updateScan({
+    required String uid,
+    required String scanId,
+    required CarIdentification identification,
+    VehicleValuation? valuation,
+    VehicleReport? report,
+  }) async {
+    final scan = SavedScan(
+      id: scanId,
+      identification: identification,
+      valuation: report?.valuation ?? valuation,
+      vehicleDetails: report?.vehicleDetails,
+      modelDetails: report?.modelDetails,
+      motHistory: report?.motHistory,
+      tyreDetails: report?.tyreDetails,
+      savedAt: DateTime.now(),
+      reportVersion: report != null ? 2 : 1,
+    );
+    await _scansCollection(uid).doc(scanId).set(scan.toFirestore());
   }
 
   /// Remove scans older than the retention period.

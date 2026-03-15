@@ -281,6 +281,7 @@
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
     let scansUnsubscribe = null;
+    let garageIndex = {}; // scanId -> garageDocId
 
     async function doSignIn() {
       try { await auth.signInWithPopup(provider); }
@@ -350,7 +351,11 @@
 
         html += '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">';
         html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--primary-light); color:var(--primary);" onclick="shareReport(\'' + doc.id + '\')">Share Report</button>';
-        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:#e8f5e9; color:#2e7d32;" onclick="addToGarage(\'' + doc.id + '\')">Save to Garage</button>';
+        if (garageIndex[doc.id]) {
+          html += '<button class="btn" id="garage-btn-' + doc.id + '" style="padding:3px 10px; font-size:12px; background:#ffebee; color:#c62828;" onclick="removeFromGarageByScan(\'' + doc.id + '\')">Remove from Garage</button>';
+        } else {
+          html += '<button class="btn" id="garage-btn-' + doc.id + '" style="padding:3px 10px; font-size:12px; background:#e8f5e9; color:#2e7d32;" onclick="addToGarage(\'' + doc.id + '\')">Save to Garage</button>';
+        }
         html += '</div>';
 
         html += '</div>';
@@ -386,11 +391,12 @@
         const existing = await db.collection('users').doc(user.uid).collection('garage')
           .where('source_scan_id', '==', scanId).limit(1).get();
         if (!existing.empty) {
-          btn.textContent = 'Already Saved';
-          btn.style.background = '#fff3e0';
-          btn.style.color = '#f57c00';
+          garageIndex[scanId] = existing.docs[0].id;
+          btn.textContent = 'Remove from Garage';
+          btn.style.background = '#ffebee';
+          btn.style.color = '#c62828';
+          btn.setAttribute('onclick', "removeFromGarageByScan('" + scanId + "')");
           btn.disabled = false;
-          setTimeout(() => { btn.textContent = originalText; btn.style.background = '#e8f5e9'; btn.style.color = '#2e7d32'; }, 2000);
           return;
         }
 
@@ -402,27 +408,60 @@
         const scanData = scanDoc.data();
 
         // Add to garage
-        await db.collection('users').doc(user.uid).collection('garage').add({
+        const garageRef = await db.collection('users').doc(user.uid).collection('garage').add({
           source_scan_id: scanId,
           identification: scanData.identification || {},
           valuation: scanData.valuation || null,
           added_at: firebase.firestore.FieldValue.serverTimestamp(),
         });
 
-        btn.textContent = 'Saved!';
-        btn.style.background = '#e8f5e9';
-        btn.style.color = '#2e7d32';
+        garageIndex[scanId] = garageRef.id;
+        btn.textContent = 'Remove from Garage';
+        btn.style.background = '#ffebee';
+        btn.style.color = '#c62828';
+        btn.setAttribute('onclick', "removeFromGarageByScan('" + scanId + "')");
       } catch (err) {
         console.error('Failed to save to garage:', err);
         alert('Failed to save vehicle. Please try again.');
         btn.textContent = originalText;
       } finally {
         btn.disabled = false;
-        setTimeout(() => {
-          btn.textContent = 'Save to Garage';
-          btn.style.background = '#e8f5e9';
-          btn.style.color = '#2e7d32';
-        }, 2000);
+      }
+    }
+
+    async function removeFromGarageByScan(scanId) {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const btn = document.getElementById('garage-btn-' + scanId);
+      if (!btn) return;
+      btn.textContent = 'Removing...';
+      btn.disabled = true;
+
+      try {
+        const garageDocId = garageIndex[scanId];
+        if (garageDocId) {
+          await db.collection('users').doc(user.uid).collection('garage').doc(garageDocId).delete();
+        } else {
+          // Fallback: query by source_scan_id
+          const snap = await db.collection('users').doc(user.uid).collection('garage')
+            .where('source_scan_id', '==', scanId).limit(1).get();
+          if (!snap.empty) {
+            await snap.docs[0].ref.delete();
+          }
+        }
+
+        delete garageIndex[scanId];
+        btn.textContent = 'Save to Garage';
+        btn.style.background = '#e8f5e9';
+        btn.style.color = '#2e7d32';
+        btn.setAttribute('onclick', "addToGarage('" + scanId + "')");
+      } catch (err) {
+        console.error('Failed to remove from garage:', err);
+        alert('Failed to remove vehicle. Please try again.');
+        btn.textContent = 'Remove from Garage';
+      } finally {
+        btn.disabled = false;
       }
     }
 
@@ -640,6 +679,16 @@
           }
         }
       } catch (e) {}
+
+      // Build garage index so scan buttons show correct state
+      try {
+        const garageSnap = await db.collection('users').doc(user.uid).collection('garage').get();
+        garageIndex = {};
+        garageSnap.forEach(function(doc) {
+          const srcId = doc.data().source_scan_id;
+          if (srcId) garageIndex[srcId] = doc.id;
+        });
+      } catch (e) { garageIndex = {}; }
 
       // Load scans
       loadUserScans(user.uid);

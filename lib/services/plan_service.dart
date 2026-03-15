@@ -47,10 +47,10 @@ class PlanConfig {
       PlanConfig(monthlyScans: 5, overagePricePence: 0, pricePence: 0);
 
   static PlanConfig basicDefault() =>
-      PlanConfig(monthlyScans: 10, overagePricePence: 40, pricePence: 500);
+      PlanConfig(monthlyScans: 10, overagePricePence: 90, pricePence: 999);
 
   static PlanConfig traderDefault() =>
-      PlanConfig(monthlyScans: 75, overagePricePence: 30, pricePence: 1499);
+      PlanConfig(monthlyScans: 75, overagePricePence: 85, pricePence: 5999);
 }
 
 class PlanService {

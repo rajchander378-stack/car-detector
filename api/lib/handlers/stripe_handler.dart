@@ -7,9 +7,9 @@ import '../config.dart';
 
 /// Scan pack definitions: id → (scans, price in pence, display name)
 const Map<String, ({int scans, int pricePence, String name})> scanPacks = {
-  'pack_10': (scans: 10, pricePence: 300, name: '10 Scan Pack'),
-  'pack_50': (scans: 50, pricePence: 1200, name: '50 Scan Pack'),
-  'pack_100': (scans: 100, pricePence: 2000, name: '100 Scan Pack'),
+  'pack_10': (scans: 10, pricePence: 899, name: '10 Scan Pack'),
+  'pack_50': (scans: 50, pricePence: 4499, name: '50 Scan Pack'),
+  'pack_100': (scans: 100, pricePence: 8499, name: '100 Scan Pack'),
 };
 
 /// POST /create-checkout-session

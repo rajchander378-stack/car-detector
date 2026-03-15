@@ -31,6 +31,32 @@ class CsvExportService {
     'Auction',
     'Trade Average',
     'Trade Poor',
+    // Vehicle Details
+    'VIN',
+    'Fuel Type',
+    'Engine CC',
+    'Previous Keepers',
+    'Road Tax (12m)',
+    'CO2 (g/km)',
+    'Imported',
+    'Scrapped',
+    // MOT
+    'MOT Due',
+    'MOT Passes',
+    'MOT Failures',
+    'Last MOT Result',
+    'Last MOT Mileage',
+    // Specs
+    'Transmission',
+    'Drive Type',
+    '0-60 mph (s)',
+    'Top Speed (mph)',
+    'Combined MPG',
+    'NCAP Stars',
+    'Kerb Weight (kg)',
+    // Tyres
+    'Front Tyre',
+    'Rear Tyre',
     'Favourite',
   ];
 
@@ -60,6 +86,12 @@ class CsvExportService {
   List<dynamic> _row(SavedScan scan) {
     final id = scan.identification;
     final v = scan.valuation;
+    final vd = scan.vehicleDetails;
+    final mot = scan.motHistory;
+    final md = scan.modelDetails;
+    final td = scan.tyreDetails;
+    final lastTest = mot != null && mot.tests.isNotEmpty ? mot.tests.first : null;
+
     return [
       _formatDate(scan.savedAt),
       id.make ?? '',
@@ -86,6 +118,34 @@ class CsvExportService {
       v?.auction ?? '',
       v?.tradeAverage ?? '',
       v?.tradePoor ?? '',
+      // Vehicle Details
+      vd?.vin ?? '',
+      vd?.dvlaFuelType ?? '',
+      vd?.engineCapacityCc ?? '',
+      vd?.numberOfPreviousKeepers ?? '',
+      vd?.vedStandard12Months != null
+          ? vd!.vedStandard12Months!.toStringAsFixed(0)
+          : '',
+      vd?.dvlaCo2 ?? '',
+      vd != null && vd.isImported ? 'Yes' : '',
+      vd != null && vd.isScrapped ? 'Yes' : '',
+      // MOT
+      mot?.motDueDate ?? '',
+      mot?.totalPasses ?? '',
+      mot?.totalFailures ?? '',
+      lastTest != null ? (lastTest.passed ? 'Pass' : 'Fail') : '',
+      lastTest?.mileageDisplay ?? '',
+      // Specs
+      md?.transmissionType ?? '',
+      md?.driveType ?? '',
+      md?.zeroToSixtyMph?.toStringAsFixed(1) ?? '',
+      md?.maxSpeedMph ?? '',
+      md?.combinedMpg?.toStringAsFixed(1) ?? '',
+      md?.ncapStarRating ?? '',
+      md?.kerbWeightKg ?? '',
+      // Tyres
+      td?.standardFitment?.front?.sizeDescription ?? '',
+      td?.standardFitment?.rear?.sizeDescription ?? '',
       scan.isFavourite ? 'Yes' : 'No',
     ];
   }

@@ -66,6 +66,48 @@
     .powered-by { text-align: center; margin-top: 24px; font-size: 13px; color: var(--text-secondary); }
     .powered-by a { font-weight: 600; }
 
+    .collapsible-section { margin-bottom: 20px; }
+    .collapsible-header {
+      display: flex; align-items: center; padding: 14px 20px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 14px; cursor: pointer; user-select: none;
+    }
+    .collapsible-header.open { border-radius: 14px 14px 0 0; border-bottom: none; }
+    .collapsible-header .section-icon { font-size: 20px; margin-right: 10px; }
+    .collapsible-header h2 { margin: 0; font-size: 16px; flex: 1; }
+    .collapsible-header .chevron { transition: transform 0.2s; font-size: 18px; color: var(--text-secondary); }
+    .collapsible-header.open .chevron { transform: rotate(180deg); }
+    .collapsible-body {
+      display: none; padding: 16px 20px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-top: none; border-radius: 0 0 14px 14px;
+    }
+    .collapsible-body.open { display: block; }
+
+    .mot-test {
+      padding: 10px 12px; border-radius: 8px; margin-bottom: 6px;
+      border: 1px solid; font-size: 13px;
+    }
+    .mot-pass { background: #e8f5e9; border-color: #a5d6a7; }
+    .mot-fail { background: #ffebee; border-color: #ef9a9a; }
+    .mot-test .mot-badge { font-weight: 700; }
+    .mot-test .mot-date { float: right; color: var(--text-secondary); font-size: 12px; }
+    .mot-test .mot-detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .mot-due-banner {
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px;
+    }
+    .mot-due-ok { background: #e0f2f1; color: #00695c; }
+    .mot-due-overdue { background: #ffebee; color: #c62828; }
+
+    .warning-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #ffebee; border: 1px solid #ef9a9a; border-radius: 4px;
+      padding: 3px 8px; font-size: 12px; font-weight: 600; color: #c62828;
+      margin-right: 6px; margin-bottom: 4px;
+    }
+
     @media (max-width: 600px) {
       .valuation-grid { grid-template-columns: 1fr; }
       .report-header h1 { font-size: 22px; }
@@ -140,6 +182,57 @@
         </p>
       </div>
 
+      <!-- Vehicle Details -->
+      <div class="collapsible-section" id="vehicle-details-section" style="display:none;">
+        <div class="collapsible-header" onclick="toggleSection(this)">
+          <span class="section-icon">&#x1F6C8;</span>
+          <h2 style="color:#1565c0;">Vehicle Details</h2>
+          <span class="chevron">&#x25BC;</span>
+        </div>
+        <div class="collapsible-body">
+          <div id="vehicle-details-fields"></div>
+          <div id="vehicle-warnings"></div>
+        </div>
+      </div>
+
+      <!-- MOT History -->
+      <div class="collapsible-section" id="mot-section" style="display:none;">
+        <div class="collapsible-header" onclick="toggleSection(this)">
+          <span class="section-icon">&#x2714;</span>
+          <h2 id="mot-title" style="color:#00796b;">MOT History</h2>
+          <span class="chevron">&#x25BC;</span>
+        </div>
+        <div class="collapsible-body">
+          <div id="mot-due-banner"></div>
+          <div id="mot-summary" style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;"></div>
+          <div id="mot-tests"></div>
+        </div>
+      </div>
+
+      <!-- Specifications -->
+      <div class="collapsible-section" id="specs-section" style="display:none;">
+        <div class="collapsible-header" onclick="toggleSection(this)">
+          <span class="section-icon">&#x1F527;</span>
+          <h2 style="color:#303f9f;">Specifications</h2>
+          <span class="chevron">&#x25BC;</span>
+        </div>
+        <div class="collapsible-body">
+          <div id="specs-fields"></div>
+        </div>
+      </div>
+
+      <!-- Tyres & Wheels -->
+      <div class="collapsible-section" id="tyres-section" style="display:none;">
+        <div class="collapsible-header" onclick="toggleSection(this)">
+          <span class="section-icon">&#x1F6DE;</span>
+          <h2 style="color:#5d4037;">Tyres &amp; Wheels</h2>
+          <span class="chevron">&#x25BC;</span>
+        </div>
+        <div class="collapsible-body">
+          <div id="tyres-fields"></div>
+        </div>
+      </div>
+
       <!-- Additional details -->
       <div class="report-card" id="details-section" style="display:none;">
         <h2>Additional Details</h2>
@@ -198,6 +291,132 @@
       div.className = 'valuation-item';
       div.innerHTML = '<div class="val-label">' + escapeHtml(label) + '</div><div class="val-price">&pound;' + Number(price).toLocaleString() + '</div>';
       container.appendChild(div);
+    }
+
+    function toggleSection(header) {
+      header.classList.toggle('open');
+      const body = header.nextElementSibling;
+      body.classList.toggle('open');
+    }
+
+    function formatDate(str) {
+      if (!str) return 'N/A';
+      try {
+        const d = new Date(str);
+        if (isNaN(d)) return str;
+        return d.toLocaleDateString('en-GB');
+      } catch (_) { return str; }
+    }
+
+    function renderVehicleDetails(vd) {
+      if (!vd) return;
+      const container = document.getElementById('vehicle-details-fields');
+      addField(container, 'VRM', vd.vrm);
+      addField(container, 'VIN', vd.vin);
+      addField(container, 'Make', vd.dvla_make);
+      addField(container, 'Model', vd.dvla_model);
+      addField(container, 'Fuel Type', vd.dvla_fuel_type);
+      addField(container, 'Body Type', vd.dvla_body_type);
+      addField(container, 'Colour', vd.current_colour);
+      addField(container, 'Year', vd.year_of_manufacture);
+      addField(container, 'First Registered', formatDate(vd.date_first_registered));
+      if (vd.engine_capacity_cc) addField(container, 'Engine', vd.engine_capacity_cc + ' cc');
+      addField(container, 'Previous Keepers', vd.number_of_previous_keepers);
+      if (vd.ved_standard_12_months) addField(container, 'Road Tax (12m)', '\u00A3' + Math.round(vd.ved_standard_12_months));
+      if (vd.dvla_co2) addField(container, 'CO2', vd.dvla_co2 + ' g/km');
+
+      const warnings = document.getElementById('vehicle-warnings');
+      if (vd.is_imported) warnings.innerHTML += '<span class="warning-chip">\u26A0 Imported</span>';
+      if (vd.is_exported) warnings.innerHTML += '<span class="warning-chip">\u26A0 Exported</span>';
+      if (vd.is_scrapped) warnings.innerHTML += '<span class="warning-chip">\u26A0 Scrapped</span>';
+
+      document.getElementById('vehicle-details-section').style.display = 'block';
+    }
+
+    function renderMotHistory(mot) {
+      if (!mot) return;
+      const banner = document.getElementById('mot-due-banner');
+      if (mot.mot_due_date) {
+        const overdue = new Date(mot.mot_due_date) < new Date();
+        banner.className = 'mot-due-banner ' + (overdue ? 'mot-due-overdue' : 'mot-due-ok');
+        banner.textContent = (overdue ? '\u26A0 ' : '\u2714 ') + 'MOT due: ' + formatDate(mot.mot_due_date);
+        if (overdue) document.getElementById('mot-title').style.color = '#c62828';
+      }
+
+      const passes = (mot.tests || []).filter(function(t) { return t.passed; }).length;
+      const failures = (mot.tests || []).filter(function(t) { return !t.passed; }).length;
+      document.getElementById('mot-summary').textContent = passes + ' passes, ' + failures + ' failures';
+
+      const testsContainer = document.getElementById('mot-tests');
+      (mot.tests || []).slice(0, 10).forEach(function(test) {
+        const div = document.createElement('div');
+        div.className = 'mot-test ' + (test.passed ? 'mot-pass' : 'mot-fail');
+        let html = '<span class="mot-badge" style="color:' + (test.passed ? '#2e7d32' : '#c62828') + '">'
+          + (test.passed ? 'PASS' : 'FAIL') + '</span>'
+          + '<span class="mot-date">' + formatDate(test.test_date) + '</span>';
+        const advisories = (test.defects || []).filter(function(d) { return d.type === 'Advisory' || d.type === 'Minor'; }).length;
+        const fails = (test.defects || []).filter(function(d) { return d.type === 'Fail' || d.type === 'Major' || d.type === 'Dangerous'; }).length;
+        let detail = '';
+        if (test.mileage) detail += test.mileage.toLocaleString() + ' miles';
+        if (advisories) detail += (detail ? ' \u00B7 ' : '') + advisories + ' advisor' + (advisories === 1 ? 'y' : 'ies');
+        if (fails) detail += (detail ? ' \u00B7 ' : '') + fails + ' failure' + (fails === 1 ? '' : 's');
+        if (detail) html += '<div class="mot-detail">' + escapeHtml(detail) + '</div>';
+        if (!test.passed) {
+          (test.defects || []).filter(function(d) { return d.type === 'Fail' || d.type === 'Major' || d.type === 'Dangerous'; }).slice(0, 5).forEach(function(d) {
+            html += '<div class="mot-detail" style="color:#c62828;">\u2022 ' + escapeHtml(d.text || '') + '</div>';
+          });
+        }
+        div.innerHTML = html;
+        testsContainer.appendChild(div);
+      });
+
+      document.getElementById('mot-section').style.display = 'block';
+    }
+
+    function renderSpecs(md) {
+      if (!md) return;
+      const container = document.getElementById('specs-fields');
+      var makeModel = ((md.make || '') + ' ' + (md.model || '')).trim();
+      addField(container, 'Make / Model', makeModel || null);
+      if (md.body_style) addField(container, 'Body', md.body_style + (md.number_of_doors ? ', ' + md.number_of_doors + ' door' : ''));
+      addField(container, 'Seats', md.number_of_seats);
+      addField(container, 'Engine', md.engine_summary);
+      if (md.transmission_type) addField(container, 'Transmission', md.transmission_type + (md.number_of_gears ? ', ' + md.number_of_gears + ' speed' : ''));
+      addField(container, 'Drive', md.drive_type);
+      if (md.zero_to_sixty_mph) addField(container, '0-60 mph', md.zero_to_sixty_mph.toFixed(1) + 's');
+      if (md.max_speed_mph) addField(container, 'Top Speed', md.max_speed_mph + ' mph');
+      if (md.combined_mpg) addField(container, 'Fuel Economy', md.combined_mpg.toFixed(1) + ' mpg combined');
+      if (md.manufacturer_co2) addField(container, 'CO2', md.manufacturer_co2 + ' g/km');
+      addField(container, 'Euro Status', md.euro_status);
+      if (md.ncap_star_rating) addField(container, 'NCAP Rating', '\u2605'.repeat(md.ncap_star_rating) + '\u2606'.repeat(5 - md.ncap_star_rating));
+      if (md.kerb_weight_kg) addField(container, 'Kerb Weight', md.kerb_weight_kg + ' kg');
+      if (md.length_mm) addField(container, 'Dimensions', md.length_mm + 'L x ' + (md.width_mm || '?') + 'W x ' + (md.height_mm || '?') + 'H mm');
+      addField(container, 'Country', md.country_of_origin);
+      if (md.is_ev) {
+        if (md.battery_capacity_kwh) addField(container, 'Battery', md.battery_capacity_kwh + ' kWh');
+        if (md.ev_real_range_miles) addField(container, 'Real Range', md.ev_real_range_miles + ' miles');
+        if (md.max_charge_input_power_kw) addField(container, 'Max Charge', md.max_charge_input_power_kw + ' kW');
+      }
+      document.getElementById('specs-section').style.display = 'block';
+    }
+
+    function renderTyres(td) {
+      if (!td || !td.fitments || td.fitments.length === 0) return;
+      const container = document.getElementById('tyres-fields');
+      const fitment = td.fitments[0];
+      if (fitment.front) {
+        addField(container, 'Front Size', fitment.front.size_description);
+        if (fitment.front.pressure_psi) addField(container, 'Front Pressure', fitment.front.pressure_psi + ' PSI');
+        addField(container, 'Front Run Flat', fitment.front.is_run_flat ? 'Yes' : 'No');
+      }
+      if (fitment.rear) {
+        addField(container, 'Rear Size', fitment.rear.size_description);
+        if (fitment.rear.pressure_psi) addField(container, 'Rear Pressure', fitment.rear.pressure_psi + ' PSI');
+        addField(container, 'Rear Run Flat', fitment.rear.is_run_flat ? 'Yes' : 'No');
+      }
+      addField(container, 'PCD', fitment.hub_pcd);
+      if (fitment.fixing_torque_nm) addField(container, 'Wheel Torque', fitment.fixing_torque_nm + ' Nm');
+      document.getElementById('tyres-section').style.display = 'block';
     }
 
     async function loadReport() {
@@ -278,6 +497,12 @@
           addValuation(grid, 'Auction', val.auction);
           addValuation(grid, 'Trade Average', val.trade_average);
         }
+
+        // Vehicle Details, MOT, Specs, Tyres sections
+        renderVehicleDetails(data.vehicle_details || null);
+        renderMotHistory(data.mot_history || null);
+        renderSpecs(data.model_details || null);
+        renderTyres(data.tyre_details || null);
 
         // Additional details
         const detailsFields = document.getElementById('details-fields');

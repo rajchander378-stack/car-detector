@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/utils/constants.dart';
+import '../models/vehicle_report.dart';
 import '../models/vehicle_valuation.dart';
 
 class ValuationService {
@@ -11,9 +12,9 @@ class ValuationService {
   static const int _maxAttempts = 3;
   static const Duration _retryDelay = Duration(seconds: 3);
 
-  /// Callback to report retry progress to the UI.
-  /// Called with (attemptNumber, maxAttempts) on each retry.
-  Future<VehicleValuation> getValuation(
+  /// Fetches a full vehicle report (valuation + MOT + specs + tyres).
+  /// Returns a [VehicleReport] containing all available data sections.
+  Future<VehicleReport> getReport(
     String vrm, {
     int? mileage,
     void Function(int attempt, int total)? onRetry,
@@ -27,11 +28,10 @@ class ValuationService {
 
     for (int attempt = 1; attempt <= _maxAttempts; attempt++) {
       try {
-        return await _attemptValuation(cleanVrm, mileage: mileage);
+        return await _attemptReport(cleanVrm, mileage: mileage);
       } on ValuationException catch (e) {
         lastError = e;
 
-        // Don't retry on auth failures or "no data" — these won't change
         if (e.message.contains('authentication') ||
             e.message.contains('No valuation data')) {
           rethrow;
@@ -44,10 +44,23 @@ class ValuationService {
       }
     }
 
-    throw lastError ?? ValuationException('Valuation failed after $_maxAttempts attempts');
+    throw lastError ?? ValuationException('Report failed after $_maxAttempts attempts');
   }
 
-  Future<VehicleValuation> _attemptValuation(String cleanVrm, {int? mileage}) async {
+  /// Backward-compatible method that returns just the valuation.
+  Future<VehicleValuation> getValuation(
+    String vrm, {
+    int? mileage,
+    void Function(int attempt, int total)? onRetry,
+  }) async {
+    final report = await getReport(vrm, mileage: mileage, onRetry: onRetry);
+    if (report.valuation == null || !report.valuation!.hasData) {
+      throw ValuationException('No valuation data available for $vrm');
+    }
+    return report.valuation!;
+  }
+
+  Future<VehicleReport> _attemptReport(String cleanVrm, {int? mileage}) async {
     final queryParams = {
       'ApiKey': Constants.vdglApiKey,
       'PackageName': Constants.vdglPackageName,
@@ -95,12 +108,7 @@ class ValuationService {
       throw ValuationException(statusMsg);
     }
 
-    final valuation = VehicleValuation.fromJson(json);
-    if (!valuation.hasData) {
-      throw ValuationException('No valuation data available for $cleanVrm');
-    }
-
-    return valuation;
+    return VehicleReport.fromApiJson(json);
   }
 }
 

@@ -46,7 +46,10 @@
       "Bash(gcloud auth:*)",
       "Bash(node -e \"\n// Use firebase-admin with the Firebase CLI's refresh token\nconst { execSync } = require\\('child_process'\\);\nconst fs = require\\('fs'\\);\nconst path = require\\('path'\\);\nconst os = require\\('os'\\);\n\n// Find Firebase CLI config to get the refresh token\nconst configDir = path.join\\(os.homedir\\(\\), '.config', 'configstore'\\);\nlet configPath = path.join\\(configDir, 'firebase-tools.json'\\);\nif \\(!fs.existsSync\\(configPath\\)\\) {\n  // Windows alternative\n  const winPath = path.join\\(os.homedir\\(\\), '.config', 'configstore', 'firebase-tools.json'\\);\n  if \\(fs.existsSync\\(winPath\\)\\) configPath = winPath;\n}\nconsole.log\\('Config path:', configPath\\);\nconsole.log\\('Exists:', fs.existsSync\\(configPath\\)\\);\n\" 2>&1)",
       "Bash(cd:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:uk.api.vehicledataglobal.com)"
     ]
   }
 }
