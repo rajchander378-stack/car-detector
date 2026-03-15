@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/saved_scan.dart';
+import '../services/csv_export_service.dart';
+import '../services/plan_service.dart';
 import '../services/saved_scan_service.dart';
 import 'saved_scan_detail_screen.dart';
 
@@ -36,6 +38,61 @@ class _SavedScansScreenState extends State<SavedScansScreen>
     super.dispose();
   }
 
+  Future<void> _exportCsv(String uid) async {
+    // Check plan
+    final plan = await PlanService().getUserPlan(uid);
+    if (plan != 'trader') {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Trader Plan Required'),
+          content: const Text(
+            'CSV export is available exclusively on the Trader plan. '
+            'Upgrade to export your scans.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final scans = await _service.fetchAllScans(uid);
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+
+      if (scans.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No scans to export.')),
+        );
+        return;
+      }
+
+      final exportService = CsvExportService();
+      final file = await exportService.generate(scans);
+      await exportService.share(file);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = _uid;
@@ -49,6 +106,13 @@ class _SavedScansScreenState extends State<SavedScansScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Saved Scans'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Export CSV',
+            onPressed: () => _exportCsv(uid),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [

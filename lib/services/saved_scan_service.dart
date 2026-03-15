@@ -46,6 +46,13 @@ class SavedScanService {
     await batch.commit();
   }
 
+  Future<List<SavedScan>> fetchAllScans(String uid) async {
+    final snapshots = await _scansCollection(uid)
+        .orderBy('saved_at', descending: true)
+        .get();
+    return snapshots.docs.map((doc) => SavedScan.fromFirestore(doc)).toList();
+  }
+
   Stream<List<SavedScan>> watchScans(String uid) {
     return _scansCollection(uid)
         .orderBy('saved_at', descending: true)

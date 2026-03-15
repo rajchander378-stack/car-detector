@@ -108,15 +108,21 @@ Future<Response> stripeWebhook(Request request) async {
   try {
     final payload = await request.readAsString();
 
-    // Verify webhook signature if secret is configured
-    if (Config.stripeWebhookSecret.isNotEmpty) {
-      final signature = request.headers['stripe-signature'] ?? '';
-      if (!_verifyStripeSignature(payload, signature, Config.stripeWebhookSecret)) {
-        return Response(400,
-          body: jsonEncode({'error': 'Invalid signature'}),
-          headers: {'content-type': 'application/json'},
-        );
-      }
+    // Always verify webhook signature — reject if secret is not configured
+    if (Config.stripeWebhookSecret.isEmpty) {
+      stderr.writeln('Webhook rejected: STRIPE_WEBHOOK_SECRET is not configured');
+      return Response(500,
+        body: jsonEncode({'error': 'Webhook signature verification not configured'}),
+        headers: {'content-type': 'application/json'},
+      );
+    }
+
+    final signature = request.headers['stripe-signature'] ?? '';
+    if (!_verifyStripeSignature(payload, signature, Config.stripeWebhookSecret)) {
+      return Response(400,
+        body: jsonEncode({'error': 'Invalid signature'}),
+        headers: {'content-type': 'application/json'},
+      );
     }
 
     final event = jsonDecode(payload);
@@ -126,8 +132,10 @@ Future<Response> stripeWebhook(Request request) async {
       final session = event['data']['object'] as Map<String, dynamic>;
       final metadata = session['metadata'] as Map<String, dynamic>? ?? {};
       final userUid = metadata['user_uid'] as String?;
-      final scans = int.tryParse(metadata['scans']?.toString() ?? '') ?? 0;
       final packId = metadata['pack_id'] as String?;
+      // Derive scans from the known pack definition, not from metadata
+      final pack = packId != null ? scanPacks[packId] : null;
+      final scans = pack?.scans ?? 0;
 
       if (userUid != null && scans > 0) {
         // Credit the user via Firestore REST API
@@ -166,40 +174,36 @@ Future<void> _creditUserScans(String uid, int scans, String packId, String sessi
   }
 
   final projectId = 'car-detector-833e5';
+  final docPath = 'projects/$projectId/databases/(default)/documents/users/$uid';
 
-  // Read current credits
-  final docUrl = 'https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents/users/$uid';
-  final getResponse = await http.get(
-    Uri.parse(docUrl),
-    headers: {'Authorization': 'Bearer $accessToken'},
-  );
-
-  int currentCredits = 0;
-  if (getResponse.statusCode == 200) {
-    final doc = jsonDecode(getResponse.body);
-    final fields = doc['fields'] as Map<String, dynamic>? ?? {};
-    if (fields.containsKey('scan_credits')) {
-      currentCredits = int.tryParse(fields['scan_credits']['integerValue']?.toString() ?? '0') ?? 0;
-    }
-  }
-
-  // Update credits
-  final newCredits = currentCredits + scans;
-  final patchResponse = await http.patch(
-    Uri.parse('$docUrl?updateMask.fieldPaths=scan_credits'),
+  // Atomically increment scan_credits using Firestore commit API
+  // This prevents race conditions from concurrent purchases
+  final commitUrl = 'https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents:commit';
+  final commitResponse = await http.post(
+    Uri.parse(commitUrl),
     headers: {
       'Authorization': 'Bearer $accessToken',
       'Content-Type': 'application/json',
     },
     body: jsonEncode({
-      'fields': {
-        'scan_credits': {'integerValue': newCredits.toString()},
-      },
+      'writes': [
+        {
+          'transform': {
+            'document': docPath,
+            'fieldTransforms': [
+              {
+                'fieldPath': 'scan_credits',
+                'increment': {'integerValue': scans.toString()},
+              },
+            ],
+          },
+        },
+      ],
     }),
   );
 
-  if (patchResponse.statusCode != 200) {
-    stderr.writeln('Failed to update credits: ${patchResponse.body}');
+  if (commitResponse.statusCode != 200) {
+    stderr.writeln('Failed to update credits: ${commitResponse.body}');
     return;
   }
 
@@ -237,6 +241,12 @@ bool _verifyStripeSignature(String payload, String sigHeader, String secret) {
     final timestamp = parts['t'];
     final expectedSig = parts['v1'];
     if (timestamp == null || expectedSig == null) return false;
+
+    // Reject events older than 5 minutes to prevent replay attacks
+    final eventTime = int.tryParse(timestamp);
+    if (eventTime == null) return false;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if ((now - eventTime).abs() > 300) return false;
 
     // Compute expected signature
     final signedPayload = '$timestamp.$payload';
