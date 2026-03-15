@@ -42,14 +42,14 @@
 - [ ] **Add `google_mlkit_text_recognition` for plate OCR** — After cropping to the plate region, run ML Kit text recognition on-device for offline plate reading.
 - [ ] **Bundle a vehicle-detection TFLite model** — Replace the default ML Kit model with a COCO-trained `.tflite` (e.g. EfficientDet Lite) that reliably detects cars, trucks, vans, motorcycles.
 
-## Completed — REST API for RapidAPI
+## Completed — REST API (Cloud Run)
 
-- [x] **Car Detector REST API** — Standalone Dart server in `api/` directory exposing the car identification pipeline as a REST API. `POST /identify` accepts multipart image upload, runs image optimisation + Gemini 2.5 Flash identification, and returns JSON. Query param `includeValuation=true` auto-fetches UK valuation data when a plate is detected. `GET /health` for Cloud Run health checks.
-- [x] **RapidAPI Auth Middleware** — Validates `X-RapidAPI-Proxy-Secret` header. Open/dev mode when env var is unset. `/health` always bypasses auth.
-- [x] **Server-Side Gemini Integration** — Rewrote `gemini_service.dart` to use `google_generative_ai` (server-side SDK) with `DataPart` instead of `firebase_ai`'s `InlineDataPart`. Same schema, prompt, and temperature as Flutter app.
+- [x] **Car Detector REST API** — Standalone Dart server in `api/` directory exposing the car identification pipeline as a REST API. `POST /identify` accepts multipart image upload, runs image optimisation + AI identification, and returns JSON. Query param `includeValuation=true` auto-fetches UK valuation data when a plate is detected. `GET /health` for Cloud Run health checks.
+- [x] **Auth Middleware** — Validates API secret header. Open/dev mode when env var is unset. `/health` always bypasses auth.
+- [x] **Server-Side AI Integration** — Rewrote `gemini_service.dart` to use `google_generative_ai` (server-side SDK) with `DataPart` instead of `firebase_ai`'s `InlineDataPart`. Same schema, prompt, and temperature as Flutter app.
 - [x] **Concurrent-Safe Image Processing** — Adapted `image_processor.dart` with unique temp file suffixes to avoid collisions under concurrent requests. Removed `cropToVehicle()` (depends on `dart:ui`).
-- [x] **Docker + Cloud Run Ready** — 2-stage AOT Dockerfile (dart:3.3 build → dart:3.3-slim runtime). Non-root user. Configurable via `GEMINI_API_KEY`, `UKVD_API_KEY`, `RAPIDAPI_PROXY_SECRET`, `PORT` env vars.
-- [x] **OpenAPI 3.0 Spec** — Full `openapi.yaml` documenting both endpoints, request/response schemas, and RapidAPI security scheme.
+- [x] **Docker + Cloud Run Ready** — 2-stage AOT Dockerfile (dart:3.3 build → dart:3.3-slim runtime). Non-root user. Configurable via `GEMINI_API_KEY`, `UKVD_API_KEY`, `PORT` env vars.
+- [x] **OpenAPI 3.0 Spec** — Full `openapi.yaml` documenting both endpoints and request/response schemas.
 
 ## Uncompleted — Other Features
 
@@ -167,13 +167,12 @@ Use this checklist each time you release a new version to Google Play.
 
 ---
 
-## Uncompleted — Bulk Image Processing (Stripe + RapidAPI)
+## Uncompleted — Bulk Image Processing (Stripe + Cloud Run)
 
 - [ ] **Stripe integration for bulk processing** — Integrate Stripe on the website for upfront payment before processing. Options: per-batch pricing (e.g. £X for N images), credit top-ups, or pay-per-scan. Use Stripe Checkout or Payment Intents. Only begin processing once payment is confirmed via Stripe webhook or redirect. This bypasses Google Play billing entirely (no 15-30% cut).
-- [ ] **Bulk upload page on website** — Add a page (e.g. `/bulk.html`) where users can upload multiple car images at once. After Stripe payment is validated, each image is sent to the existing `POST /identify?includeValuation=true` RapidAPI endpoint. RapidAPI is a cost to us (metering our requests to the API) — not the billing channel. Results are displayed in a table as they complete and can be downloaded as CSV/Excel/JSON.
+- [ ] **Bulk upload page on website** — Add a page (e.g. `/bulk.html`) where users can upload multiple car images at once. After Stripe payment is validated, each image is sent to the Cloud Run `POST /identify?includeValuation=true` endpoint directly. Results are displayed in a table as they complete and can be downloaded as CSV/Excel/JSON.
 - [ ] **Progress UI for bulk uploads** — Show per-image progress (queued, processing, complete, failed) with results appearing in real-time. Allow retry on failed images. Show a summary at the end.
-- [ ] **Pricing model** — Stripe's fixed 20p per transaction means single-scan sales at 30p are a loss. Enforce a minimum batch purchase (e.g. 10 scans for £3.00). At 30p/scan in a batch of 10+, estimated profit is ~18-19p/scan after Stripe (1.5% + 20p per transaction), Gemini (~0.02p), and valuation API (~5-15p) costs. Consider volume tiers: 10 scans £3.00, 25 scans £7.00 (28p each), 50 scans £12.50 (25p each). Stripe fee is amortised across the batch so larger purchases yield better margins.
-- [ ] **Call Cloud Run directly, not via RapidAPI** — For bulk uploads from our own website, call the Cloud Run endpoint directly instead of routing through RapidAPI. RapidAPI is a marketplace for third-party API consumers — using it for our own site just adds unnecessary cost. Reserve RapidAPI for external developers who want to integrate the AutoSpotter API into their own products.
+- [ ] **Pricing model** — Stripe's fixed 20p per transaction means single-scan sales at 30p are a loss. Enforce a minimum batch purchase (e.g. 10 scans for £3.00). At 30p/scan in a batch of 10+, estimated profit is ~18-19p/scan after Stripe (1.5% + 20p per transaction), AI API (~0.02p), and valuation API (~5-15p) costs. Consider volume tiers: 10 scans £3.00, 25 scans £7.00 (28p each), 50 scans £12.50 (25p each). Stripe fee is amortised across the batch so larger purchases yield better margins.
 - [ ] **Link bulk upload from main site** — Add a nav link or CTA for "Bulk Processing" aimed at dealers and fleet managers who want to process many vehicles at once without using the mobile app.
 
 ## Uncompleted — Trader Export Feature
@@ -256,3 +255,33 @@ Use this checklist each time you release a new version to Google Play.
 - [x] **Consistent theme and typography** — Refined Material 3 theme with custom seed colour, rounded card/chip/button shapes, centred app bar titles, and consistent spacing.
 - [x] **Smooth page transitions** — Fade transition from camera to results screen with Hero widget on captured image.
 - [x] **Empty and error states** — Polished "vehicle not recognised" state with orange car icon, helpful guidance text, and prominent retry button.
+
+---
+
+## Targeted Profit Analysis — Bulk Scans at 30p (Direct Cloud Run)
+
+Cost assumptions: Stripe fee = 1.5% + 20p per transaction (UK cards). AI API ≈ £0.0002/scan. Valuation API ≈ £0.10/scan. Calling Cloud Run directly from our website.
+
+### Full Accuracy (100% of images successfully scanned)
+
+| Batch Size | Revenue | Stripe Fee | API Cost | Profit/Batch | Profit/Scan |
+|---|---|---|---|---|---|
+| 1 | £0.30 | £0.205 | £0.100 | **−£0.005** | −£0.005 |
+| 5 | £1.50 | £0.223 | £0.501 | **£0.777** | £0.155 |
+| 10 | £3.00 | £0.245 | £1.002 | **£1.753** | £0.175 |
+| 25 | £7.50 | £0.313 | £2.505 | **£4.683** | £0.187 |
+| 50 | £15.00 | £0.425 | £5.010 | **£9.565** | £0.191 |
+| 100 | £30.00 | £0.650 | £10.020 | **£19.330** | £0.193 |
+
+### Adjusted for ~90% Accuracy (10% failed/unusable images)
+
+| Batch Size | Billable Scans | Revenue | Stripe Fee | API Cost (all attempts) | Profit/Batch | Profit/Billable Scan |
+|---|---|---|---|---|---|---|
+| 1 | 0.9 | £0.27 | £0.204 | £0.100 | **−£0.034** | −£0.038 |
+| 5 | 4.5 | £1.35 | £0.220 | £0.501 | **£0.629** | £0.140 |
+| 10 | 9 | £2.70 | £0.241 | £1.002 | **£1.458** | £0.162 |
+| 25 | 22.5 | £6.75 | £0.301 | £2.505 | **£3.944** | £0.175 |
+| 50 | 45 | £13.50 | £0.403 | £5.010 | **£8.088** | £0.180 |
+| 100 | 90 | £27.00 | £0.605 | £10.020 | **£16.375** | £0.182 |
+
+**Key takeaway:** Single-scan sales at 30p are a loss due to Stripe's 20p fixed fee. Enforce a minimum batch of 5–10 scans. At batch sizes of 10+, profit per scan stabilises around 16–19p. Larger batches amortise the Stripe fixed fee better. Consider volume tiers: 10 for £3.00, 25 for £7.00 (28p each), 50 for £12.50 (25p each) to incentivise bigger purchases while maintaining healthy margins.

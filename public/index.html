@@ -27,10 +27,10 @@
       background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%); border-radius: 50%;
     }
     .hero-inner { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
-    .hero-icon { width: 88px; height: 88px; border-radius: 22px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); margin-bottom: 24px; }
+    .hero-icon { max-width: 75%; width: 75%; height: auto; margin-bottom: 24px; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.2)); }
     .hero h1 { font-size: 42px; font-weight: 800; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.5px; }
     .hero h1 span { background: linear-gradient(90deg, #fff 0%, #bbdefb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .hero p.tagline { font-size: 18px; opacity: 0.9; max-width: 520px; margin: 0 auto 32px; line-height: 1.5; }
+    .hero p.tagline { font-size: 18px; opacity: 1; color: #ffffff; max-width: 520px; margin: 0 auto 32px; line-height: 1.5; }
     .hero-cta { display: inline-flex; align-items: center; gap: 12px; background: #fff; color: #0d47a1; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 20px rgba(0,0,0,0.15); transition: transform 0.2s, box-shadow 0.2s; }
     .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.2); text-decoration: none; }
     .hero-cta svg { flex-shrink: 0; }
@@ -57,14 +57,9 @@
     .phone-screen .result-card .plate { display: inline-block; background: #F2C10F; color: #000; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 3px; margin-top: 4px; letter-spacing: 1px; border: 1px solid #000; }
     .phone-screen .result-card .price { color: #2e7d32; font-size: 12px; font-weight: 700; margin-top: 4px; }
 
-    /* Nav */
-    .landing-nav {
-      text-align: center; padding: 14px 20px; background: #fff; border-bottom: 1px solid var(--border);
-      font-size: 14px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);
-      background: rgba(255,255,255,0.95);
-    }
-    .landing-nav a { margin: 0 14px; color: var(--text-secondary); font-weight: 500; }
-    .landing-nav a:hover { color: var(--primary); text-decoration: none; }
+    /* Nav overrides for landing */
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); }
+    nav a:hover { color: var(--primary); text-decoration: none; }
 
     /* Sections */
     .section { max-width: 900px; margin: 0 auto; padding: 64px 24px; }
@@ -92,7 +87,7 @@
     /* Pricing preview */
     .pricing-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 640px; margin: 0 auto; }
     .price-card { background: #fff; border: 2px solid var(--border); border-radius: 14px; padding: 28px; text-align: center; }
-    .price-card.featured { border-color: #d4a017; }
+    .price-card.featured { border-color: var(--primary); }
     .price-card .plan-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
     .price-card .price { font-size: 32px; font-weight: 800; color: var(--primary); }
     .price-card .price .mo { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
@@ -116,10 +111,22 @@
     .cta-banner p { font-size: 15px; opacity: 0.9; margin-bottom: 24px; }
 
     /* Auth area in nav */
-    .auth-area { float: right; margin-right: 8px; }
+    #auth-area { margin-left: auto; }
 
-    /* User scans section */
-    .scans-section { max-width: 720px; margin: 0 auto; padding: 0 24px 48px; }
+    /* Section images */
+    .section-img {
+      display: block; max-width: 480px; width: 100%; height: auto; margin: 0 auto 32px;
+      border-radius: 14px; box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      object-fit: cover;
+    }
+    .section-img-side {
+      display: block; max-width: 400px; width: 100%; height: auto;
+      border-radius: 14px; box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      object-fit: cover;
+    }
+    .who-layout { display: flex; gap: 40px; align-items: flex-start; }
+    .who-layout .features-grid { flex: 1; }
+    .who-layout .section-img-side { flex-shrink: 0; }
 
     /* Footer */
     .landing-footer { text-align: center; padding: 40px 20px; font-size: 13px; color: var(--text-secondary); border-top: 1px solid var(--border); background: #fafafa; }
@@ -133,37 +140,31 @@
       .pricing-preview { grid-template-columns: 1fr !important; }
       .stats-row { gap: 24px; flex-wrap: wrap; }
       .phone-mockup { width: 180px; height: 360px; }
-      .landing-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 10px 12px; }
-      .landing-nav a { margin: 0 6px; font-size: 13px; }
-      .auth-area { float: none !important; width: 100%; text-align: center; margin-top: 8px; }
+      .section-img { max-width: 100%; }
+      .who-layout { flex-direction: column; }
+      .who-layout .section-img-side { max-width: 100%; margin: 0 auto 24px; }
+      #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
     }
   </style>
 </head>
 <body>
 
   <!-- Navigation -->
-  <nav class="landing-nav">
-    <a href="/">Home</a>
+  <nav>
+    <a href="/" class="active">Home</a>
     <a href="#features">Features</a>
     <a href="/pricing.html">Pricing</a>
-    <a id="contact-link" href="/contact.html" style="display:none;">Contact</a>
     <a href="/privacy-policy.html">Privacy</a>
-    <a id="admin-link" href="/admin/" style="display:none; font-weight:600; color:var(--primary);">Admin</a>
-    <span class="auth-area" id="auth-area">
+    <span id="auth-area">
       <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
-      <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
-        <img id="user-photo" src="" alt="" style="width:26px; height:26px; border-radius:50%; vertical-align:middle;">
-        <span id="user-name" style="vertical-align:middle;"></span>
-        <button class="btn" style="padding:4px 12px; font-size:12px; background:var(--border); color:var(--text);" onclick="doSignOut()">Sign out</button>
-      </span>
+      <span id="user-info" style="display:none;"></span>
     </span>
   </nav>
 
   <!-- Hero -->
   <section class="hero">
     <div class="hero-inner">
-      <img src="/icon.png" alt="AutoSpotter" class="hero-icon">
-      <div class="hero-badge">Coming soon to Google Play</div>
+      <img src="/images/autospotter_title.PNG" alt="AutoSpotter" class="hero-icon">
       <h1><span>Identify any car</span><br>in seconds</h1>
       <p class="tagline">Point your camera at any vehicle for instant AI-powered identification, UK number plate reading, and real-time valuations.</p>
       <a href="/pricing.html" class="hero-cta">
@@ -180,9 +181,7 @@
             <div class="vf-corner vf-tr"></div>
             <div class="vf-corner vf-bl"></div>
             <div class="vf-corner vf-br"></div>
-            <div style="display:flex; align-items:center; justify-content:center; height:100%;">
-              <span class="car-icon">&#128663;</span>
-            </div>
+            <img src="/images/A_photorea_4581_1.png" alt="BMW 3 Series" style="width:100%; height:100%; object-fit:cover; border-radius:6px;">
           </div>
           <div class="result-card">
             <div class="car-name">BMW 3 Series (G20)</div>
@@ -200,7 +199,7 @@
     <div class="stats-row">
       <div class="stat-item">
         <div class="num">AI</div>
-        <div class="label">Powered by Gemini</div>
+        <div class="label">AI-Assisted</div>
       </div>
       <div class="stat-item">
         <div class="num">UK</div>
@@ -221,6 +220,7 @@
   <section class="section">
     <h2 class="section-title">How It Works</h2>
     <p class="section-subtitle">Three simple steps from photo to full vehicle report.</p>
+    <img src="/images/A_young_pe_4108_3.png" alt="Person scanning a car with AutoSpotter" class="section-img" style="max-height:280px;">
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
@@ -248,7 +248,7 @@
       <div class="feature-card">
         <div class="feature-icon" style="background:#e3f2fd;">&#129302;</div>
         <h3>AI-Powered Identification</h3>
-        <p>Google Gemini analyses your photo to identify the exact make, model, generation, trim level, colour, and body style.</p>
+        <p>Advanced AI analyses your photo to identify the exact make, model, generation, trim level, colour, and body style.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon" style="background:#fff3e0;">&#127468;&#127463;</div>
@@ -282,23 +282,26 @@
   <section class="section">
     <h2 class="section-title">Who It's For</h2>
     <p class="section-subtitle">AutoSpotter works for everyone — from casual car spotters to professional dealers.</p>
-    <div class="features-grid">
-      <div class="feature-card" style="border-left: 4px solid var(--primary);">
-        <h3>Car Enthusiasts</h3>
-        <p>Spot a car you like? Snap a photo and instantly find out exactly what it is, what year, and what it's worth.</p>
+    <div class="who-layout">
+      <div class="features-grid" style="grid-template-columns:1fr;">
+        <div class="feature-card" style="border-left: 4px solid var(--primary);">
+          <h3>Car Enthusiasts</h3>
+          <p>Spot a car you like? Snap a photo and instantly find out exactly what it is, what year, and what it's worth.</p>
+        </div>
+        <div class="feature-card" style="border-left: 4px solid #d4a017;">
+          <h3>Used Car Dealers</h3>
+          <p>Value stock quickly at auctions, on the forecourt, or on the road. 100 valuation scans per month on the Trader plan.</p>
+        </div>
+        <div class="feature-card" style="border-left: 4px solid #2e7d32;">
+          <h3>Private Buyers &amp; Sellers</h3>
+          <p>Check a fair price before buying or selling. Know the dealer, private, and trade values before you negotiate.</p>
+        </div>
+        <div class="feature-card" style="border-left: 4px solid #c62828;">
+          <h3>Insurance &amp; Fleet</h3>
+          <p>Quickly identify and value vehicles for claims, inspections, or fleet management.</p>
+        </div>
       </div>
-      <div class="feature-card" style="border-left: 4px solid #d4a017;">
-        <h3>Used Car Dealers</h3>
-        <p>Value stock quickly at auctions, on the forecourt, or on the road. 100 valuation scans per month on the Trader plan.</p>
-      </div>
-      <div class="feature-card" style="border-left: 4px solid #2e7d32;">
-        <h3>Private Buyers &amp; Sellers</h3>
-        <p>Check a fair price before buying or selling. Know the dealer, private, and trade values before you negotiate.</p>
-      </div>
-      <div class="feature-card" style="border-left: 4px solid #c62828;">
-        <h3>Insurance &amp; Fleet</h3>
-        <p>Quickly identify and value vehicles for claims, inspections, or fleet management.</p>
-      </div>
+      <img src="/images/profession_4130_0.png" alt="Professional dealer valuing cars on the forecourt" class="section-img-side" style="max-height:340px;">
     </div>
   </section>
 
@@ -311,31 +314,31 @@
         <div class="plan-name">Free</div>
         <div class="price">Free</div>
         <div class="feat">
-          5 AI scans/month<br>
-          Number plate reading<br>
-          No valuations
+          5 vehicle scans/month<br>
+          Number plate recognition<br>
+          Basic vehicle details
         </div>
         <a href="/pricing.html" class="price-btn price-btn-basic">Get Started</a>
       </div>
-      <div class="price-card">
+      <div class="price-card featured">
         <div class="plan-name">Basic</div>
         <div class="price">&pound;5 <span class="mo">/ mo</span></div>
         <div class="feat">
-          10 valuation scans/month<br>
-          Unlimited AI identification<br>
-          40p per extra scan
+          10 vehicle valuations/month<br>
+          Unlimited scanning<br>
+          Additional scans 40p each
         </div>
-        <a href="/pricing.html" class="price-btn price-btn-basic">View Basic</a>
+        <a href="/pricing.html" class="price-btn price-btn-basic">Start Basic Plan</a>
       </div>
-      <div class="price-card featured">
+      <div class="price-card">
         <div class="plan-name">Trader</div>
         <div class="price">&pound;14.99 <span class="mo">/ mo</span></div>
         <div class="feat">
-          75 valuation scans/month<br>
-          Export to CSV/Excel<br>
+          75 vehicle valuations/month<br>
+          CSV / Excel export<br>
           Priority support
         </div>
-        <a href="/pricing.html" class="price-btn price-btn-trader">View Trader</a>
+        <a href="/pricing.html" class="price-btn price-btn-trader">Upgrade to Trader</a>
       </div>
     </div>
   </section>
@@ -351,14 +354,6 @@
       </a>
     </div>
   </section>
-
-  <!-- User scans (shown when signed in) -->
-  <div class="scans-section" id="user-section" style="display:none;">
-    <h2 class="section-title" style="font-size:22px;">Your Saved Scans</h2>
-    <p id="scans-loading" style="color:var(--text-secondary); text-align:center;">Loading your scans...</p>
-    <p id="scans-empty" style="display:none; color:var(--text-secondary); text-align:center;">You have no saved scans yet. Use the AutoSpotter app to scan vehicles and they will appear here.</p>
-    <div id="scans-list"></div>
-  </div>
 
   <!-- Footer -->
   <footer class="landing-footer">
@@ -385,119 +380,47 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
-    let scansUnsubscribe = null;
 
     async function doSignIn() {
       try {
         await auth.signInWithPopup(provider);
       } catch (err) {
-        if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-          await auth.signInWithRedirect(provider);
+        if (err.code === 'auth/popup-blocked') {
+          alert('Pop-ups are blocked by your browser. Please allow pop-ups for this site to sign in.');
+        } else if (err.code !== 'auth/popup-closed-by-user') {
+          alert('Sign-in failed: ' + err.message);
         }
       }
     }
 
     function doSignOut() {
-      if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
       auth.signOut();
-    }
-
-    function formatDate(ts) {
-      if (!ts) return '';
-      const d = ts.toDate ? ts.toDate() : new Date(ts);
-      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    }
-
-    function renderScans(snapshot) {
-      const list = document.getElementById('scans-list');
-      const empty = document.getElementById('scans-empty');
-      const loading = document.getElementById('scans-loading');
-      loading.style.display = 'none';
-
-      if (snapshot.empty) {
-        empty.style.display = 'block';
-        list.innerHTML = '';
-        return;
-      }
-      empty.style.display = 'none';
-
-      list.innerHTML = snapshot.docs.map(doc => {
-        const data = doc.data();
-        const id = data.identification || {};
-        const val = data.valuation || null;
-        const fav = data.is_favourite ? ' &#9733;' : '';
-        const date = formatDate(data.saved_at);
-
-        let html = '<div style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px;">';
-        html += '<strong>' + (id.make || '') + ' ' + (id.model || '') + '</strong>' + fav;
-        if (id.year_range) html += ' <span style="color:var(--text-secondary); font-size:13px;">(' + id.year_range + ')</span>';
-        html += '<br><span style="font-size:13px; color:var(--text-secondary);">';
-        if (id.generation) html += id.generation + ' &middot; ';
-        if (id.trim_level) html += id.trim_level + ' &middot; ';
-        html += date + '</span>';
-
-        if (id.number_plate) {
-          html += '<br><span style="font-size:13px; background:#ffdc00; color:#000; padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:1px;">' + id.number_plate + '</span>';
-        }
-
-        if (val) {
-          html += '<div style="margin-top:6px; font-size:13px; color:var(--text-secondary);">';
-          if (val.dealer_price) html += 'Dealer: &pound;' + Number(val.dealer_price).toLocaleString() + ' &middot; ';
-          if (val.private_price) html += 'Private: &pound;' + Number(val.private_price).toLocaleString() + ' &middot; ';
-          if (val.trade_price) html += 'Trade: &pound;' + Number(val.trade_price).toLocaleString();
-          html += '</div>';
-        }
-
-        html += '</div>';
-        return html;
-      }).join('');
-    }
-
-    function loadUserScans(uid) {
-      if (scansUnsubscribe) scansUnsubscribe();
-      scansUnsubscribe = db.collection('users').doc(uid).collection('saved_scans')
-        .orderBy('saved_at', 'desc')
-        .onSnapshot(renderScans, () => {
-          document.getElementById('scans-loading').textContent = 'Unable to load scans.';
-        });
     }
 
     auth.onAuthStateChanged(async (user) => {
       const signInBtn = document.getElementById('sign-in-btn');
       const userInfo = document.getElementById('user-info');
-      const userSection = document.getElementById('user-section');
 
       if (user) {
-        signInBtn.style.display = 'none';
-        userInfo.style.display = 'inline-flex';
-        document.getElementById('user-photo').src = user.photoURL || '';
-        document.getElementById('user-name').textContent = user.displayName || user.email;
-
-        userSection.style.display = 'block';
-        loadUserScans(user.uid);
-
+        // Check if admin — redirect to admin page
         let isAdmin = false;
         try {
           const doc = await db.collection('config').doc('admin').get();
           if (doc.exists) {
             const emails = doc.data().admin_emails || [];
             if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
-              document.getElementById('admin-link').style.display = 'inline';
               isAdmin = true;
             }
           }
         } catch (e) {}
 
-        if (!isAdmin) {
-          document.getElementById('contact-link').style.display = 'inline';
+        if (isAdmin) {
+          window.location.href = '/admin/';
+          return;
         }
-      } else {
-        signInBtn.style.display = 'inline-block';
-        userInfo.style.display = 'none';
-        userSection.style.display = 'none';
-        document.getElementById('admin-link').style.display = 'none';
-        document.getElementById('contact-link').style.display = 'none';
-        if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
+
+        // Regular user — redirect to dashboard
+        window.location.href = '/dashboard.html';
       }
     });
   </script>

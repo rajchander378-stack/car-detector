@@ -33,7 +33,7 @@ Middleware _corsMiddleware() {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers':
-            'Content-Type, X-RapidAPI-Proxy-Secret, X-RapidAPI-Key',
+            'Content-Type, X-API-Secret',
       });
     },
   );

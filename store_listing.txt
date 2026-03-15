@@ -14,7 +14,7 @@ FULL DESCRIPTION (max 4000 chars)
 Ever spotted a car and wondered what it is? AutoSpotter identifies any vehicle in seconds using advanced AI.
 
 HOW IT WORKS
-Just point your camera at a car — or pick a photo from your gallery — and AutoSpotter will tell you exactly what it is. Powered by Google Gemini AI, you get detailed results including:
+Just point your camera at a car — or pick a photo from your gallery — and AutoSpotter will tell you exactly what it is. Using advanced AI assistance, you get detailed results including:
 
 • Make and model
 • Year range and generation

@@ -16,9 +16,9 @@ Middleware authMiddleware() {
       }
 
       final proxySecret =
-          request.headers['x-rapidapi-proxy-secret'] ?? '';
+          request.headers['x-api-secret'] ?? '';
 
-      if (proxySecret != Config.rapidApiProxySecret) {
+      if (proxySecret != Config.apiSecret) {
         return Response.forbidden(
           jsonEncode({
             'success': false,

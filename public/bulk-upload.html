@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bulk Upload — AutoSpotter</title>
+  <meta name="description" content="Bulk upload car images for AI identification. Trader plan feature.">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { background: #fff; }
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); }
+    nav a:hover { color: var(--primary); text-decoration: none; }
+    #auth-area { margin-left: auto; }
+    @media (max-width: 600px) {
+      #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="/">Home</a>
+    <a href="/#features">Features</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/bulk-upload.html" class="active">Bulk Upload</a>
+    <a href="/privacy-policy.html">Privacy</a>
+    <span id="auth-area">
+      <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
+      <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
+        <img id="user-photo" src="" alt="" style="width:26px; height:26px; border-radius:50%; vertical-align:middle;">
+        <span id="user-name" style="vertical-align:middle;"></span>
+        <span id="user-plan-badge" class="plan-badge" style="display:none;"></span>
+        <button class="btn" style="padding:4px 12px; font-size:12px; background:var(--border); color:var(--text);" onclick="doSignOut()">Sign out</button>
+      </span>
+    </span>
+  </nav>
+
+  <header>
+    <h1>Bulk Upload</h1>
+    <p>Upload multiple car images for AI identification</p>
+  </header>
+
+  <!-- Gate: not signed in -->
+  <div id="gate-auth" class="container" style="display:none;">
+    <div class="card" style="text-align:center;">
+      <h2 style="margin-top:0;">Sign in Required</h2>
+      <p>Please sign in with your Google account to use bulk upload.</p>
+      <button class="btn btn-primary" onclick="doSignIn()">Sign in with Google</button>
+    </div>
+  </div>
+
+  <!-- Gate: not trader -->
+  <div id="gate-plan" class="container" style="display:none;">
+    <div class="card" style="text-align:center;">
+      <h2 style="margin-top:0;">Trader Plan Required</h2>
+      <p>Bulk upload is available exclusively for Trader plan subscribers.</p>
+      <a href="/pricing.html" class="btn btn-primary">View Pricing &amp; Upgrade</a>
+    </div>
+  </div>
+
+  <!-- Main content: trader only -->
+  <div id="bulk-content" class="container" style="display:none;">
+
+    <!-- Instructions -->
+    <div class="card">
+      <h2 style="margin-top:0;">Image Requirements</h2>
+      <ul id="rules-list">
+        <li>Each image must contain exactly one vehicle as the primary subject.</li>
+        <li>Must be a real photograph — not a drawing, sketch, 3D render, toy, or model car.</li>
+        <li>The vehicle must be clearly visible — not too far away, heavily obscured, or only partially visible.</li>
+        <li>Must not be a screenshot from a website, video game, or another app.</li>
+        <li>JPEG or PNG format only.</li>
+        <li>Minimum resolution: 200×200 pixels.</li>
+        <li>Avoid extremely dark, bright, or blurry images.</li>
+        <li>Number plates should be legible where possible — this helps with valuation lookups.</li>
+      </ul>
+    </div>
+
+    <!-- File picker / drop zone -->
+    <div class="drop-zone" id="drop-zone">
+      <p style="font-size:18px; font-weight:600; margin-bottom:8px;">Drag &amp; drop images here</p>
+      <p style="color:var(--text-secondary); margin-bottom:16px;">or click to browse files</p>
+      <input type="file" id="file-input" multiple accept="image/jpeg,image/png" style="display:none;">
+      <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Choose Files</button>
+    </div>
+
+    <!-- File info -->
+    <div id="file-info" style="display:none; margin:16px 0; text-align:center;">
+      <p><strong id="file-count">0</strong> images selected (<span id="file-size">0 MB</span>)</p>
+      <div style="display:flex; gap:12px; justify-content:center; margin-top:12px;">
+        <button id="start-btn" class="btn btn-primary" onclick="startProcessing()">Start Upload</button>
+        <button class="btn" style="background:var(--border); color:var(--text);" onclick="clearFiles()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="progress-section" style="display:none; margin:24px 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span id="progress-text">0 / 0 images processed</span>
+        <button id="cancel-btn" class="btn" style="padding:4px 14px; font-size:13px; background:var(--danger); color:white;" onclick="cancelProcessing()">Cancel</button>
+      </div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="progress-bar" style="width:0%;"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-section" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="margin:0;">Results</h2>
+        <button id="export-btn" class="btn btn-primary" style="padding:8px 18px; font-size:13px;" onclick="exportCSV()">Export to CSV</button>
+      </div>
+      <div id="results-list"></div>
+    </div>
+
+  </div>
+
+  <footer style="text-align:center; padding:32px 20px; font-size:13px; color:var(--text-secondary); border-top:1px solid var(--border); background:#fafafa;">
+    <a href="/">Home</a> &middot;
+    <a href="/pricing.html">Pricing</a> &middot;
+    <a href="/contact.html">Contact</a> &middot;
+    <a href="/privacy-policy.html">Privacy Policy</a>
+    <br>&copy; 2026 Axiom Forge Software. All rights reserved.
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-vertexai-preview-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+      authDomain: 'car-detector-833e5.firebaseapp.com',
+      projectId: 'car-detector-833e5',
+    });
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    // ── State ──
+    let selectedFiles = [];
+    let results = [];
+    let cancelled = false;
+    let processing = false;
+    let userPlan = null;
+
+    // ── Auth ──
+    async function doSignIn() {
+      try { await auth.signInWithPopup(provider); }
+      catch (err) {
+        if (err.code === 'auth/popup-blocked') alert('Pop-ups are blocked. Please allow pop-ups for this site.');
+        else if (err.code !== 'auth/popup-closed-by-user') alert('Sign-in failed: ' + err.message);
+      }
+    }
+    function doSignOut() { auth.signOut(); }
+
+    auth.onAuthStateChanged(async (user) => {
+      document.getElementById('sign-in-btn').style.display = user ? 'none' : 'inline-block';
+      document.getElementById('user-info').style.display = user ? 'inline-flex' : 'none';
+
+      if (user) {
+        document.getElementById('user-photo').src = user.photoURL || '';
+        document.getElementById('user-name').textContent = user.displayName || user.email;
+
+        // Fetch plan
+        userPlan = null;
+        try {
+          const doc = await db.collection('users').doc(user.uid).get();
+          if (doc.exists) userPlan = (doc.data().plan || 'free').toLowerCase();
+          else userPlan = 'free';
+        } catch (e) { userPlan = 'free'; }
+
+        // Show plan badge
+        const badge = document.getElementById('user-plan-badge');
+        badge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
+        badge.className = 'plan-badge plan-badge-' + userPlan;
+        badge.style.display = 'inline-block';
+
+        // Gate check
+        if (userPlan === 'trader') {
+          document.getElementById('gate-auth').style.display = 'none';
+          document.getElementById('gate-plan').style.display = 'none';
+          document.getElementById('bulk-content').style.display = 'block';
+        } else {
+          document.getElementById('gate-auth').style.display = 'none';
+          document.getElementById('gate-plan').style.display = 'block';
+          document.getElementById('bulk-content').style.display = 'none';
+        }
+      } else {
+        userPlan = null;
+        document.getElementById('user-plan-badge').style.display = 'none';
+        document.getElementById('gate-auth').style.display = 'block';
+        document.getElementById('gate-plan').style.display = 'none';
+        document.getElementById('bulk-content').style.display = 'none';
+      }
+    });
+
+    // ── Drop zone ──
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON') fileInput.click();
+    });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => { handleFiles(fileInput.files); });
+
+    function handleFiles(fileList) {
+      selectedFiles = Array.from(fileList).filter(f => f.type === 'image/jpeg' || f.type === 'image/png');
+      if (selectedFiles.length === 0) { alert('Please select JPEG or PNG images only.'); return; }
+
+      const totalSize = selectedFiles.reduce((s, f) => s + f.size, 0);
+      document.getElementById('file-count').textContent = selectedFiles.length;
+      document.getElementById('file-size').textContent = (totalSize / (1024 * 1024)).toFixed(1) + ' MB';
+      document.getElementById('file-info').style.display = 'block';
+    }
+
+    function clearFiles() {
+      selectedFiles = [];
+      fileInput.value = '';
+      document.getElementById('file-info').style.display = 'none';
+      document.getElementById('progress-section').style.display = 'none';
+      document.getElementById('results-section').style.display = 'none';
+      document.getElementById('results-list').innerHTML = '';
+      results = [];
+    }
+
+    // ── Gemini via Firebase AI ──
+    const SYSTEM_PROMPT = `You are a vehicle identification system. Analyse the provided image of a car and identify it as accurately as possible.
+Be specific about the generation and facelift where visual evidence supports it. Use UK English spelling.
+If you cannot identify the car, set identified to false.
+For year, provide a range if exact year is uncertain.
+Only identify trim level if visual evidence supports it.
+
+IMAGE VALIDATION RULES — you MUST check these BEFORE attempting identification:
+1. The image must contain exactly one vehicle as the primary subject.
+2. Must be a real photograph — not a drawing, sketch, 3D render, toy, or model car.
+3. The vehicle must be clearly visible — not too far away, heavily obscured, or only partially visible.
+4. Must not be a screenshot from a website, video game, or another app.
+5. Avoid extremely dark, bright, or blurry images that prevent identification.
+6. Number plates should be read if legible.
+
+If ANY of these rules are violated, set "identified" to false and provide a clear "error" message explaining which rule was violated. Do NOT attempt to identify the vehicle in this case.`;
+
+    const RESPONSE_SCHEMA = {
+      type: 'object',
+      properties: {
+        identified: { type: 'boolean', description: 'Whether a car was successfully identified' },
+        confidence: { type: 'number', description: 'Confidence score from 0.0 to 1.0' },
+        make: { type: 'string', description: 'Car manufacturer e.g. BMW, Toyota, Ford', nullable: true },
+        model: { type: 'string', description: 'Car model name e.g. 3 Series, Corolla', nullable: true },
+        year_min: { type: 'integer', description: 'Earliest likely model year', nullable: true },
+        year_max: { type: 'integer', description: 'Latest likely model year', nullable: true },
+        generation: { type: 'string', description: 'Generation or facelift designation e.g. G20, Mk8', nullable: true },
+        trim: { type: 'string', description: 'Trim level if identifiable e.g. M Sport, ST-Line', nullable: true },
+        body_style: { type: 'string', description: 'Body type: saloon, hatchback, estate, coupe, convertible, suv, mpv, or pickup', nullable: true },
+        colour: { type: 'string', description: 'Exterior colour of the vehicle', nullable: true },
+        distinguishing_features: { type: 'array', items: { type: 'string' }, description: 'Notable visual features', nullable: true },
+        notes: { type: 'string', description: 'Relevant observations or uncertainty notes', nullable: true },
+        error: { type: 'string', description: 'Error description if identification failed', nullable: true },
+        number_plate: { type: 'string', description: 'Number plate text if visible and legible', nullable: true },
+      },
+      required: ['identified', 'confidence'],
+    };
+
+    function fileToGenerativePart(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          resolve({ inlineData: { data: base64, mimeType: file.type } });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function identifyImage(model, file) {
+      // Pre-validation
+      if (file.size > 20 * 1024 * 1024) {
+        return { identified: false, confidence: 0, error: 'File too large (max 20 MB)', _filename: file.name };
+      }
+
+      const part = await fileToGenerativePart(file);
+
+      // 30s timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
+      try {
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: 'Identify this vehicle.' }, part] }],
+        });
+        clearTimeout(timeout);
+
+        const text = result.response.text();
+        const parsed = JSON.parse(text);
+        parsed._filename = file.name;
+        return parsed;
+      } catch (err) {
+        clearTimeout(timeout);
+        return { identified: false, confidence: 0, error: err.message || 'Processing failed', _filename: file.name };
+      }
+    }
+
+    // ── Processing with concurrency ──
+    async function startProcessing() {
+      if (processing || selectedFiles.length === 0) return;
+      processing = true;
+      cancelled = false;
+      results = [];
+
+      document.getElementById('start-btn').disabled = true;
+      document.getElementById('progress-section').style.display = 'block';
+      document.getElementById('results-section').style.display = 'block';
+      document.getElementById('results-list').innerHTML = '';
+
+      const total = selectedFiles.length;
+      let completed = 0;
+      updateProgress(0, total);
+
+      // Init Firebase AI model
+      const ai = firebase.vertexAI();
+      const model = ai.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+        },
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      });
+
+      // Process with concurrency of 3
+      const CONCURRENCY = 3;
+      let index = 0;
+
+      async function processNext() {
+        while (index < total && !cancelled) {
+          const i = index++;
+          const file = selectedFiles[i];
+          try {
+            const result = await identifyImage(model, file);
+            result._objectUrl = URL.createObjectURL(file);
+            results.push(result);
+            appendResultCard(result);
+          } catch (err) {
+            const errResult = { identified: false, confidence: 0, error: err.message, _filename: file.name, _objectUrl: URL.createObjectURL(file) };
+            results.push(errResult);
+            appendResultCard(errResult);
+          }
+          completed++;
+          updateProgress(completed, total);
+        }
+      }
+
+      const workers = [];
+      for (let w = 0; w < CONCURRENCY; w++) workers.push(processNext());
+      await Promise.all(workers);
+
+      processing = false;
+      document.getElementById('start-btn').disabled = false;
+      document.getElementById('cancel-btn').style.display = 'none';
+    }
+
+    function cancelProcessing() {
+      cancelled = true;
+      document.getElementById('cancel-btn').textContent = 'Cancelling...';
+      document.getElementById('cancel-btn').disabled = true;
+    }
+
+    function updateProgress(done, total) {
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      document.getElementById('progress-text').textContent = done + ' / ' + total + ' images processed';
+      document.getElementById('progress-bar').style.width = pct + '%';
+    }
+
+    // ── Result cards ──
+    function appendResultCard(r) {
+      const list = document.getElementById('results-list');
+      const card = document.createElement('div');
+      const isError = !r.identified;
+      card.className = 'result-card-bulk' + (isError ? ' error' : '');
+
+      let html = '<div class="result-card-bulk-thumb">';
+      if (r._objectUrl) html += '<img src="' + r._objectUrl + '" alt="' + (r._filename || '') + '">';
+      html += '</div><div class="result-card-bulk-info">';
+
+      if (r.identified) {
+        html += '<strong>' + (r.make || '') + ' ' + (r.model || '') + '</strong>';
+        if (r.year_min || r.year_max) html += ' <span style="color:var(--text-secondary);">(' + (r.year_min || '?') + '–' + (r.year_max || '?') + ')</span>';
+        if (r.generation) html += '<br><span style="font-size:13px; color:var(--text-secondary);">' + r.generation + '</span>';
+        if (r.trim) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.trim + '</span>';
+        if (r.body_style) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.body_style + '</span>';
+        if (r.colour) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.colour + '</span>';
+        if (r.number_plate) html += '<br><span style="font-size:13px; background:#F2C10F; color:#000; padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:1px;">' + escapeHtml(r.number_plate) + '</span>';
+        html += '<br><span style="font-size:12px; color:var(--text-secondary);">Confidence: ' + Math.round((r.confidence || 0) * 100) + '%</span>';
+      } else {
+        html += '<strong style="color:var(--danger);">Not identified</strong>';
+        if (r.error) html += '<br><span style="font-size:13px; color:var(--danger);">' + escapeHtml(r.error) + '</span>';
+      }
+
+      html += '<br><span style="font-size:12px; color:var(--text-secondary);">' + escapeHtml(r._filename || '') + '</span>';
+      html += '</div>';
+
+      card.innerHTML = html;
+      list.appendChild(card);
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // ── CSV export ──
+    function exportCSV() {
+      if (results.length === 0) return;
+      const headers = ['filename','identified','confidence','make','model','year_min','year_max','generation','trim','body_style','colour','number_plate','notes','error'];
+      const rows = results.map(r => headers.map(h => {
+        const v = r[h === 'filename' ? '_filename' : h];
+        if (v == null) return '';
+        const s = String(v);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(','));
+
+      const csv = headers.join(',') + '\n' + rows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'autospotter_bulk_results_' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.click();
+    }
+  </script>
+</body>
+</html>

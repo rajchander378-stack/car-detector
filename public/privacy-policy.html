@@ -14,8 +14,10 @@
   </header>
   <nav>
     <a href="/">Home</a>
-    <a href="/privacy-policy.html">Privacy Policy</a>
-    <a href="/delete-account.html">Delete Account</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/privacy-policy.html" class="active">Privacy</a>
+    <a id="delete-link" href="/delete-account.html" style="display:none;">Delete Account</a>
   </nav>
   <div class="container">
     <p class="effective-date">Effective date: 7 March 2026</p>
@@ -35,7 +37,7 @@
     <p>This information is stored securely in Google Cloud Firestore.</p>
 
     <h3>Vehicle Images</h3>
-    <p>When you capture a photo for identification, the image is sent to Google Gemini (Google's AI service) for analysis. Images are processed transiently and are <strong>not stored on our servers</strong>. Google's use of this data is governed by their own privacy policy.</p>
+    <p>When you capture a photo for identification, the image is sent to a secure AI service for analysis. Images are processed transiently and are <strong>not stored on our servers</strong>. The AI provider's use of this data is governed by their own privacy policy.</p>
 
     <h3>Number Plates</h3>
     <p>If a UK number plate (Vehicle Registration Mark) is visible in your photo, it may be read by the AI. If you request a price valuation, the registration is sent to a third-party UK vehicle data API to retrieve valuation information. We do not permanently store number plate data.</p>
@@ -54,7 +56,7 @@
     <h2>3. Third-Party Services</h2>
     <p>We share data with the following third-party services to provide the app's functionality:</p>
     <ul>
-      <li><strong>Google Firebase</strong> — authentication, data storage, and AI processing (Gemini)</li>
+      <li><strong>Google Firebase</strong> — authentication, data storage, and AI processing</li>
       <li><strong>UK Vehicle Data API</strong> — vehicle valuation lookups using registration numbers</li>
     </ul>
     <p>Each third-party service is governed by its own privacy policy. We only share the minimum data necessary for each service to function.</p>

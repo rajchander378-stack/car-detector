@@ -202,10 +202,10 @@ components:
           nullable: true
 
   securitySchemes:
-    rapidApiProxy:
+    apiSecret:
       type: apiKey
       in: header
-      name: X-RapidAPI-Proxy-Secret
+      name: X-API-Secret
 
 security:
-  - rapidApiProxy: []
+  - apiSecret: []

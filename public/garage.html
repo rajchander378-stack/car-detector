@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Vehicles — AutoSpotter</title>
+  <meta name="description" content="Your saved vehicles — track valuations over time.">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { background: var(--bg); }
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); }
+    nav a:hover { color: var(--primary); text-decoration: none; }
+    #auth-area { margin-left: auto; }
+
+    .garage-header {
+      background: linear-gradient(135deg, #0d47a1 0%, #1565c0 40%, #1e88e5 100%);
+      color: white; padding: 32px 20px; text-align: center;
+    }
+    .garage-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: white; }
+    .garage-header p { font-size: 14px; opacity: 0.85; }
+
+    .garage-container { max-width: 900px; margin: 0 auto; padding: 24px 20px 64px; }
+
+    @media (max-width: 600px) {
+      #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/garage.html" class="active">My Vehicles</a>
+    <a href="/pricing.html">Pricing</a>
+    <a id="bulk-link" href="/bulk-upload.html" style="display:none; font-weight:600; color:#d4a017;">Bulk Upload</a>
+    <span id="auth-area">
+      <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
+      <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
+        <img id="user-photo" src="" alt="" style="width:26px; height:26px; border-radius:50%; vertical-align:middle;">
+        <span id="user-name" style="vertical-align:middle;"></span>
+        <span id="user-plan-badge" class="plan-badge" style="display:none;"></span>
+        <button class="btn" style="padding:4px 12px; font-size:12px; background:var(--border); color:var(--text);" onclick="doSignOut()">Sign out</button>
+      </span>
+    </span>
+  </nav>
+
+  <!-- Auth gate -->
+  <div id="gate-auth" style="display:none;">
+    <div class="garage-header">
+      <h1>Sign in to continue</h1>
+      <p>View your saved vehicles</p>
+    </div>
+    <div style="max-width:400px; margin:40px auto; text-align:center;">
+      <button class="btn btn-primary" style="font-size:16px; padding:14px 32px;" onclick="doSignIn()">Sign in with Google</button>
+    </div>
+  </div>
+
+  <!-- Garage content -->
+  <div id="garage-content" style="display:none;">
+    <div class="garage-header">
+      <h1>My Vehicles</h1>
+      <p id="garage-subtitle">Your saved vehicles</p>
+    </div>
+
+    <div class="garage-container">
+      <!-- Limit info -->
+      <div class="garage-limit-info" id="garage-limit">
+        <span id="garage-limit-text">Loading...</span>
+        <a href="/pricing.html" id="garage-upgrade-link" style="display:none; font-size:13px; font-weight:600;">Upgrade for more</a>
+      </div>
+
+      <!-- Empty state -->
+      <div id="garage-empty" style="display:none; text-align:center; padding:40px 20px;">
+        <p style="font-size:18px; font-weight:600; margin-bottom:8px;">No vehicles saved yet</p>
+        <p style="color:var(--text-secondary); margin-bottom:16px;">Scan a vehicle with the AutoSpotter app, then save it to your garage from the Dashboard.</p>
+        <a href="/dashboard.html" class="btn btn-primary">Go to Dashboard</a>
+      </div>
+
+      <!-- Loading -->
+      <p id="garage-loading" style="text-align:center; color:var(--text-secondary);">Loading your vehicles...</p>
+
+      <!-- Vehicle grid -->
+      <div id="garage-grid" class="garage-grid"></div>
+    </div>
+  </div>
+
+  <footer style="text-align:center; padding:32px 20px; font-size:13px; color:var(--text-secondary); border-top:1px solid var(--border); background:#fafafa;">
+    <a href="/">Home</a> &middot;
+    <a href="/dashboard.html">Dashboard</a> &middot;
+    <a href="/pricing.html">Pricing</a> &middot;
+    <a href="/privacy-policy.html">Privacy Policy</a>
+    <br>&copy; 2026 Axiom Forge Software. All rights reserved.
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+      authDomain: 'car-detector-833e5.firebaseapp.com',
+      projectId: 'car-detector-833e5',
+    });
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    let garageUnsubscribe = null;
+    let userPlan = 'free';
+
+    const GARAGE_LIMITS = { free: 2, basic: 20, trader: Infinity };
+
+    async function doSignIn() {
+      try { await auth.signInWithPopup(provider); }
+      catch (err) {
+        if (err.code === 'auth/popup-blocked') alert('Pop-ups are blocked. Please allow pop-ups for this site.');
+        else if (err.code !== 'auth/popup-closed-by-user') alert('Sign-in failed: ' + err.message);
+      }
+    }
+
+    function doSignOut() {
+      if (garageUnsubscribe) { garageUnsubscribe(); garageUnsubscribe = null; }
+      auth.signOut();
+      window.location.href = '/';
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function renderGarage(snapshot) {
+      const grid = document.getElementById('garage-grid');
+      const empty = document.getElementById('garage-empty');
+      const loading = document.getElementById('garage-loading');
+      loading.style.display = 'none';
+
+      const limit = GARAGE_LIMITS[userPlan] || 2;
+      const count = snapshot.size;
+
+      // Update limit info
+      if (limit === Infinity) {
+        document.getElementById('garage-limit-text').textContent = count + ' vehicle' + (count !== 1 ? 's' : '') + ' saved (unlimited)';
+      } else {
+        document.getElementById('garage-limit-text').textContent = count + ' of ' + limit + ' vehicle slots used';
+        if (userPlan !== 'trader') {
+          document.getElementById('garage-upgrade-link').style.display = 'inline';
+        }
+      }
+
+      if (snapshot.empty) {
+        empty.style.display = 'block';
+        grid.innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+
+      grid.innerHTML = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const id = data.identification || {};
+        const val = data.valuation || null;
+        const addedDate = formatDate(data.added_at);
+
+        let html = '<div class="garage-card">';
+        html += '<div class="vehicle-name">' + escapeHtml((id.make || '') + ' ' + (id.model || '')) + '</div>';
+        html += '<div class="vehicle-meta">';
+
+        const yearStr = id.year_min && id.year_max && id.year_min !== id.year_max
+          ? id.year_min + '–' + id.year_max
+          : (id.year_min || id.year_max || '');
+        if (yearStr) html += yearStr + '<br>';
+        if (id.generation) html += id.generation;
+        if (id.trim || id.trim_level) html += ' &middot; ' + escapeHtml(id.trim || id.trim_level);
+        if (id.body_style) html += ' &middot; ' + escapeHtml(id.body_style);
+        if (id.colour) html += ' &middot; ' + escapeHtml(id.colour);
+        html += '<br><span style="font-size:12px;">Added ' + addedDate + '</span>';
+        html += '</div>';
+
+        if (id.number_plate) {
+          html += '<div class="vehicle-plate">' + escapeHtml(id.number_plate) + '</div>';
+        }
+
+        if (val) {
+          html += '<div class="vehicle-valuation">';
+          if (val.dealer_forecourt || val.dealer_price) html += 'Dealer: &pound;' + Number(val.dealer_forecourt || val.dealer_price).toLocaleString();
+          if (val.private_clean || val.private_price) html += ' &middot; Private: &pound;' + Number(val.private_clean || val.private_price).toLocaleString();
+          if (val.trade_retail || val.trade_price) html += ' &middot; Trade: &pound;' + Number(val.trade_retail || val.trade_price).toLocaleString();
+          html += '</div>';
+        }
+
+        html += '<div class="garage-actions">';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + doc.id + '\')">Remove</button>';
+        html += '</div>';
+        html += '</div>';
+        return html;
+      }).join('');
+    }
+
+    async function removeFromGarage(vehicleId) {
+      const user = auth.currentUser;
+      if (!user) return;
+      if (!confirm('Remove this vehicle from your garage?')) return;
+      try {
+        await db.collection('users').doc(user.uid).collection('garage').doc(vehicleId).delete();
+      } catch (err) {
+        alert('Failed to remove vehicle.');
+      }
+    }
+
+    function loadGarage(uid) {
+      if (garageUnsubscribe) garageUnsubscribe();
+      garageUnsubscribe = db.collection('users').doc(uid).collection('garage')
+        .orderBy('added_at', 'desc')
+        .onSnapshot(renderGarage, () => {
+          document.getElementById('garage-loading').textContent = 'Unable to load vehicles.';
+        });
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      document.getElementById('sign-in-btn').style.display = user ? 'none' : 'inline-block';
+      document.getElementById('user-info').style.display = user ? 'inline-flex' : 'none';
+
+      if (user) {
+        document.getElementById('user-photo').src = user.photoURL || '';
+        document.getElementById('user-name').textContent = user.displayName || user.email;
+        document.getElementById('gate-auth').style.display = 'none';
+        document.getElementById('garage-content').style.display = 'block';
+
+        // Fetch plan
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          if (userDoc.exists) userPlan = (userDoc.data().plan || 'free').toLowerCase();
+        } catch (e) {}
+
+        // Plan badge
+        const badge = document.getElementById('user-plan-badge');
+        badge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
+        badge.className = 'plan-badge plan-badge-' + userPlan;
+        badge.style.display = 'inline-block';
+
+        // Trader bulk link
+        if (userPlan === 'trader') {
+          document.getElementById('bulk-link').style.display = 'inline';
+        }
+
+        const limit = GARAGE_LIMITS[userPlan] || 2;
+        document.getElementById('garage-subtitle').textContent =
+          limit === Infinity ? 'Track and manage your vehicles' : 'Save up to ' + limit + ' vehicles on your plan';
+
+        loadGarage(user.uid);
+      } else {
+        document.getElementById('gate-auth').style.display = 'block';
+        document.getElementById('garage-content').style.display = 'none';
+        document.getElementById('user-plan-badge').style.display = 'none';
+        document.getElementById('bulk-link').style.display = 'none';
+        if (garageUnsubscribe) { garageUnsubscribe(); garageUnsubscribe = null; }
+      }
+    });
+  </script>
+</body>
+</html>

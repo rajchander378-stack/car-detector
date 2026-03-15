@@ -81,7 +81,7 @@ Test each completed feature on a physical device. Tick the box when verified wor
 - [ ] **POST /identify** — Send a multipart image upload, confirm JSON response with car identification.
 - [ ] **POST /identify?includeValuation=true** — Send image with a visible plate, confirm valuation data is included in response.
 - [ ] **GET /health** — Confirm health endpoint returns 200 OK.
-- [ ] **RapidAPI auth** — Send request without `X-RapidAPI-Proxy-Secret` header (when env var is set), confirm it is rejected.
+- [ ] **API auth** — Send request without `X-API-Secret` header (when env var is set), confirm it is rejected.
 - [ ] **Concurrent requests** — Send multiple requests simultaneously, confirm no temp file collisions or crashes.
 
 ## Firebase Hosting / Web Pages

@@ -82,7 +82,7 @@ class _CameraScreenState extends State<CameraScreen>
           content: const Text(
             'AutoSpotter uses your camera to capture vehicle images '
             'for AI identification and valuation.\n\n'
-            'Your photos are sent securely to Google Gemini for '
+            'Your photos are sent securely for AI-assisted '
             'analysis. Images are processed transiently and are '
             'not stored on our servers.',
           ),

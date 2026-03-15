@@ -7,11 +7,11 @@ class Config {
   static String get ukvdApiKey =>
       Platform.environment['UKVD_API_KEY'] ?? '';
 
-  static String get rapidApiProxySecret =>
-      Platform.environment['RAPIDAPI_PROXY_SECRET'] ?? '';
+  static String get apiSecret =>
+      Platform.environment['API_SECRET'] ?? '';
 
   static int get port =>
       int.tryParse(Platform.environment['PORT'] ?? '') ?? 8080;
 
-  static bool get authEnabled => rapidApiProxySecret.isNotEmpty;
+  static bool get authEnabled => apiSecret.isNotEmpty;
 }

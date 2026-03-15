@@ -1,0 +1,11 @@
+Image Requirements for AI Vehicle Identification
+=================================================
+
+1. The image must contain exactly one vehicle as the primary subject.
+2. Must be a real photograph — not a drawing, sketch, 3D render, toy, or model car.
+3. The vehicle must be clearly visible — not too far away, heavily obscured, or only partially visible.
+4. Must not be a screenshot from a website, video game, or another app.
+5. File format: JPEG or PNG only.
+6. Minimum resolution: 200×200 pixels.
+7. Avoid extremely dark, bright, or blurry images.
+8. Number plates should be legible where possible — this helps with valuation lookups.

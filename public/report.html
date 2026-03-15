@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title id="page-title">Vehicle Report — AutoSpotter</title>
+  <meta name="description" id="page-desc" content="AI-powered vehicle identification and valuation report by AutoSpotter.">
+  <meta property="og:title" id="og-title" content="Vehicle Report — AutoSpotter">
+  <meta property="og:description" id="og-desc" content="AI-powered vehicle identification and valuation report.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { background: var(--bg); }
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); }
+    nav a:hover { color: var(--primary); text-decoration: none; }
+
+    .report-header {
+      background: linear-gradient(135deg, #0d47a1 0%, #1565c0 40%, #1e88e5 100%);
+      color: white; padding: 32px 20px; text-align: center;
+    }
+    .report-header h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; color: white; }
+    .report-header p { font-size: 14px; opacity: 0.85; }
+
+    .report-container { max-width: 720px; margin: 0 auto; padding: 24px 20px 64px; }
+
+    .report-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .report-card h2 { margin: 0 0 16px; font-size: 18px; color: var(--text); }
+
+    .report-field { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .report-field:last-child { border-bottom: none; }
+    .report-field .label { color: var(--text-secondary); }
+    .report-field .value { font-weight: 600; color: var(--text); text-align: right; }
+
+    .plate-display {
+      display: inline-block; background: #F2C10F; color: #000;
+      font-size: 20px; font-weight: 800; padding: 6px 16px;
+      border-radius: 5px; letter-spacing: 2px; border: 2px solid #000;
+      margin: 12px 0;
+    }
+
+    .confidence-bar-bg { background: #e0e0e0; border-radius: 4px; height: 8px; flex: 1; margin-left: 12px; }
+    .confidence-bar { border-radius: 4px; height: 8px; }
+
+    .valuation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .valuation-item { background: #f8f9fa; border-radius: 10px; padding: 16px; text-align: center; }
+    .valuation-item .val-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .valuation-item .val-price { font-size: 22px; font-weight: 800; color: #2e7d32; }
+
+    .cta-box {
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 24px;
+    }
+    .cta-box h3 { margin: 0 0 8px; color: var(--primary); }
+    .cta-box p { margin: 0 0 16px; font-size: 14px; color: var(--text-secondary); }
+
+    .powered-by { text-align: center; margin-top: 24px; font-size: 13px; color: var(--text-secondary); }
+    .powered-by a { font-weight: 600; }
+
+    @media (max-width: 600px) {
+      .valuation-grid { grid-template-columns: 1fr; }
+      .report-header h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/privacy-policy.html">Privacy</a>
+  </nav>
+
+  <!-- Loading state -->
+  <div id="loading-state">
+    <div class="report-header">
+      <h1>Loading Report...</h1>
+      <p>Fetching vehicle details</p>
+    </div>
+    <div class="report-container" style="text-align:center; padding-top:48px;">
+      <p style="color:var(--text-secondary);">Please wait...</p>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div id="error-state" style="display:none;">
+    <div class="report-header">
+      <h1>Report Not Found</h1>
+      <p>This report may have been removed or the link is invalid</p>
+    </div>
+    <div class="report-container" style="text-align:center; padding-top:32px;">
+      <p style="color:var(--text-secondary);">The vehicle report you're looking for doesn't exist or has expired.</p>
+      <a href="/" class="btn btn-primary" style="margin-top:16px;">Go to AutoSpotter</a>
+    </div>
+  </div>
+
+  <!-- Report content -->
+  <div id="report-content" style="display:none;">
+    <div class="report-header">
+      <h1 id="report-title">Vehicle Report</h1>
+      <p id="report-subtitle"></p>
+    </div>
+
+    <div class="report-container">
+
+      <!-- Number plate -->
+      <div id="plate-section" style="text-align:center; display:none;">
+        <div class="plate-display" id="report-plate"></div>
+      </div>
+
+      <!-- Vehicle identification -->
+      <div class="report-card">
+        <h2>Vehicle Identification</h2>
+        <div id="identification-fields"></div>
+        <div style="display:flex; align-items:center; margin-top:12px;">
+          <span style="font-size:13px; color:var(--text-secondary);">Confidence</span>
+          <div class="confidence-bar-bg">
+            <div class="confidence-bar" id="confidence-bar" style="width:0%;"></div>
+          </div>
+          <span style="font-size:13px; font-weight:600; margin-left:8px;" id="confidence-pct"></span>
+        </div>
+      </div>
+
+      <!-- Valuation (if available) -->
+      <div class="report-card" id="valuation-section" style="display:none;">
+        <h2>Valuation Estimate</h2>
+        <div class="valuation-grid" id="valuation-grid"></div>
+        <p style="font-size:12px; color:var(--text-secondary); margin-top:12px; text-align:center;">
+          Valuations are estimates based on UK market data. Actual prices may vary.
+        </p>
+      </div>
+
+      <!-- Additional details -->
+      <div class="report-card" id="details-section" style="display:none;">
+        <h2>Additional Details</h2>
+        <div id="details-fields"></div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-box">
+        <h3>Want to scan your own vehicle?</h3>
+        <p>Download AutoSpotter for instant AI-powered vehicle identification and UK valuations.</p>
+        <a href="/pricing.html" class="btn btn-primary">Get Started Free</a>
+      </div>
+
+      <div class="powered-by">
+        Report generated by <a href="/">AutoSpotter</a> &mdash; AI Vehicle Identification
+      </div>
+    </div>
+  </div>
+
+  <footer style="text-align:center; padding:32px 20px; font-size:13px; color:var(--text-secondary); border-top:1px solid var(--border); background:#fafafa;">
+    <a href="/">Home</a> &middot;
+    <a href="/pricing.html">Pricing</a> &middot;
+    <a href="/privacy-policy.html">Privacy Policy</a>
+    <br>&copy; 2026 Axiom Forge Software. All rights reserved.
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+      authDomain: 'car-detector-833e5.firebaseapp.com',
+      projectId: 'car-detector-833e5',
+    });
+
+    const db = firebase.firestore();
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
+    }
+
+    function addField(container, label, value) {
+      if (!value) return;
+      const div = document.createElement('div');
+      div.className = 'report-field';
+      div.innerHTML = '<span class="label">' + escapeHtml(label) + '</span><span class="value">' + escapeHtml(String(value)) + '</span>';
+      container.appendChild(div);
+    }
+
+    function addValuation(container, label, price) {
+      if (!price) return;
+      const div = document.createElement('div');
+      div.className = 'valuation-item';
+      div.innerHTML = '<div class="val-label">' + escapeHtml(label) + '</div><div class="val-price">&pound;' + Number(price).toLocaleString() + '</div>';
+      container.appendChild(div);
+    }
+
+    async function loadReport() {
+      const params = new URLSearchParams(window.location.search);
+      const reportId = params.get('id');
+
+      if (!reportId) {
+        showError();
+        return;
+      }
+
+      try {
+        const doc = await db.collection('shared_reports').doc(reportId).get();
+        if (!doc.exists) {
+          showError();
+          return;
+        }
+
+        const data = doc.data();
+        const id = data.identification || {};
+        const val = data.valuation || null;
+
+        // Update page title and meta
+        const vehicleName = (id.make || '') + ' ' + (id.model || '');
+        const yearStr = id.year_min && id.year_max ? id.year_min + '–' + id.year_max : (id.year_min || id.year_max || '');
+        const fullTitle = vehicleName.trim() + (yearStr ? ' ' + yearStr : '') + ' — AutoSpotter Vehicle Report';
+        const description = 'Vehicle report for ' + vehicleName.trim() + (yearStr ? ' (' + yearStr + ')' : '') + '. AI-powered identification and valuation by AutoSpotter.';
+
+        document.getElementById('page-title').textContent = fullTitle;
+        document.getElementById('page-desc').content = description;
+        document.getElementById('og-title').content = fullTitle;
+        document.getElementById('og-desc').content = description;
+
+        // Header
+        document.getElementById('report-title').textContent = vehicleName.trim() || 'Vehicle Report';
+        const subtitleParts = [];
+        if (yearStr) subtitleParts.push(yearStr);
+        if (id.generation) subtitleParts.push(id.generation);
+        if (id.trim) subtitleParts.push(id.trim);
+        document.getElementById('report-subtitle').textContent = subtitleParts.join(' \u00B7 ');
+
+        // Number plate
+        if (id.number_plate) {
+          document.getElementById('plate-section').style.display = 'block';
+          document.getElementById('report-plate').textContent = id.number_plate;
+        }
+
+        // Identification fields
+        const idFields = document.getElementById('identification-fields');
+        addField(idFields, 'Make', id.make);
+        addField(idFields, 'Model', id.model);
+        if (id.year_min && id.year_max && id.year_min !== id.year_max) {
+          addField(idFields, 'Year Range', id.year_min + ' – ' + id.year_max);
+        } else {
+          addField(idFields, 'Year', id.year_min || id.year_max);
+        }
+        addField(idFields, 'Generation', id.generation);
+        addField(idFields, 'Trim', id.trim || id.trim_level);
+        addField(idFields, 'Body Style', id.body_style);
+        addField(idFields, 'Colour', id.colour);
+
+        // Confidence bar
+        const conf = Math.round((id.confidence || 0) * 100);
+        document.getElementById('confidence-pct').textContent = conf + '%';
+        const bar = document.getElementById('confidence-bar');
+        bar.style.width = conf + '%';
+        bar.style.background = conf >= 80 ? '#2e7d32' : conf >= 50 ? '#f57c00' : '#c62828';
+
+        // Valuation
+        if (val) {
+          const valSection = document.getElementById('valuation-section');
+          valSection.style.display = 'block';
+          const grid = document.getElementById('valuation-grid');
+          addValuation(grid, 'Dealer Forecourt', val.dealer_forecourt || val.dealer_price);
+          addValuation(grid, 'Private Sale', val.private_clean || val.private_price);
+          addValuation(grid, 'Trade', val.trade_retail || val.trade_price);
+          addValuation(grid, 'Part Exchange', val.part_exchange);
+          addValuation(grid, 'Auction', val.auction);
+          addValuation(grid, 'Trade Average', val.trade_average);
+        }
+
+        // Additional details
+        const detailsFields = document.getElementById('details-fields');
+        let hasDetails = false;
+        if (id.distinguishing_features && id.distinguishing_features.length > 0) {
+          addField(detailsFields, 'Features', id.distinguishing_features.join(', '));
+          hasDetails = true;
+        }
+        if (id.notes) { addField(detailsFields, 'Notes', id.notes); hasDetails = true; }
+        if (val && val.vehicle_description) { addField(detailsFields, 'DVLA Description', val.vehicle_description); hasDetails = true; }
+        if (val && val.date_of_first_registration) { addField(detailsFields, 'First Registered', val.date_of_first_registration); hasDetails = true; }
+        if (val && val.valuation_mileage) { addField(detailsFields, 'Mileage (est.)', Number(val.valuation_mileage).toLocaleString() + ' miles'); hasDetails = true; }
+        if (hasDetails) document.getElementById('details-section').style.display = 'block';
+
+        // Show report, hide loading
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('report-content').style.display = 'block';
+
+      } catch (err) {
+        console.error('Failed to load report:', err);
+        showError();
+      }
+    }
+
+    function showError() {
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('error-state').style.display = 'block';
+    }
+
+    loadReport();
+  </script>
+</body>
+</html>

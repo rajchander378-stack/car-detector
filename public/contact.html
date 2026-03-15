@@ -38,8 +38,9 @@
   <nav>
     <a href="/">Home</a>
     <a href="/pricing.html">Pricing</a>
-    <a href="/contact.html" style="font-weight:600;">Contact</a>
-    <a href="/privacy-policy.html">Privacy Policy</a>
+    <a href="/contact.html" class="active">Contact</a>
+    <a href="/privacy-policy.html">Privacy</a>
+    <a id="delete-link" href="/delete-account.html" style="display:none;">Delete Account</a>
     <a id="admin-link" href="/admin/" style="display:none; font-weight:600;">Admin Dashboard</a>
   </nav>
 
@@ -107,8 +108,10 @@
       try {
         await auth.signInWithPopup(provider);
       } catch (err) {
-        if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-          await auth.signInWithRedirect(provider);
+        if (err.code === 'auth/popup-blocked') {
+          alert('Pop-ups are blocked by your browser. Please allow pop-ups for this site to sign in.');
+        } else if (err.code !== 'auth/popup-closed-by-user') {
+          alert('Sign-in failed: ' + err.message);
         }
       }
     }
@@ -233,9 +236,11 @@
             }
           }
         } catch (e) {}
+        document.getElementById('delete-link').style.display = 'inline';
       } else {
         prompt.style.display = 'block';
         section.style.display = 'none';
+        document.getElementById('delete-link').style.display = 'none';
         if (msgsUnsubscribe) { msgsUnsubscribe(); msgsUnsubscribe = null; }
       }
     });

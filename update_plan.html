@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html><head><title>Update Plan</title></head>
+<body style="font-family:sans-serif; padding:40px; text-align:center;">
+<h2>Update Admin Plan to Trader</h2>
+<p id="status">Loading...</p>
+<button id="btn" style="display:none; padding:12px 24px; font-size:16px; cursor:pointer;" onclick="updatePlan()">Set Plan to Trader</button>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+  authDomain: 'car-detector-833e5.firebaseapp.com',
+  projectId: 'car-detector-833e5',
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('status').textContent = 'Signed in as ' + user.email + '. Click the button to update plan.';
+    document.getElementById('btn').style.display = 'inline-block';
+  } else {
+    document.getElementById('status').textContent = 'Signing in...';
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  }
+});
+
+async function updatePlan() {
+  try {
+    const user = auth.currentUser;
+    await db.collection('users').doc(user.uid).update({
+      plan: 'trader',
+      plan_started_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('status').textContent = 'Plan updated to Trader successfully!';
+    document.getElementById('status').style.color = 'green';
+    document.getElementById('btn').style.display = 'none';
+  } catch(e) {
+    document.getElementById('status').textContent = 'Error: ' + e.message;
+    document.getElementById('status').style.color = 'red';
+  }
+}
+</script>
+</body></html>

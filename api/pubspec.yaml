@@ -1,5 +1,5 @@
 name: car_detector_api
-description: Car Detector REST API for RapidAPI
+description: Car Detector REST API for Cloud Run
 version: 1.0.0
 publish_to: none
 

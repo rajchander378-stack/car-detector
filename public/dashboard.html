@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — AutoSpotter</title>
+  <meta name="description" content="Your AutoSpotter dashboard — view scans, usage, and plan details.">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { background: var(--bg); }
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); }
+    nav a:hover { color: var(--primary); text-decoration: none; }
+    #auth-area { margin-left: auto; }
+
+    /* Dashboard layout */
+    .dash-header {
+      background: linear-gradient(135deg, #0d47a1 0%, #1565c0 40%, #1e88e5 100%);
+      color: white; padding: 32px 20px; text-align: center;
+    }
+    .dash-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: white; }
+    .dash-header p { font-size: 14px; opacity: 0.85; }
+
+    .dash-container { max-width: 900px; margin: 0 auto; padding: 24px 20px 64px; }
+
+    /* Stats row */
+    .dash-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .dash-stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .dash-stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .dash-stat-card .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Plan card */
+    .dash-plan-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .dash-plan-card.plan-free { border-color: #9e9e9e; }
+    .dash-plan-card.plan-basic { border-color: var(--primary); }
+    .dash-plan-card.plan-trader { border-color: #d4a017; }
+    .dash-plan-info h3 { margin: 0 0 4px; font-size: 18px; }
+    .dash-plan-info p { margin: 0; font-size: 14px; color: var(--text-secondary); }
+
+    /* Usage bar */
+    .usage-bar-bg { background: #e0e0e0; border-radius: 4px; height: 8px; margin: 8px 0; width: 200px; }
+    .usage-bar { background: var(--primary); border-radius: 4px; height: 8px; transition: width 0.3s; }
+    .usage-bar.warning { background: #f57c00; }
+    .usage-bar.full { background: var(--danger); }
+
+    /* Quick actions */
+    .dash-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .dash-action-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--text);
+      transition: box-shadow 0.2s, transform 0.2s;
+      display: block;
+    }
+    .dash-action-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+    .dash-action-card .action-icon { font-size: 28px; margin-bottom: 8px; }
+    .dash-action-card h4 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
+    .dash-action-card p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+
+    /* Upgrade prompt */
+    .upgrade-prompt {
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .upgrade-prompt p { margin: 0; font-size: 14px; color: var(--text); }
+    .upgrade-prompt strong { color: var(--primary); }
+
+    /* Scans list */
+    .scans-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .scans-header h2 { margin: 0; font-size: 20px; color: var(--text); }
+
+    @media (max-width: 600px) {
+      #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
+      .dash-plan-card { flex-direction: column; text-align: center; }
+      .usage-bar-bg { width: 100%; }
+      .upgrade-prompt { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="/">Home</a>
+    <a href="/dashboard.html" class="active">Dashboard</a>
+    <a href="/garage.html">My Vehicles</a>
+    <a href="/pricing.html">Pricing</a>
+    <a id="bulk-link" href="/bulk-upload.html" style="display:none; font-weight:600; color:#d4a017;">Bulk Upload</a>
+    <a id="admin-link" href="/admin/" style="display:none; font-weight:600; color:var(--primary);">Admin</a>
+    <span id="auth-area">
+      <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
+      <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
+        <img id="user-photo" src="" alt="" style="width:26px; height:26px; border-radius:50%; vertical-align:middle;">
+        <span id="user-name" style="vertical-align:middle;"></span>
+        <span id="user-plan-badge" class="plan-badge" style="display:none;"></span>
+        <button class="btn" style="padding:4px 12px; font-size:12px; background:var(--border); color:var(--text);" onclick="doSignOut()">Sign out</button>
+      </span>
+    </span>
+  </nav>
+
+  <!-- Auth gate -->
+  <div id="gate-auth" style="display:none;">
+    <div class="dash-header">
+      <h1>Sign in to continue</h1>
+      <p>Access your AutoSpotter dashboard</p>
+    </div>
+    <div style="max-width:400px; margin:40px auto; text-align:center;">
+      <button class="btn btn-primary" style="font-size:16px; padding:14px 32px;" onclick="doSignIn()">Sign in with Google</button>
+      <p style="margin-top:16px; font-size:14px; color:var(--text-secondary);">Don't have an account? <a href="/pricing.html">Get started free</a></p>
+    </div>
+  </div>
+
+  <!-- Dashboard content -->
+  <div id="dash-content" style="display:none;">
+    <div class="dash-header">
+      <h1 id="dash-greeting">Welcome back</h1>
+      <p id="dash-plan-label">Loading your dashboard...</p>
+    </div>
+
+    <div class="dash-container">
+
+      <!-- Plan card -->
+      <div id="dash-plan-card" class="dash-plan-card" style="display:none;">
+        <div class="dash-plan-info">
+          <h3 id="plan-title"></h3>
+          <p id="plan-description"></p>
+        </div>
+        <div>
+          <div id="usage-section" style="display:none;">
+            <div style="font-size:13px; color:var(--text-secondary);" id="usage-label"></div>
+            <div class="usage-bar-bg"><div id="usage-bar" class="usage-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upgrade prompt (Free/Basic only) -->
+      <div id="upgrade-prompt" class="upgrade-prompt" style="display:none;">
+        <p id="upgrade-text"></p>
+        <a href="/pricing.html" class="btn btn-primary" style="padding:8px 20px; font-size:13px; white-space:nowrap;">View Plans</a>
+      </div>
+
+      <!-- Stats row -->
+      <div class="dash-stats" id="dash-stats" style="display:none;">
+        <div class="dash-stat-card">
+          <div class="stat-value" id="stat-scans">—</div>
+          <div class="stat-label">Total Scans</div>
+        </div>
+        <div class="dash-stat-card">
+          <div class="stat-value" id="stat-used">—</div>
+          <div class="stat-label" id="stat-used-label">Used This Month</div>
+        </div>
+        <div class="dash-stat-card">
+          <div class="stat-value" id="stat-remaining">—</div>
+          <div class="stat-label" id="stat-remaining-label">Remaining</div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="dash-actions" id="dash-actions">
+        <a href="/pricing.html" class="dash-action-card">
+          <div class="action-icon">&#128179;</div>
+          <h4>Manage Plan</h4>
+          <p>View pricing and change your subscription</p>
+        </a>
+        <a href="/garage.html" class="dash-action-card">
+          <div class="action-icon">&#128663;</div>
+          <h4>My Vehicles</h4>
+          <p>View and track your saved vehicles</p>
+        </a>
+        <a href="/contact.html" class="dash-action-card">
+          <div class="action-icon">&#128172;</div>
+          <h4>Contact Support</h4>
+          <p>Get help or send feedback</p>
+        </a>
+        <a id="action-bulk" href="/bulk-upload.html" class="dash-action-card" style="display:none;">
+          <div class="action-icon">&#128228;</div>
+          <h4>Bulk Upload</h4>
+          <p>Upload 100+ car images for AI identification</p>
+        </a>
+        <a href="/delete-account.html" class="dash-action-card">
+          <div class="action-icon">&#9881;&#65039;</div>
+          <h4>Account Settings</h4>
+          <p>Delete account or manage data</p>
+        </a>
+      </div>
+
+      <!-- Saved scans -->
+      <div class="scans-header">
+        <h2>Your Saved Scans</h2>
+      </div>
+      <p id="scans-loading" style="color:var(--text-secondary); text-align:center;">Loading your scans...</p>
+      <p id="scans-empty" style="display:none; color:var(--text-secondary); text-align:center;">You have no saved scans yet. Use the AutoSpotter app to scan vehicles and they will appear here.</p>
+      <div id="scans-list"></div>
+    </div>
+  </div>
+
+  <footer style="text-align:center; padding:32px 20px; font-size:13px; color:var(--text-secondary); border-top:1px solid var(--border); background:#fafafa;">
+    <a href="/">Home</a> &middot;
+    <a href="/pricing.html">Pricing</a> &middot;
+    <a href="/contact.html">Contact</a> &middot;
+    <a href="/privacy-policy.html">Privacy Policy</a>
+    <br>&copy; 2026 Axiom Forge Software. All rights reserved.
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+      authDomain: 'car-detector-833e5.firebaseapp.com',
+      projectId: 'car-detector-833e5',
+    });
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    let scansUnsubscribe = null;
+
+    async function doSignIn() {
+      try { await auth.signInWithPopup(provider); }
+      catch (err) {
+        if (err.code === 'auth/popup-blocked') alert('Pop-ups are blocked. Please allow pop-ups for this site.');
+        else if (err.code !== 'auth/popup-closed-by-user') alert('Sign-in failed: ' + err.message);
+      }
+    }
+
+    function doSignOut() {
+      if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
+      auth.signOut();
+      window.location.href = '/';
+    }
+
+    function currentMonthKey() {
+      const now = new Date();
+      return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function renderScans(snapshot) {
+      const list = document.getElementById('scans-list');
+      const empty = document.getElementById('scans-empty');
+      const loading = document.getElementById('scans-loading');
+      loading.style.display = 'none';
+
+      if (snapshot.empty) {
+        empty.style.display = 'block';
+        list.innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+
+      list.innerHTML = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const id = data.identification || {};
+        const val = data.valuation || null;
+        const fav = data.is_favourite ? ' &#9733;' : '';
+        const date = formatDate(data.saved_at);
+
+        let html = '<div style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px;">';
+        html += '<strong>' + (id.make || '') + ' ' + (id.model || '') + '</strong>' + fav;
+        if (id.year_range) html += ' <span style="color:var(--text-secondary); font-size:13px;">(' + id.year_range + ')</span>';
+        html += '<br><span style="font-size:13px; color:var(--text-secondary);">';
+        if (id.generation) html += id.generation + ' &middot; ';
+        if (id.trim_level) html += id.trim_level + ' &middot; ';
+        html += date + '</span>';
+
+        if (id.number_plate) {
+          html += '<br><span style="font-size:13px; background:#ffdc00; color:#000; padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:1px;">' + id.number_plate + '</span>';
+        }
+
+        if (val) {
+          html += '<div style="margin-top:6px; font-size:13px; color:var(--text-secondary);">';
+          if (val.dealer_price) html += 'Dealer: &pound;' + Number(val.dealer_price).toLocaleString() + ' &middot; ';
+          if (val.private_price) html += 'Private: &pound;' + Number(val.private_price).toLocaleString() + ' &middot; ';
+          if (val.trade_price) html += 'Trade: &pound;' + Number(val.trade_price).toLocaleString();
+          html += '</div>';
+        }
+
+        html += '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--primary-light); color:var(--primary);" onclick="shareReport(\'' + doc.id + '\')">Share Report</button>';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:#e8f5e9; color:#2e7d32;" onclick="addToGarage(\'' + doc.id + '\')">Save to Garage</button>';
+        html += '</div>';
+
+        html += '</div>';
+        return html;
+      }).join('');
+    }
+
+    const GARAGE_LIMITS = { free: 2, basic: 20, trader: Infinity };
+    let currentPlan = 'free';
+
+    async function addToGarage(scanId) {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        // Check garage limit
+        const garageSnap = await db.collection('users').doc(user.uid).collection('garage').get();
+        const limit = GARAGE_LIMITS[currentPlan] || 2;
+        if (garageSnap.size >= limit) {
+          const planName = currentPlan === 'free' ? 'Free' : 'Basic';
+          alert('You\'ve reached your ' + planName + ' plan limit of ' + limit + ' saved vehicles. Upgrade your plan for more.');
+          btn.textContent = originalText;
+          btn.disabled = false;
+          return;
+        }
+
+        // Check if already in garage
+        const existing = await db.collection('users').doc(user.uid).collection('garage')
+          .where('source_scan_id', '==', scanId).limit(1).get();
+        if (!existing.empty) {
+          btn.textContent = 'Already Saved';
+          btn.style.background = '#fff3e0';
+          btn.style.color = '#f57c00';
+          btn.disabled = false;
+          setTimeout(() => { btn.textContent = originalText; btn.style.background = '#e8f5e9'; btn.style.color = '#2e7d32'; }, 2000);
+          return;
+        }
+
+        // Fetch scan data
+        const scanDoc = await db.collection('users').doc(user.uid)
+          .collection('saved_scans').doc(scanId).get();
+        if (!scanDoc.exists) { alert('Scan not found.'); btn.textContent = originalText; btn.disabled = false; return; }
+
+        const scanData = scanDoc.data();
+
+        // Add to garage
+        await db.collection('users').doc(user.uid).collection('garage').add({
+          source_scan_id: scanId,
+          identification: scanData.identification || {},
+          valuation: scanData.valuation || null,
+          added_at: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+
+        btn.textContent = 'Saved!';
+        btn.style.background = '#e8f5e9';
+        btn.style.color = '#2e7d32';
+      } catch (err) {
+        console.error('Failed to save to garage:', err);
+        alert('Failed to save vehicle. Please try again.');
+        btn.textContent = originalText;
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+          btn.textContent = 'Save to Garage';
+          btn.style.background = '#e8f5e9';
+          btn.style.color = '#2e7d32';
+        }, 2000);
+      }
+    }
+
+    async function shareReport(scanId) {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = 'Sharing...';
+      btn.disabled = true;
+
+      try {
+        // Fetch the scan data
+        const scanDoc = await db.collection('users').doc(user.uid)
+          .collection('saved_scans').doc(scanId).get();
+        if (!scanDoc.exists) { alert('Scan not found.'); return; }
+
+        const scanData = scanDoc.data();
+
+        // Check if already shared
+        const existing = await db.collection('shared_reports')
+          .where('source_scan_id', '==', scanId)
+          .where('owner_uid', '==', user.uid)
+          .limit(1).get();
+
+        let reportId;
+        if (!existing.empty) {
+          // Already shared — reuse the link
+          reportId = existing.docs[0].id;
+        } else {
+          // Create shared report
+          const reportRef = await db.collection('shared_reports').add({
+            owner_uid: user.uid,
+            source_scan_id: scanId,
+            identification: scanData.identification || {},
+            valuation: scanData.valuation || null,
+            shared_at: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          reportId = reportRef.id;
+        }
+
+        const url = window.location.origin + '/report.html?id=' + reportId;
+
+        // Copy to clipboard
+        try {
+          await navigator.clipboard.writeText(url);
+          btn.textContent = 'Link Copied!';
+          btn.style.background = '#e8f5e9';
+          btn.style.color = '#2e7d32';
+        } catch (e) {
+          // Fallback: show URL in prompt
+          prompt('Share this link:', url);
+          btn.textContent = 'Shared!';
+        }
+      } catch (err) {
+        console.error('Share failed:', err);
+        alert('Failed to share report. Please try again.');
+        btn.textContent = originalText;
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+          btn.textContent = 'Share Report';
+          btn.style.background = 'var(--primary-light)';
+          btn.style.color = 'var(--primary)';
+        }, 3000);
+      }
+    }
+
+    function loadUserScans(uid) {
+      if (scansUnsubscribe) scansUnsubscribe();
+      scansUnsubscribe = db.collection('users').doc(uid).collection('saved_scans')
+        .orderBy('saved_at', 'desc')
+        .onSnapshot(renderScans, () => {
+          document.getElementById('scans-loading').textContent = 'Unable to load scans.';
+        });
+    }
+
+    async function loadDashboard(user) {
+      // Fetch plan
+      let plan = 'free';
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) plan = (userDoc.data().plan || 'free').toLowerCase();
+      } catch (e) {}
+
+      currentPlan = plan;
+
+      // Show plan badge in nav
+      const badge = document.getElementById('user-plan-badge');
+      badge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+      badge.className = 'plan-badge plan-badge-' + plan;
+      badge.style.display = 'inline-block';
+
+      // Greeting
+      const firstName = (user.displayName || 'there').split(' ')[0];
+      document.getElementById('dash-greeting').textContent = 'Welcome back, ' + firstName;
+
+      // Plan card
+      const planCard = document.getElementById('dash-plan-card');
+      planCard.style.display = 'flex';
+      planCard.className = 'dash-plan-card plan-' + plan;
+
+      const planNames = { free: 'Free Plan', basic: 'Basic Plan', trader: 'Trader Plan' };
+      const planDescs = {
+        free: '5 vehicle scans per month — valuations available on paid plans',
+        basic: '10 vehicle valuations per month — unlimited scanning',
+        trader: '75 vehicle valuations per month — bulk upload, CSV export, priority support'
+      };
+      document.getElementById('plan-title').textContent = planNames[plan] || 'Free Plan';
+      document.getElementById('plan-description').textContent = planDescs[plan] || '';
+      document.getElementById('dash-plan-label').textContent = planNames[plan] || 'Free Plan';
+
+      // Fetch usage
+      let monthlyLimit = plan === 'trader' ? 75 : plan === 'basic' ? 10 : 5;
+      let valuationScans = 0;
+      let aiOnlyScans = 0;
+      let overageScans = 0;
+
+      try {
+        const plansDoc = await db.collection('config').doc('plans').get();
+        if (plansDoc.exists) {
+          const config = plansDoc.data()[plan];
+          if (config) monthlyLimit = config.monthly_scans || monthlyLimit;
+        }
+      } catch (e) {}
+
+      try {
+        const usageDoc = await db.collection('users').doc(user.uid)
+          .collection('usage').doc(currentMonthKey()).get();
+        if (usageDoc.exists) {
+          valuationScans = usageDoc.data().valuation_scans || 0;
+          aiOnlyScans = usageDoc.data().ai_only_scans || 0;
+          overageScans = usageDoc.data().overage_scans || 0;
+        }
+      } catch (e) {}
+
+      // Stats
+      const statsEl = document.getElementById('dash-stats');
+      statsEl.style.display = 'grid';
+
+      // Total scans count
+      let totalScans = '—';
+      try {
+        const scansSnap = await db.collection('users').doc(user.uid).collection('saved_scans').get();
+        totalScans = scansSnap.size;
+      } catch (e) {}
+      document.getElementById('stat-scans').textContent = totalScans;
+
+      if (plan === 'free') {
+        document.getElementById('stat-used').textContent = aiOnlyScans;
+        document.getElementById('stat-used-label').textContent = 'Vehicle Scans This Month';
+        const remaining = Math.max(0, monthlyLimit - aiOnlyScans);
+        document.getElementById('stat-remaining').textContent = remaining;
+        document.getElementById('stat-remaining-label').textContent = 'Scans Remaining';
+      } else {
+        document.getElementById('stat-used').textContent = valuationScans;
+        document.getElementById('stat-used-label').textContent = 'Valuations This Month';
+        const remaining = Math.max(0, monthlyLimit - valuationScans);
+        document.getElementById('stat-remaining').textContent = remaining;
+        document.getElementById('stat-remaining-label').textContent = 'Valuations Remaining';
+      }
+
+      // Usage bar
+      const usageSection = document.getElementById('usage-section');
+      usageSection.style.display = 'block';
+      const used = plan === 'free' ? aiOnlyScans : valuationScans;
+      const pct = Math.min((used / monthlyLimit) * 100, 100);
+      const bar = document.getElementById('usage-bar');
+      bar.style.width = pct + '%';
+      if (pct >= 100) bar.className = 'usage-bar full';
+      else if (pct >= 80) bar.className = 'usage-bar warning';
+      document.getElementById('usage-label').textContent = used + ' / ' + monthlyLimit + ' used';
+
+      // Upgrade prompt
+      if (plan === 'free') {
+        document.getElementById('upgrade-prompt').style.display = 'flex';
+        document.getElementById('upgrade-text').innerHTML = '<strong>Upgrade to Basic</strong> to unlock vehicle valuations and unlimited scanning.';
+      } else if (plan === 'basic') {
+        document.getElementById('upgrade-prompt').style.display = 'flex';
+        document.getElementById('upgrade-text').innerHTML = '<strong>Upgrade to Trader</strong> for 75 vehicle valuations, bulk upload, CSV export, and priority support.';
+      }
+
+      // Trader-only features
+      if (plan === 'trader') {
+        document.getElementById('bulk-link').style.display = 'inline';
+        document.getElementById('action-bulk').style.display = 'block';
+      }
+
+      // Admin link
+      try {
+        const adminDoc = await db.collection('config').doc('admin').get();
+        if (adminDoc.exists) {
+          const emails = adminDoc.data().admin_emails || [];
+          if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
+            document.getElementById('admin-link').style.display = 'inline';
+          }
+        }
+      } catch (e) {}
+
+      // Load scans
+      loadUserScans(user.uid);
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      document.getElementById('sign-in-btn').style.display = user ? 'none' : 'inline-block';
+      document.getElementById('user-info').style.display = user ? 'inline-flex' : 'none';
+
+      if (user) {
+        document.getElementById('user-photo').src = user.photoURL || '';
+        document.getElementById('user-name').textContent = user.displayName || user.email;
+        document.getElementById('gate-auth').style.display = 'none';
+        document.getElementById('dash-content').style.display = 'block';
+        await loadDashboard(user);
+      } else {
+        document.getElementById('gate-auth').style.display = 'block';
+        document.getElementById('dash-content').style.display = 'none';
+        document.getElementById('user-plan-badge').style.display = 'none';
+        document.getElementById('bulk-link').style.display = 'none';
+        document.getElementById('admin-link').style.display = 'none';
+        if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
+      }
+    });
+  </script>
+</body>
+</html>

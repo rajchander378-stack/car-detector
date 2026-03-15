@@ -29,7 +29,7 @@ We reserve the right to suspend or terminate your account without notice if we r
 
 ## 3. AI-Generated Content — No Guarantee of Accuracy
 
-The App uses Google Gemini and other machine-learning models to analyse images. You acknowledge and agree that:
+The App uses AI-assisted machine-learning models to analyse images. You acknowledge and agree that:
 
 - **All identifications are estimates.** The AI may misidentify the make, model, year, trim, or any other attribute of a vehicle. Confidence scores are indicative only.
 - **Number plate readings may be incorrect.** Optical character recognition from photographs is inherently unreliable. Characters may be misread, transposed, or omitted. Never rely solely on the App to verify a registration.
@@ -79,7 +79,7 @@ Vehicle registration plates may constitute personal data under UK GDPR when they
 
 ## 8. Third-Party Services
 
-The App relies on third-party services including Google Firebase, Google Gemini AI, Google Sign-In, and vehicle data APIs. We do not control these services and are not liable for their availability, accuracy, or terms. Your use of Google services is additionally subject to Google's Terms of Service and Privacy Policy.
+The App relies on third-party services including Google Firebase, AI processing services, Google Sign-In, and vehicle data APIs. We do not control these services and are not liable for their availability, accuracy, or terms. Your use of Google services is additionally subject to Google's Terms of Service and Privacy Policy.
 
 ---
 

@@ -25,6 +25,11 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Garage subcollection — owner only
+      match /garage/{vehicleId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
       // Usage tracking subcollection — owner can read/write, admins can read
       match /usage/{monthId} {
         allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
@@ -52,6 +57,16 @@ service cloud.firestore {
       // Only existing admins can update the admin list
       allow update: if isAdmin();
       allow delete: if false;
+    }
+
+    // --- Shared Vehicle Reports ---
+    // Anyone can read (public links). Only authenticated owner can create/update/delete.
+    match /shared_reports/{reportId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.owner_uid == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.owner_uid == request.auth.uid;
     }
 
     // --- AI Reports ---

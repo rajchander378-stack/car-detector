@@ -13,10 +13,10 @@
       padding: 28px 24px; text-align: center; position: relative; transition: box-shadow 0.2s;
     }
     .plan-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-    .plan-card.featured { border-color: #d4a017; }
+    .plan-card.featured { border-color: var(--primary); }
     .plan-card.featured::before {
-      content: 'Best Value'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-      background: #d4a017; color: white; font-size: 11px; font-weight: 700; padding: 3px 14px;
+      content: 'Most Popular'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--primary); color: white; font-size: 11px; font-weight: 700; padding: 3px 14px;
       border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px;
     }
     .plan-card.active { border-color: var(--primary); }
@@ -71,9 +71,10 @@
   </header>
   <nav>
     <a href="/">Home</a>
-    <a href="/pricing.html" style="font-weight:600;">Pricing</a>
+    <a href="/pricing.html" class="active">Pricing</a>
     <a href="/contact.html">Contact</a>
-    <a href="/privacy-policy.html">Privacy Policy</a>
+    <a href="/privacy-policy.html">Privacy</a>
+    <a id="delete-link" href="/delete-account.html" style="display:none;">Delete Account</a>
     <a id="admin-link" href="/admin/" style="display:none; font-weight:600;">Admin Dashboard</a>
   </nav>
 
@@ -88,57 +89,57 @@
     </div>
 
     <h2 style="text-align:center; margin-top:16px;">Choose Your Plan</h2>
-    <p style="text-align:center;">Start free with AI identification. Upgrade to unlock vehicle valuations.</p>
+    <p style="text-align:center;">Start free. Upgrade to unlock vehicle valuations and dealer tools.</p>
 
     <div class="plans">
       <!-- Free Plan -->
       <div class="plan-card" id="card-free">
         <div class="plan-name">Free</div>
-        <div class="plan-desc">Try it out</div>
+        <div class="plan-desc">Try the product</div>
         <div class="plan-price">Free</div>
         <ul class="plan-features">
-          <li>5 AI identification scans per month</li>
-          <li>Number plate reading</li>
+          <li>5 vehicle scans per month</li>
+          <li>Automatic number plate recognition</li>
+          <li>Basic vehicle details</li>
           <li>Save scan history</li>
-          <li class="disabled">Price valuations not included</li>
-          <li class="disabled">No pay-as-you-go</li>
+          <li class="disabled">Valuations available on paid plans</li>
         </ul>
         <button class="plan-btn plan-btn-free" id="btn-free" onclick="handleFree()">Get Started Free</button>
         <div class="overage-note">No credit card required.</div>
       </div>
 
       <!-- Basic Plan -->
-      <div class="plan-card" id="card-basic">
+      <div class="plan-card featured" id="card-basic">
         <div class="plan-name">Basic</div>
         <div class="plan-desc">For personal use</div>
         <div class="plan-price">&pound;5 <span class="period">/ month</span></div>
         <ul class="plan-features">
-          <li>10 valuation scans per month</li>
-          <li>Unlimited AI identification</li>
-          <li>Number plate reading</li>
+          <li>10 vehicle valuations per month</li>
+          <li>Unlimited number plate scanning</li>
+          <li>Full vehicle details</li>
           <li>Save scan history</li>
-          <li>Pay-as-you-go: 40p per extra scan</li>
+          <li>Additional scans 40p each</li>
         </ul>
-        <button class="plan-btn plan-btn-basic" id="btn-basic" onclick="handleUpgrade()">Upgrade to Basic</button>
+        <button class="plan-btn plan-btn-basic" id="btn-basic" onclick="handleUpgrade()">Start Basic Plan</button>
         <div class="overage-note">Cancel anytime.</div>
       </div>
 
       <!-- Trader Plan -->
-      <div class="plan-card featured" id="card-trader">
+      <div class="plan-card" id="card-trader">
         <div class="plan-name">Trader</div>
-        <div class="plan-desc">For dealers &amp; commercial use</div>
+        <div class="plan-desc">For dealers &amp; professionals</div>
         <div class="plan-price">&pound;14.99 <span class="period">/ month</span></div>
         <ul class="plan-features">
-          <li>75 valuation scans per month</li>
-          <li>Unlimited AI identification</li>
-          <li>Number plate reading</li>
-          <li>Save scan history</li>
-          <li>Pay-as-you-go: 30p per extra scan</li>
+          <li>75 vehicle valuations per month</li>
+          <li>Unlimited number plate scanning</li>
+          <li>Dealer-grade vehicle insights</li>
+          <li>Additional scans 30p each</li>
+          <li class="extra">CSV / Excel export</li>
+          <li class="extra">Bulk upload (100+ images)</li>
           <li class="extra">Priority support</li>
-          <li class="extra">Export data (CSV, Excel, JSON)</li>
         </ul>
         <button class="plan-btn plan-btn-trader" id="btn-trader" onclick="handleUpgrade()">Upgrade to Trader</button>
-        <div class="overage-note">Cancel anytime. Best for professionals.</div>
+        <div class="overage-note">Cancel anytime. Built for professionals.</div>
       </div>
     </div>
 
@@ -151,13 +152,14 @@
         </thead>
         <tbody>
           <tr><td>Monthly price</td><td>Free</td><td>&pound;5</td><td>&pound;14.99</td></tr>
-          <tr><td>AI identification</td><td>5/month</td><td>Unlimited</td><td>Unlimited</td></tr>
-          <tr><td>Valuation scans</td><td>&mdash;</td><td>10/month</td><td>75/month</td></tr>
-          <tr><td>Overage pricing</td><td>&mdash;</td><td>40p/scan</td><td>30p/scan</td></tr>
-          <tr><td>Number plate reading</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+          <tr><td>Vehicle scans</td><td>5/month</td><td>Unlimited</td><td>Unlimited</td></tr>
+          <tr><td>Vehicle valuations</td><td>&mdash;</td><td>10/month</td><td>75/month</td></tr>
+          <tr><td>Additional valuations</td><td>&mdash;</td><td>40p each</td><td>30p each</td></tr>
+          <tr><td>Number plate recognition</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
           <tr><td>Scan history</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+          <tr><td>Bulk upload</td><td>&mdash;</td><td>&mdash;</td><td>&#10003;</td></tr>
+          <tr><td>CSV / Excel export</td><td>&mdash;</td><td>&mdash;</td><td>&#10003;</td></tr>
           <tr><td>Priority support</td><td>&mdash;</td><td>&mdash;</td><td>&#10003;</td></tr>
-          <tr><td>Export (CSV/Excel/JSON)</td><td>&mdash;</td><td>&mdash;</td><td>&#10003;</td></tr>
         </tbody>
       </table>
     </div>
@@ -230,7 +232,7 @@
 
         if (isFree) {
           document.getElementById('usage-text').textContent =
-            aiOnlyScans + ' AI scans this month (valuations not included on Free plan)';
+            aiOnlyScans + ' vehicle scans this month (valuations available on paid plans)';
           document.getElementById('usage-bar').style.width = Math.min((aiOnlyScans / monthlyScans) * 100, 100) + '%';
         } else {
           const pct = Math.min((valuationScans / monthlyScans) * 100, 100);
@@ -294,14 +296,21 @@
       try {
         await auth.signInWithPopup(provider);
       } catch (err) {
-        if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-          await auth.signInWithRedirect(provider);
+        if (err.code === 'auth/popup-blocked') {
+          alert('Pop-ups are blocked by your browser. Please allow pop-ups for this site to sign in.');
+        } else if (err.code !== 'auth/popup-closed-by-user') {
+          alert('Sign-in failed: ' + err.message);
         }
       }
     }
 
     auth.onAuthStateChanged(async (user) => {
-      if (user) await loadMembership(user);
+      if (user) {
+        await loadMembership(user);
+        document.getElementById('delete-link').style.display = 'inline';
+      } else {
+        document.getElementById('delete-link').style.display = 'none';
+      }
     });
   </script>
 </body>
