@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -207,6 +209,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => _confirmDeleteAccount(context),
           ),
 
+          // Debug plan switcher — only in debug builds
+          if (kDebugMode && user != null) ...[
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'DEBUG: Plan Switcher',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red[400],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'free', label: Text('Free')),
+                  ButtonSegment(value: 'basic', label: Text('Basic')),
+                  ButtonSegment(value: 'trader', label: Text('Trader')),
+                ],
+                selected: {_plan},
+                onSelectionChanged: (selection) =>
+                    _switchPlan(user.uid, selection.first),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Text(
+                'Switches your plan instantly. No payment required.',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              ),
+            ),
+          ],
+
           // Version footer
           if (_version.isNotEmpty)
             Padding(
@@ -222,6 +260,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _switchPlan(String uid, String newPlan) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .set({'plan': newPlan}, SetOptions(merge: true));
+    // Clear cached plan configs so they reload
+    PlanService().clearCache();
+    setState(() => _plan = newPlan);
+    await _loadPlanInfo();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Switched to ${newPlan.toUpperCase()} plan')),
+      );
+    }
   }
 
   Future<void> _openUrl(String url) async {

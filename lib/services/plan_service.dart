@@ -62,6 +62,8 @@ class PlanService {
 
   Map<String, PlanConfig>? _cachedConfigs;
 
+  void clearCache() => _cachedConfigs = null;
+
   String _currentMonthKey() {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}';
