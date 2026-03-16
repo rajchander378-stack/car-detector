@@ -19,10 +19,64 @@
     .garage-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: white; }
     .garage-header p { font-size: 14px; opacity: 0.85; }
 
-    .garage-container { max-width: 900px; margin: 0 auto; padding: 24px 20px 64px; }
+    .garage-container { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
+
+    /* View toggle buttons */
+    .view-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-right: 12px; }
+    .view-toggle button { padding: 6px 16px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; background: var(--card-bg); color: var(--text-secondary); transition: background 0.15s, color 0.15s; }
+    .view-toggle button.active { background: var(--primary, #1565c0); color: #fff; }
+    .view-toggle button:not(.active):hover { background: var(--border); color: var(--text); }
+
+    .garage-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+
+    /* Download buttons */
+    .btn-export { padding: 6px 14px; font-size: 13px; font-weight: 600; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); cursor: pointer; transition: background 0.15s; }
+    .btn-export:hover { background: var(--border); }
+    .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-export-excel { border-color: #217346; color: #217346; }
+    .btn-export-excel:hover:not(:disabled) { background: #217346; color: #fff; }
+    .btn-export-pdf { border-color: #d32f2f; color: #d32f2f; }
+    .btn-export-pdf:hover:not(:disabled) { background: #d32f2f; color: #fff; }
+
+    /* Selection & filter bar */
+    .filter-bar { display: none; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; padding: 12px 16px; background: #f0f4f8; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+    .filter-bar label { font-weight: 600; color: var(--text-secondary); }
+    .filter-bar input[type="date"] { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+    .filter-bar .btn-sm { padding: 4px 12px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); cursor: pointer; }
+    .filter-bar .btn-sm:hover { background: var(--border); }
+    .selection-info { font-size: 13px; font-weight: 600; color: var(--primary, #1565c0); margin-left: auto; }
+
+    /* Card checkbox overlay */
+    .garage-card { position: relative; }
+    .card-checkbox { position: absolute; top: 10px; left: 10px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary, #1565c0); }
+    .card-date-badge { display: inline-block; background: #e3f2fd; color: #1565c0; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; margin-top: 6px; }
+
+    /* Table checkbox */
+    .garage-table .cb-col { width: 32px; cursor: default; }
+    .garage-table .cb-col:hover { background: inherit; }
+    .garage-table input[type="checkbox"] { cursor: pointer; accent-color: var(--primary, #1565c0); }
+    .garage-table tr.selected { background: rgba(21, 101, 192, 0.06) !important; }
+
+    /* Table view */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .garage-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .garage-table th {
+      position: sticky; top: 0; z-index: 2;
+      background: var(--card-bg); color: var(--text); font-weight: 600; text-align: left;
+      padding: 10px 12px; border-bottom: 2px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .garage-table th:hover { background: var(--border); }
+    .garage-table th .sort-arrow { font-size: 11px; margin-left: 4px; opacity: 0.4; }
+    .garage-table th.sorted .sort-arrow { opacity: 1; color: var(--primary, #1565c0); }
+    .garage-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+    .garage-table tr:nth-child(even) { background: rgba(0,0,0,0.025); }
+    .garage-table tr:hover { background: rgba(0,0,0,0.045); }
+    .garage-table .td-actions button { padding: 2px 8px; font-size: 11px; }
 
     @media (max-width: 600px) {
       #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
+      .garage-toolbar { justify-content: center; }
     }
   </style>
 </head>
@@ -70,6 +124,30 @@
         <a href="/pricing.html" id="garage-upgrade-link" style="display:none; font-size:13px; font-weight:600;">Upgrade for more</a>
       </div>
 
+      <!-- Toolbar: view toggle + exports -->
+      <div class="garage-toolbar" id="garage-toolbar" style="display:none;">
+        <div class="view-toggle">
+          <button id="btn-view-cards" class="active" onclick="setView('cards')">Cards</button>
+          <button id="btn-view-table" onclick="setView('table')">Table</button>
+        </div>
+        <button class="btn-export" id="btn-csv" style="display:none;" disabled onclick="downloadCSV()">&#x2B73; CSV</button>
+        <button class="btn-export btn-export-excel" id="btn-xlsx" style="display:none;" disabled onclick="downloadExcel()">&#x2B73; Excel</button>
+        <button class="btn-export btn-export-pdf" id="btn-pdf" style="display:none;" disabled onclick="downloadPDF()">&#x2B73; PDF Report</button>
+        <span class="selection-info" id="selection-info" style="display:none;">0 selected</span>
+      </div>
+
+      <!-- Filter bar (Trader only) -->
+      <div class="filter-bar" id="filter-bar">
+        <label>Date range:</label>
+        <input type="date" id="filter-from" onchange="applyDateFilter()">
+        <span>to</span>
+        <input type="date" id="filter-to" onchange="applyDateFilter()">
+        <button class="btn-sm" onclick="clearDateFilter()">Clear dates</button>
+        <span style="color:var(--text-secondary);">|</span>
+        <button class="btn-sm" onclick="selectAll()">Select all</button>
+        <button class="btn-sm" onclick="selectNone()">Deselect all</button>
+      </div>
+
       <!-- Empty state -->
       <div id="garage-empty" style="display:none; text-align:center; padding:40px 20px;">
         <p style="font-size:18px; font-weight:600; margin-bottom:8px;">No vehicles saved yet</p>
@@ -82,6 +160,29 @@
 
       <!-- Vehicle grid -->
       <div id="garage-grid" class="garage-grid"></div>
+
+      <!-- Table view -->
+      <div id="garage-table-wrap" class="table-wrap" style="display:none;">
+        <table class="garage-table" id="garage-table">
+          <thead>
+            <tr>
+              <th class="cb-col"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)" title="Select all"></th>
+              <th data-col="reg" onclick="sortTable('reg')">Reg <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="make" onclick="sortTable('make')">Make <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="model" onclick="sortTable('model')">Model <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="year" onclick="sortTable('year')">Year <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="colour" onclick="sortTable('colour')">Colour <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="dealer" onclick="sortTable('dealer')">Dealer Price <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="private" onclick="sortTable('private')">Private Price <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="trade" onclick="sortTable('trade')">Trade Price <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="mot" onclick="sortTable('mot')">MOT Due <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="added" onclick="sortTable('added')">Date Added <span class="sort-arrow">&#x25B2;</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="garage-table-body"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -93,6 +194,11 @@
     <a href="/disclaimer.html">Data Disclaimer</a>
     <br>&copy; 2026 Axiom Forge Software. All rights reserved.
   </footer>
+
+  <!-- Export libraries (self-hosted to avoid tracking prevention blocks) -->
+  <script src="/lib/xlsx.full.min.js"></script>
+  <script src="/lib/jspdf.umd.min.js"></script>
+  <script src="/lib/jspdf.plugin.autotable.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -109,6 +215,13 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     let garageUnsubscribe = null;
     let userPlan = 'free';
+    let garageData = [];       // Array of { docId, id, val, added_at, mot } objects
+    let currentView = localStorage.getItem('garageView') || 'cards';
+    let sortCol = localStorage.getItem('garageSortCol') || 'added';
+    let sortAsc = localStorage.getItem('garageSortAsc') === 'true';
+    let selectedIds = new Set(); // docIds of selected vehicles for export
+    let lastClickedRowIdx = null; // for shift-click range selection
+    let sortedFilteredCache = []; // cached sorted+filtered list for shift-click indexing
 
     const GARAGE_LIMITS = { free: 2, basic: 20, trader: Infinity };
 
@@ -142,6 +255,7 @@
       const grid = document.getElementById('garage-grid');
       const empty = document.getElementById('garage-empty');
       const loading = document.getElementById('garage-loading');
+      const toolbar = document.getElementById('garage-toolbar');
       loading.style.display = 'none';
 
       const limit = GARAGE_LIMITS[userPlan] || 2;
@@ -160,17 +274,63 @@
       if (snapshot.empty) {
         empty.style.display = 'block';
         grid.innerHTML = '';
+        toolbar.style.display = 'none';
+        document.getElementById('garage-table-wrap').style.display = 'none';
+        garageData = [];
         return;
       }
       empty.style.display = 'none';
+      toolbar.style.display = 'flex';
 
-      grid.innerHTML = snapshot.docs.map(doc => {
+      // Show export buttons and filter bar only for trader
+      const isTrader = userPlan === 'trader';
+      const exportDisplay = isTrader ? 'inline-block' : 'none';
+      document.getElementById('btn-csv').style.display = exportDisplay;
+      document.getElementById('btn-xlsx').style.display = exportDisplay;
+      document.getElementById('btn-pdf').style.display = exportDisplay;
+      document.getElementById('filter-bar').style.display = isTrader ? 'flex' : 'none';
+      document.getElementById('selection-info').style.display = isTrader ? 'inline' : 'none';
+
+      // Reset selection (keep selected if docIds still exist)
+      const validIds = new Set(snapshot.docs.map(d => d.id));
+      selectedIds = new Set([...selectedIds].filter(id => validIds.has(id)));
+      updateSelectionUI();
+
+      // Build garageData array from snapshot
+      garageData = snapshot.docs.map(doc => {
         const data = doc.data();
         const id = data.identification || {};
         const val = data.valuation || null;
-        const addedDate = formatDate(data.added_at);
+        const mot = data.mot || null;
+        return {
+          docId: doc.id,
+          id: id,
+          val: val,
+          mot: mot,
+          added_at: data.added_at || null
+        };
+      });
+
+      renderCards();
+      renderTable();
+
+      // Apply persisted view
+      setView(currentView);
+    }
+
+    function renderCards() {
+      const grid = document.getElementById('garage-grid');
+      const filtered = getFilteredData();
+      grid.innerHTML = filtered.map(item => {
+        const id = item.id;
+        const val = item.val;
+        const addedDate = formatDate(item.added_at);
+        const checked = selectedIds.has(item.docId) ? 'checked' : '';
 
         let html = '<div class="garage-card">';
+        if (userPlan === 'trader') {
+          html += '<input type="checkbox" class="card-checkbox" ' + checked + ' onchange="toggleSelect(\'' + item.docId + '\', this.checked)">';
+        }
         html += '<div class="vehicle-name">' + escapeHtml((id.make || '') + ' ' + (id.model || '')) + '</div>';
         html += '<div class="vehicle-meta">';
 
@@ -182,8 +342,8 @@
         if (id.trim || id.trim_level) html += ' &middot; ' + escapeHtml(id.trim || id.trim_level);
         if (id.body_style) html += ' &middot; ' + escapeHtml(id.body_style);
         if (id.colour) html += ' &middot; ' + escapeHtml(id.colour);
-        html += '<br><span style="font-size:12px;">Added ' + addedDate + '</span>';
         html += '</div>';
+        if (addedDate) html += '<span class="card-date-badge">Added ' + addedDate + '</span>';
 
         if (id.number_plate) {
           html += '<div class="vehicle-plate">' + escapeHtml(id.number_plate) + '</div>';
@@ -198,11 +358,466 @@
         }
 
         html += '<div class="garage-actions">';
-        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + doc.id + '\')">Remove</button>';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button>';
         html += '</div>';
         html += '</div>';
         return html;
       }).join('');
+    }
+
+    function getVal(item, col) {
+      const id = item.id || {};
+      const val = item.val || {};
+      const mot = item.mot || {};
+      switch (col) {
+        case 'reg': return (id.number_plate || '').toUpperCase();
+        case 'make': return (id.make || '').toLowerCase();
+        case 'model': return (id.model || '').toLowerCase();
+        case 'year': return Number(id.year_min || id.year_max || 0);
+        case 'colour': return (id.colour || '').toLowerCase();
+        case 'dealer': return Number(val.dealer_forecourt || val.dealer_price || 0);
+        case 'private': return Number(val.private_clean || val.private_price || 0);
+        case 'trade': return Number(val.trade_retail || val.trade_price || 0);
+        case 'mot': return mot.mot_due || '';
+        case 'added': return item.added_at ? (item.added_at.toDate ? item.added_at.toDate().getTime() : new Date(item.added_at).getTime()) : 0;
+        default: return '';
+      }
+    }
+
+    function renderTable() {
+      // Sort filtered data
+      const sorted = getFilteredData().slice().sort((a, b) => {
+        let va = getVal(a, sortCol), vb = getVal(b, sortCol);
+        if (typeof va === 'number' && typeof vb === 'number') {
+          return sortAsc ? va - vb : vb - va;
+        }
+        va = String(va); vb = String(vb);
+        return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+      });
+
+      // Update header arrows
+      document.querySelectorAll('.garage-table th').forEach(th => {
+        const col = th.getAttribute('data-col');
+        if (!col) return;
+        th.classList.toggle('sorted', col === sortCol);
+        const arrow = th.querySelector('.sort-arrow');
+        if (arrow) arrow.innerHTML = (col === sortCol && sortAsc) ? '&#x25B2;' : '&#x25BC;';
+      });
+
+      // Cache for shift-click indexing
+      sortedFilteredCache = sorted;
+
+      const tbody = document.getElementById('garage-table-body');
+      tbody.innerHTML = sorted.map((item, idx) => {
+        const id = item.id || {};
+        const val = item.val || {};
+        const mot = item.mot || {};
+        const yearStr = id.year_min && id.year_max && id.year_min !== id.year_max
+          ? id.year_min + '–' + id.year_max
+          : (id.year_min || id.year_max || '');
+        const dealer = val.dealer_forecourt || val.dealer_price;
+        const priv = val.private_clean || val.private_price;
+        const trade = val.trade_retail || val.trade_price;
+        const motDue = mot.mot_due || '';
+
+        const checked = selectedIds.has(item.docId) ? 'checked' : '';
+        const rowClass = selectedIds.has(item.docId) ? ' class="selected"' : '';
+        let row = '<tr' + rowClass + ' data-idx="' + idx + '" data-docid="' + item.docId + '">';
+        row += '<td class="cb-col"><input type="checkbox" ' + checked + ' data-idx="' + idx + '" data-docid="' + item.docId + '" onclick="handleRowCheckbox(event, ' + idx + ', \'' + item.docId + '\')"></td>';
+        row += '<td>' + escapeHtml(id.number_plate || '') + '</td>';
+        row += '<td>' + escapeHtml(id.make || '') + '</td>';
+        row += '<td>' + escapeHtml(id.model || '') + '</td>';
+        row += '<td>' + escapeHtml(yearStr) + '</td>';
+        row += '<td>' + escapeHtml(id.colour || '') + '</td>';
+        row += '<td>' + (dealer ? '&pound;' + Number(dealer).toLocaleString() : '') + '</td>';
+        row += '<td>' + (priv ? '&pound;' + Number(priv).toLocaleString() : '') + '</td>';
+        row += '<td>' + (trade ? '&pound;' + Number(trade).toLocaleString() : '') + '</td>';
+        row += '<td>' + escapeHtml(motDue) + '</td>';
+        row += '<td>' + formatDate(item.added_at) + '</td>';
+        row += '<td class="td-actions"><button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button></td>';
+        row += '</tr>';
+        return row;
+      }).join('');
+    }
+
+    function setView(view) {
+      currentView = view;
+      localStorage.setItem('garageView', view);
+      document.getElementById('btn-view-cards').classList.toggle('active', view === 'cards');
+      document.getElementById('btn-view-table').classList.toggle('active', view === 'table');
+      document.getElementById('garage-grid').style.display = view === 'cards' ? '' : 'none';
+      document.getElementById('garage-table-wrap').style.display = view === 'table' ? '' : 'none';
+    }
+
+    function sortTable(col) {
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+      localStorage.setItem('garageSortCol', sortCol);
+      localStorage.setItem('garageSortAsc', sortAsc);
+      renderTable();
+    }
+
+    // ───────────── Selection & filtering ─────────────
+
+    function getItemDate(item) {
+      if (!item.added_at) return null;
+      return item.added_at.toDate ? item.added_at.toDate() : new Date(item.added_at);
+    }
+
+    function getFilteredData() {
+      const fromVal = document.getElementById('filter-from').value;
+      const toVal = document.getElementById('filter-to').value;
+      if (!fromVal && !toVal) return garageData;
+
+      const from = fromVal ? new Date(fromVal + 'T00:00:00') : null;
+      const to = toVal ? new Date(toVal + 'T23:59:59') : null;
+
+      return garageData.filter(item => {
+        const d = getItemDate(item);
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+        return true;
+      });
+    }
+
+    function applyDateFilter() {
+      // Auto-select all vehicles in the filtered range
+      const filtered = getFilteredData();
+      selectedIds = new Set(filtered.map(i => i.docId));
+      renderCards();
+      renderTable();
+      updateSelectionUI();
+    }
+
+    function clearDateFilter() {
+      document.getElementById('filter-from').value = '';
+      document.getElementById('filter-to').value = '';
+      selectedIds.clear();
+      renderCards();
+      renderTable();
+      updateSelectionUI();
+    }
+
+    function toggleSelect(docId, checked) {
+      if (checked) {
+        selectedIds.add(docId);
+      } else {
+        selectedIds.delete(docId);
+      }
+      updateSelectionUI();
+      // Sync the other view's checkbox without full re-render
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        const onclick = cb.getAttribute('onchange') || '';
+        if (onclick.includes("'" + docId + "'")) {
+          cb.checked = checked;
+          const tr = cb.closest('tr');
+          if (tr) tr.classList.toggle('selected', checked);
+        }
+      });
+    }
+
+    function handleRowCheckbox(e, idx, docId) {
+      const checked = e.target.checked;
+
+      if (e.shiftKey && lastClickedRowIdx !== null && lastClickedRowIdx !== idx) {
+        // Shift-click: select/deselect range between lastClickedRowIdx and idx
+        const start = Math.min(lastClickedRowIdx, idx);
+        const end = Math.max(lastClickedRowIdx, idx);
+        for (let i = start; i <= end; i++) {
+          const item = sortedFilteredCache[i];
+          if (item) {
+            if (checked) {
+              selectedIds.add(item.docId);
+            } else {
+              selectedIds.delete(item.docId);
+            }
+          }
+        }
+        // Re-render to sync all checkboxes
+        renderCards();
+        renderTable();
+      } else {
+        // Normal click
+        if (checked) {
+          selectedIds.add(docId);
+        } else {
+          selectedIds.delete(docId);
+        }
+        // Sync visually without full re-render
+        document.querySelectorAll('#garage-table-body tr[data-docid="' + docId + '"]').forEach(tr => {
+          tr.classList.toggle('selected', checked);
+        });
+        // Sync card checkboxes
+        document.querySelectorAll('.card-checkbox').forEach(cb => {
+          const onc = cb.getAttribute('onchange') || '';
+          if (onc.includes("'" + docId + "'")) cb.checked = checked;
+        });
+      }
+
+      lastClickedRowIdx = idx;
+      updateSelectionUI();
+    }
+
+    function toggleSelectAll(checked) {
+      const filtered = getFilteredData();
+      if (checked) {
+        filtered.forEach(i => selectedIds.add(i.docId));
+      } else {
+        filtered.forEach(i => selectedIds.delete(i.docId));
+      }
+      renderCards();
+      renderTable();
+      updateSelectionUI();
+    }
+
+    function selectAll() {
+      const filtered = getFilteredData();
+      filtered.forEach(i => selectedIds.add(i.docId));
+      renderCards();
+      renderTable();
+      updateSelectionUI();
+    }
+
+    function selectNone() {
+      selectedIds.clear();
+      renderCards();
+      renderTable();
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      const count = selectedIds.size;
+      const info = document.getElementById('selection-info');
+      if (info) {
+        info.textContent = count + ' selected';
+        info.style.color = count > 0 ? 'var(--primary, #1565c0)' : 'var(--text-secondary)';
+      }
+      // Enable/disable export buttons
+      const hasSelection = count > 0;
+      ['btn-csv', 'btn-xlsx', 'btn-pdf'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = !hasSelection;
+      });
+      // Sync select-all checkbox
+      const selectAllCb = document.getElementById('select-all-cb');
+      if (selectAllCb) {
+        const filtered = getFilteredData();
+        selectAllCb.checked = filtered.length > 0 && filtered.every(i => selectedIds.has(i.docId));
+        selectAllCb.indeterminate = !selectAllCb.checked && filtered.some(i => selectedIds.has(i.docId));
+      }
+    }
+
+    function getSelectedData() {
+      return garageData.filter(i => selectedIds.has(i.docId));
+    }
+
+    function csvEscape(val) {
+      const s = String(val == null ? '' : val);
+      if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    function downloadCSV() {
+      if (selectedIds.size === 0) { alert('Please select vehicles to export.'); return; }
+      const rows = getExportRows();
+      const headers = Object.keys(rows[0] || {});
+      const csvRows = rows.map(r => headers.map(h => csvEscape(r[h])).join(','));
+      const csv = headers.map(csvEscape).join(',') + '\n' + csvRows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = 'autospotter_garage_' + today + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function getExportRows() {
+      return getSelectedData().map(item => {
+        const id = item.id || {};
+        const val = item.val || {};
+        const mot = item.mot || {};
+        const yearStr = id.year_min && id.year_max && id.year_min !== id.year_max
+          ? id.year_min + '-' + id.year_max
+          : (id.year_min || id.year_max || '');
+        return {
+          'Registration': id.number_plate || '',
+          'Make': id.make || '',
+          'Model': id.model || '',
+          'Year': yearStr,
+          'Generation': id.generation || '',
+          'Trim': id.trim || id.trim_level || '',
+          'Body Style': id.body_style || '',
+          'Colour': id.colour || '',
+          'Dealer Price': val.dealer_forecourt || val.dealer_price || '',
+          'Private Price': val.private_clean || val.private_price || '',
+          'Trade Price': val.trade_retail || val.trade_price || '',
+          'Part Exchange': val.part_exchange || '',
+          'Auction': val.auction || '',
+          'MOT Due': mot.mot_due || '',
+          'Date Added': formatDate(item.added_at)
+        };
+      });
+    }
+
+    function downloadExcel() {
+      if (selectedIds.size === 0) { alert('Please select vehicles to export.'); return; }
+      const rows = getExportRows();
+      const ws = XLSX.utils.json_to_sheet(rows);
+
+      // Column widths
+      ws['!cols'] = [
+        { wch: 14 }, // Registration
+        { wch: 14 }, // Make
+        { wch: 16 }, // Model
+        { wch: 10 }, // Year
+        { wch: 14 }, // Generation
+        { wch: 14 }, // Trim
+        { wch: 14 }, // Body Style
+        { wch: 10 }, // Colour
+        { wch: 13 }, // Dealer Price
+        { wch: 13 }, // Private Price
+        { wch: 12 }, // Trade Price
+        { wch: 13 }, // Part Exchange
+        { wch: 10 }, // Auction
+        { wch: 12 }, // MOT Due
+        { wch: 14 }, // Date Added
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Garage');
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, 'autospotter_garage_' + today + '.xlsx');
+    }
+
+    function downloadPDF() {
+      const selected = getSelectedData();
+      if (selected.length === 0) { alert('Please select vehicles to export.'); return; }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      const user = auth.currentUser;
+      const userName = user ? (user.displayName || user.email) : '';
+
+      // --- Header ---
+      doc.setFillColor(13, 71, 161); // #0d47a1
+      doc.rect(0, 0, 297, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AutoSpotter — Garage Report', 14, 14);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(userName + '  |  ' + today + '  |  ' + selected.length + ' vehicle' + (selected.length !== 1 ? 's' : '') + ' selected', 14, 22);
+
+      // --- Table ---
+      const headers = ['Reg', 'Make', 'Model', 'Year', 'Colour', 'Dealer', 'Private', 'Trade', 'P/X', 'Auction', 'MOT Due', 'Added'];
+      const body = selected.map(item => {
+        const id = item.id || {};
+        const val = item.val || {};
+        const mot = item.mot || {};
+        const yearStr = id.year_min && id.year_max && id.year_min !== id.year_max
+          ? id.year_min + '-' + id.year_max
+          : (id.year_min || id.year_max || '');
+        const fmtPrice = (v) => v ? '\u00A3' + Number(v).toLocaleString() : '';
+        return [
+          id.number_plate || '',
+          id.make || '',
+          id.model || '',
+          yearStr,
+          id.colour || '',
+          fmtPrice(val.dealer_forecourt || val.dealer_price),
+          fmtPrice(val.private_clean || val.private_price),
+          fmtPrice(val.trade_retail || val.trade_price),
+          fmtPrice(val.part_exchange),
+          fmtPrice(val.auction),
+          mot.mot_due || '',
+          formatDate(item.added_at)
+        ];
+      });
+
+      doc.autoTable({
+        startY: 32,
+        head: [headers],
+        body: body,
+        theme: 'grid',
+        headStyles: { fillColor: [21, 101, 192], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 7.5, textColor: [33, 33, 33] },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        margin: { left: 8, right: 8 },
+        styles: { cellPadding: 2, overflow: 'linebreak' },
+        columnStyles: {
+          0: { cellWidth: 20, fontStyle: 'bold' },
+          5: { halign: 'right' },
+          6: { halign: 'right' },
+          7: { halign: 'right' },
+          8: { halign: 'right' },
+          9: { halign: 'right' },
+        }
+      });
+
+      // --- Disclaimer ---
+      const finalY = doc.lastAutoTable.finalY || 180;
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let disclaimerY = finalY + 10;
+
+      // If disclaimer would go off-page, add a new page
+      if (disclaimerY + 30 > pageHeight) {
+        doc.addPage();
+        disclaimerY = 14;
+      }
+
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(8, disclaimerY, 289, disclaimerY);
+      disclaimerY += 5;
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 100, 100);
+      doc.text('DATA DISCLAIMER', 8, disclaimerY);
+      disclaimerY += 4;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      const disclaimer = [
+        'This report contains vehicle registration marks (VRMs) which may constitute personal data under the UK General Data Protection Regulation',
+        '(UK GDPR) and the Data Protection Act 2018 when combined with other identifying information. By downloading this report, you accept',
+        'responsibility for the lawful processing, storage, and protection of any personal data contained herein.',
+        '',
+        'This data is provided for trade and professional use only. You must not share, publish, or distribute this report or its contents to any',
+        'third party without ensuring compliance with applicable data protection legislation. Vehicle valuations are estimates based on market data',
+        'at the time of the scan and should not be relied upon as a guarantee of value.',
+        '',
+        'AutoSpotter by Axiom Forge Software Ltd. For full terms, see: https://car-detector-833e5.web.app/privacy-policy.html'
+      ];
+      disclaimer.forEach(line => {
+        doc.text(line, 8, disclaimerY);
+        disclaimerY += 3.2;
+      });
+
+      // --- Footer on every page ---
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text('AutoSpotter Garage Report — Generated ' + today + ' — Page ' + i + ' of ' + pageCount, 148, pageHeight - 6, { align: 'center' });
+      }
+
+      const todayFile = new Date().toISOString().slice(0, 10);
+      doc.save('autospotter_garage_report_' + todayFile + '.pdf');
     }
 
     async function removeFromGarage(vehicleId) {

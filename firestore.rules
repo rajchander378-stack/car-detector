@@ -16,6 +16,11 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow update: if request.auth != null && request.auth.uid == userId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'plan_started_at', 'plan_expires_at']);
+      // TEMPORARY: allow users to self-switch plans during testing.
+      // TODO: Remove this rule before production — plan changes should only
+      // come from the server after Stripe payment confirmation.
+      allow update: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['plan']);
       allow update: if isAdmin();
       allow create: if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null && request.auth.uid == userId;
@@ -99,6 +104,13 @@ service cloud.firestore {
         && (resource.data.user_id == request.auth.uid || isAdmin());
       allow update: if isAdmin();
       allow delete: if false;
+    }
+
+    // --- Vehicle cache ---
+    // Authenticated users can read/write during testing.
+    // TODO: Lock down to backend-only (Cloud Run service account) before production.
+    match /vehicles/{vehicleHash} {
+      allow read, write: if request.auth != null;
     }
 
     // Deny everything else by default

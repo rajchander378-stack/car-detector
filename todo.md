@@ -54,6 +54,8 @@
 ## Uncompleted — Other Features
 
 - [x] **Price Estimation** — Get price estimates via UK Vehicle Data API using the number plate. Button on results screen fetches retail/trade/private valuations with loading spinner and error handling. Requires a valid API key in `constants.dart`. Sandbox mode limited to VRMs containing "A".
+- [x] **Monthly plan pricing update** — Basic £9.99/mo (overage 90p), Trader £59.99/mo (overage 85p). Updated in `plan_service.dart` and `pricing.html`.
+- [x] **Plan switching for testing** — Staging pricing page allows users to self-switch plans (writes directly to Firestore). Temporary Firestore rule permits updating only the `plan` field. TODO: Remove before production — plan changes should only come from server after Stripe payment.
 - [x] **Identification History** — Track past identifications. History button exists in camera UI and storage dependency included but not functional.
 - [x] **Manual Edit/Correction** — Allow users to override AI results with manual search and correction. Bottom sheet form on results screen lets users edit make, model, year range, generation, trim, body style, colour, and number plate. Saving resets valuation so the user can re-fetch with corrected data.
 - [x] **Gallery Upload** — Identify cars from existing photos. Gallery button on camera screen (bottom-left) and in drawer menu. Uses `image_picker` to select photo, runs through optimise + Gemini pipeline. Also added Sample Images screen with bundled placeholder images for demo/testing (accessible from drawer).
@@ -175,9 +177,19 @@ Use this checklist each time you release a new version to Google Play.
 - [ ] **Pricing model** — Stripe's fixed 20p per transaction means single-scan sales at 30p are a loss. Enforce a minimum batch purchase (e.g. 10 scans for £3.00). At 30p/scan in a batch of 10+, estimated profit is ~18-19p/scan after Stripe (1.5% + 20p per transaction), AI API (~0.02p), and valuation API (~5-15p) costs. Consider volume tiers: 10 scans £3.00, 25 scans £7.00 (28p each), 50 scans £12.50 (25p each). Stripe fee is amortised across the batch so larger purchases yield better margins.
 - [ ] **Link bulk upload from main site** — Add a nav link or CTA for "Bulk Processing" aimed at dealers and fleet managers who want to process many vehicles at once without using the mobile app.
 
-## Uncompleted — Trader Export Feature
+## Completed — Trader Export & Garage Features
 
-- [ ] **Export scanned data (Trader plan only)** — Allow Trader plan users to download their saved scan data in CSV, Excel (.xlsx), or JSON format. Should include all identification fields (make, model, year range, generation, trim, body style, colour, number plate) and valuation data (dealer, private, trade prices, mileage). Add an "Export" button to the Saved Scans screen (visible only for Trader users). Consider using the `csv` and `excel` (or `syncfusion_flutter_xlsio`) packages. Web dashboard should also offer export via a download button on the user's scans section.
+- [x] **Export scanned data (Trader plan only)** — CSV export from mobile app via `CsvExportService` with 18+ columns including VIN, fuel type, engine CC, MOT history, transmission, tyres, and more. Export button visible only for Trader users on Saved Scans screen.
+- [x] **Garage spreadsheet/table view (web)** — `public/garage.html` has Cards/Table toggle with sortable columns (Reg, Make, Model, Year, Colour, Dealer/Private/Trade Price, MOT Due, Date Added). Click column headers to sort ascending/descending.
+- [x] **Garage CSV download (Trader only)** — Download button on garage page exports 15-column CSV (Registration, Make, Model, Year, Generation, Trim, Body Style, Colour, all price tiers, Part Exchange, Auction, MOT Due, Date Added). Hidden for non-Trader plans.
+- [x] **Garage badge toggle on dashboard** — Dashboard scan cards show "Save to Garage" (green) or "Remove from Garage" (red) based on whether the vehicle is already in the garage. Clicking toggles the state.
+
+## Completed — Vehicle Cache System
+
+- [x] **Centralized vehicle cache** — `VehicleCacheService` in `lib/services/vehicle_cache_service.dart`. Stores full vehicle data in Firestore `vehicles/{sha256_hash}` collection, shared across all users. SHA-256 hash of normalized plate (uppercase, no spaces) used as document ID. Estimated ~90% reduction in VDGL API calls.
+- [x] **Stale-while-revalidate pattern** — Cache hits return data immediately. Stale valuation (>24h) and MOT (>7d) sections are refreshed in the background using individual VDGL packages (ValuationDetails, MotHistoryDetails). Vehicle details, model specs, and tyre data never expire (static).
+- [x] **Credit charging only on cache miss** — `CacheResult` wrapper indicates whether the lookup was a cache hit or miss. `recordValuationScan()` only charges a credit when a real DataPackage2 API call was made (cache miss). Repeat lookups of the same plate are free.
+- [x] **Duplicate scan detection** — `results_screen.dart` checks for existing saved scans by plate before API call. Shows dialog warning with options to update existing, save new, or cancel.
 
 ## Uncompleted — Branding & Visual Assets
 
@@ -211,7 +223,9 @@ Use this checklist each time you release a new version to Google Play.
 ## Uncompleted — Sharing, Reviews & Growth
 
 ### Sharing
-- [ ] **Share identification result** — Add a "Share" button on the results screen that sends the car image + identification summary (make, model, year, price range) via the native share sheet (WhatsApp, Instagram, X, etc.). Free marketing with every share.
+- [x] **Share vehicle report (web)** — "Share Report" on dashboard creates a shared report with all data sections (identification, valuation, vehicle details, MOT, specs, tyres) in `shared_reports` collection. Shows popup with WhatsApp, Facebook, X/Twitter, Email, and Copy Link buttons. Report page also has a share bar so viewers can re-share. Open Graph + Twitter Card meta tags for good link previews.
+- [ ] **Facebook Messenger DM sharing** — Register a Facebook App ID to enable the FB Send Dialog for direct Messenger DMs (currently shares as a public post). Target: next app version release.
+- [ ] **Share identification result (mobile)** — Add a "Share" button on the Flutter results screen that sends the car image + identification summary via the native share sheet (WhatsApp, Instagram, X, etc.).
 - [ ] **Share the app / Tell a friend** — Add a "Tell a friend" option (in about/settings screen) that shares the Play Store link with a short message like "I just identified a car with AutoSpotter! Try it out:".
 - [ ] **Deep links** — Configure Firebase Dynamic Links or App Links so shared URLs open directly in the app if installed, or redirect to the Play Store if not.
 

@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "saved_scans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_favourite", "order": "ASCENDING" },
+        { "fieldPath": "saved_at", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

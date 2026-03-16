@@ -104,7 +104,7 @@
           <li>Save scan history</li>
           <li class="disabled">Valuations available on paid plans</li>
         </ul>
-        <button class="plan-btn plan-btn-free" id="btn-free" onclick="handleFree()">Get Started Free</button>
+        <button class="plan-btn plan-btn-free" id="btn-free" onclick="switchPlan('free')">Get Started Free</button>
         <div class="overage-note">No credit card required.</div>
       </div>
 
@@ -120,7 +120,7 @@
           <li>Save scan history</li>
           <li>Additional scans 90p each</li>
         </ul>
-        <button class="plan-btn plan-btn-basic" id="btn-basic" onclick="handleUpgrade()">Start Basic Plan</button>
+        <button class="plan-btn plan-btn-basic" id="btn-basic" onclick="switchPlan('basic')">Start Basic Plan</button>
         <div class="overage-note">Cancel anytime.</div>
       </div>
 
@@ -138,7 +138,7 @@
           <li class="extra">Bulk upload (100+ images)</li>
           <li class="extra">Priority support</li>
         </ul>
-        <button class="plan-btn plan-btn-trader" id="btn-trader" onclick="handleUpgrade()">Upgrade to Trader</button>
+        <button class="plan-btn plan-btn-trader" id="btn-trader" onclick="switchPlan('trader')">Upgrade to Trader</button>
         <div class="overage-note">Cancel anytime. Built for professionals.</div>
       </div>
     </div>
@@ -386,14 +386,26 @@
       }
     }
 
-    function handleFree() {
-      alert('To downgrade, please contact us via the Contact page.');
-    }
-
-    function handleUpgrade() {
+    async function switchPlan(targetPlan) {
       const user = auth.currentUser;
       if (!user) { doSignIn(); return; }
-      window.location.href = '/contact.html';
+
+      const planLabels = { free: 'Free', basic: 'Basic', trader: 'Trader' };
+      const label = planLabels[targetPlan] || targetPlan;
+
+      if (!confirm('Switch to the ' + label + ' plan?')) return;
+
+      try {
+        await db.collection('users').doc(user.uid).set(
+          { plan: targetPlan },
+          { merge: true }
+        );
+        alert('Switched to ' + label + ' plan. Refreshing...');
+        window.location.reload();
+      } catch (err) {
+        console.error('Failed to switch plan:', err);
+        alert('Failed to switch plan. Please try again.');
+      }
     }
 
     async function doSignIn() {

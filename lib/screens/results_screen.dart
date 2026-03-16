@@ -11,6 +11,7 @@ import '../models/vehicle_valuation.dart';
 import '../services/saved_scan_service.dart';
 import '../services/plan_service.dart';
 import '../services/valuation_service.dart';
+import '../services/vehicle_cache_service.dart';
 
 class ResultsScreen extends StatefulWidget {
   final String imagePath;
@@ -281,17 +282,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
     });
 
     try {
-      final report = await ValuationService().getReport(
-        plate,
-        onRetry: (attempt, total) {
-          if (mounted) {
-            setState(() {
-              _retryStatus = 'Attempt $attempt of $total...';
-            });
-          }
-        },
-      );
-      await PlanService().recordValuationScan(user.uid);
+      final cacheResult = await VehicleCacheService().getReport(plate);
+      final report = cacheResult.report;
+      if (!cacheResult.wasCacheHit) {
+        await PlanService().recordValuationScan(user.uid);
+      }
       setState(() {
         _report = report;
         _valuation = report.valuation;
