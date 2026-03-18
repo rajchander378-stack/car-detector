@@ -11,6 +11,7 @@
     nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); }
     nav a:hover { color: var(--primary); text-decoration: none; }
     #auth-area { margin-left: auto; }
+    .result-card-bulk.needs-plate { border-left: 3px solid orange; }
     @media (max-width: 600px) {
       #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
     }
@@ -104,6 +105,9 @@
         <div class="progress-bar-inner" id="progress-bar" style="width:0%;"></div>
       </div>
     </div>
+
+    <!-- Summary banner -->
+    <div id="summary-banner" class="card" style="display:none; border-left:4px solid var(--primary); margin-bottom:16px;"></div>
 
     <!-- Results -->
     <div id="results-section" style="display:none;">
@@ -231,6 +235,7 @@
       document.getElementById('progress-section').style.display = 'none';
       document.getElementById('results-section').style.display = 'none';
       document.getElementById('results-list').innerHTML = '';
+      document.getElementById('summary-banner').style.display = 'none';
       results = [];
     }
 
@@ -305,6 +310,10 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         const text = result.response.text();
         const parsed = JSON.parse(text);
         parsed._filename = file.name;
+        // Clean number plate if present
+        if (parsed.number_plate && parsed.number_plate.trim()) {
+          parsed.number_plate = cleanPlate(parsed.number_plate);
+        }
         return parsed;
       } catch (err) {
         clearTimeout(timeout);
@@ -370,6 +379,40 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       processing = false;
       document.getElementById('start-btn').disabled = false;
       document.getElementById('cancel-btn').style.display = 'none';
+      showProcessingSummary();
+    }
+
+    function cleanPlate(plate) {
+      return plate.replace(/\s+/g, '').toUpperCase();
+    }
+
+    function hasValidPlate(r) {
+      const plate = r._manualPlate || r.number_plate;
+      return r.identified && plate && plate.trim().length > 0;
+    }
+
+    function getEffectivePlate(r) {
+      return (r._manualPlate && r._manualPlate.trim()) || r.number_plate || '';
+    }
+
+    function showProcessingSummary() {
+      if (results.length === 0 || cancelled) return;
+      const withPlate = results.filter(r => hasValidPlate(r)).length;
+      const identifiedNoPlate = results.filter(r => r.identified && !hasValidPlate(r)).length;
+      const failed = results.filter(r => !r.identified).length;
+      const noPlateTotal = identifiedNoPlate + failed;
+
+      const summaryEl = document.getElementById('summary-banner');
+      let html = '';
+      if (withPlate > 0) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:green;font-size:18px;">&#10003;</span> <span><strong>' + withPlate + '</strong> image' + (withPlate === 1 ? '' : 's') + ' suitable for pricing</span></div>';
+      }
+      if (noPlateTotal > 0) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:orange;font-size:18px;">&#9888;</span> <span><strong>' + noPlateTotal + '</strong> image' + (noPlateTotal === 1 ? '' : 's') + ' failed to recognise a number plate</span></div>';
+        html += '<p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0 26px;">Please recapture these images or enter the number plates manually using the edit buttons below.</p>';
+      }
+      summaryEl.innerHTML = html;
+      summaryEl.style.display = 'block';
     }
 
     function cancelProcessing() {
@@ -389,7 +432,9 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       const list = document.getElementById('results-list');
       const card = document.createElement('div');
       const isError = !r.identified;
-      card.className = 'result-card-bulk' + (isError ? ' error' : '');
+      const needsPlate = r.identified && !hasValidPlate(r);
+      card.className = 'result-card-bulk' + (isError ? ' error' : '') + (needsPlate ? ' needs-plate' : '');
+      r._cardEl = card;
 
       let html = '<div class="result-card-bulk-thumb">';
       if (r._objectUrl) html += '<img src="' + r._objectUrl + '" alt="' + (r._filename || '') + '">';
@@ -402,7 +447,18 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         if (r.trim) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.trim + '</span>';
         if (r.body_style) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.body_style + '</span>';
         if (r.colour) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.colour + '</span>';
-        if (r.number_plate) html += '<br><span style="font-size:13px; background:#F2C10F; color:#000; padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:1px;">' + escapeHtml(r.number_plate) + '</span>';
+
+        // Plate display or manual entry prompt
+        const plate = getEffectivePlate(r);
+        html += '<br><span class="plate-area" data-idx="' + (results.length - 1) + '">';
+        if (plate) {
+          html += '<span style="font-size:13px; background:#F2C10F; color:#000; padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:1px;">' + escapeHtml(plate) + '</span>';
+          html += ' <button class="btn-edit-plate" onclick="editPlate(' + (results.length - 1) + ')" title="Edit plate" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:13px;padding:2px 4px;">&#9998;</button>';
+        } else {
+          html += '<button class="btn-enter-plate" onclick="editPlate(' + (results.length - 1) + ')" style="background:none;border:1px solid orange;border-radius:4px;cursor:pointer;color:orange;font-size:12px;padding:2px 8px;font-weight:500;">&#9998; No plate — click to enter</button>';
+        }
+        html += '</span>';
+
         html += '<br><span style="font-size:12px; color:var(--text-secondary);">Confidence: ' + Math.round((r.confidence || 0) * 100) + '%</span>';
       } else {
         html += '<strong style="color:var(--danger);">Not identified</strong>';
@@ -416,6 +472,33 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       list.appendChild(card);
     }
 
+    function editPlate(idx) {
+      const r = results[idx];
+      const current = getEffectivePlate(r);
+      const input = prompt('Enter number plate:', current);
+      if (input === null) return;
+      const cleaned = cleanPlate(input);
+      r._manualPlate = cleaned;
+
+      // Re-render just this card's plate area
+      const card = r._cardEl;
+      if (card) {
+        const plateArea = card.querySelector('.plate-area');
+        if (plateArea) {
+          if (cleaned) {
+            plateArea.innerHTML = '<span style="font-size:13px; background:#F2C10F; color:#000; padding:1px 6px; border-radius:3px; font-weight:600; letter-spacing:1px;">' + escapeHtml(cleaned) + '</span>'
+              + ' <button class="btn-edit-plate" onclick="editPlate(' + idx + ')" title="Edit plate" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:13px;padding:2px 4px;">&#9998;</button>';
+          } else {
+            plateArea.innerHTML = '<button class="btn-enter-plate" onclick="editPlate(' + idx + ')" style="background:none;border:1px solid orange;border-radius:4px;cursor:pointer;color:orange;font-size:12px;padding:2px 8px;font-weight:500;">&#9998; No plate — click to enter</button>';
+          }
+        }
+        // Update card border
+        card.classList.toggle('needs-plate', !hasValidPlate(r));
+      }
+      // Refresh summary
+      showProcessingSummary();
+    }
+
     function escapeHtml(str) {
       const d = document.createElement('div');
       d.textContent = str;
@@ -427,7 +510,9 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       if (results.length === 0) return;
       const headers = ['filename','identified','confidence','make','model','year_min','year_max','generation','trim','body_style','colour','number_plate','notes','error'];
       const rows = results.map(r => headers.map(h => {
-        const v = r[h === 'filename' ? '_filename' : h];
+        const v = h === 'filename' ? r._filename
+          : h === 'number_plate' ? getEffectivePlate(r)
+          : r[h];
         if (v == null) return '';
         const s = String(v);
         return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;

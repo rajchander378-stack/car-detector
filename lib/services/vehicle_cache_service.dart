@@ -76,7 +76,6 @@ class VehicleCacheService {
     final now = FieldValue.serverTimestamp();
 
     final doc = <String, dynamic>{
-      'vrm_normalized': normalizedVrm,
       if (report.valuation != null) 'valuation': report.valuation!.toJson(),
       if (report.vehicleDetails != null)
         'vehicle_details': report.vehicleDetails!.toJson(),

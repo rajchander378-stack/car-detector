@@ -20,9 +20,9 @@
     <a id="delete-link" href="/delete-account.html" style="display:none;">Delete Account</a>
   </nav>
   <div class="container">
-    <p class="effective-date">Effective date: 7 March 2026</p>
+    <p class="effective-date">Effective date: 17 March 2026</p>
 
-    <p>Axiom Forge Software ("we", "us", "our") operates the AutoSpotter mobile application. This Privacy Policy explains how we collect, use, and protect your information when you use our app.</p>
+    <p>Axiom Forge Software ("we", "us", "our") operates the AutoSpotter mobile application and website. This Privacy Policy explains how we collect, use, and protect your information when you use our services.</p>
 
     <h2>1. Information We Collect</h2>
 
@@ -37,47 +37,93 @@
     <p>This information is stored securely in Google Cloud Firestore.</p>
 
     <h3>Vehicle Images</h3>
-    <p>When you capture a photo for identification, the image is sent to a secure AI service for analysis. Images are processed transiently and are <strong>not stored on our servers</strong>. The AI provider's use of this data is governed by their own privacy policy.</p>
+    <p>When you capture or upload a photo for identification, the image is sent to a secure AI service (Google Gemini) for analysis. Images are processed transiently and are <strong>not stored on our servers</strong>. Temporary files created during processing are deleted immediately afterwards. The AI provider's use of this data is governed by their own privacy policy.</p>
 
-    <h3>Number Plates</h3>
-    <p>If a UK number plate (Vehicle Registration Mark) is visible in your photo, it may be read by the AI. If you request a price valuation, the registration is sent to a third-party UK vehicle data API to retrieve valuation information. We do not permanently store number plate data.</p>
+    <h3>Number Plates (Vehicle Registration Marks)</h3>
+    <p>If a UK number plate (VRM) is visible in your photo, it may be read by the AI. We treat VRMs as personal data under UK GDPR when linked to other identifying information. Here is how we handle VRM data:</p>
+    <ul>
+      <li><strong>Scan history</strong> — If you save a scan, the VRM is stored in your personal scan history for up to <strong>90 days</strong>, after which it is automatically deleted. You can manually delete individual scans at any time.</li>
+      <li><strong>Vehicle data cache</strong> — When a valuation is fetched, the vehicle data is cached using a one-way cryptographic hash (SHA-256) of the VRM as the lookup key. The plaintext VRM is <strong>not stored</strong> in the cache. This cache is used solely to reduce redundant third-party API calls.</li>
+      <li><strong>Shared reports</strong> — If you choose to share a vehicle report, the VRM is included in the shared report and is accessible to anyone with the link. Shared reports expire and are automatically deleted after <strong>30 days</strong>. You can delete a shared report at any time before it expires.</li>
+      <li><strong>Valuation lookups</strong> — When you request a valuation, the VRM is sent to a third-party UK vehicle data API. This transmission uses HTTPS encryption.</li>
+      <li><strong>AI inaccuracy reports</strong> — If you report an inaccurate AI result, the vehicle identification data (excluding the VRM) is stored for service improvement. These reports are automatically deleted after <strong>180 days</strong>.</li>
+    </ul>
 
     <h3>Usage Data</h3>
-    <p>We may record basic usage information such as scan timestamps and identification results to improve the service.</p>
+    <p>We record basic usage information such as scan timestamps and plan usage counts to manage your subscription and improve the service.</p>
 
     <h2>2. How We Use Your Information</h2>
     <ul>
       <li>To provide AI-powered vehicle identification</li>
       <li>To retrieve UK vehicle valuations using detected number plates</li>
-      <li>To maintain your user account</li>
+      <li>To maintain your user account and subscription</li>
       <li>To investigate and resolve reported issues with AI results</li>
+      <li>To cache vehicle data and reduce redundant third-party API calls</li>
     </ul>
 
-    <h2>3. Third-Party Services</h2>
-    <p>We share data with the following third-party services to provide the app's functionality:</p>
+    <h2>3. Third-Party Services (Data Processors)</h2>
+    <p>We share data with the following third-party services to provide the app's functionality. Each acts as a data processor on our behalf:</p>
     <ul>
-      <li><strong>Google Firebase</strong> — authentication, data storage, and AI processing</li>
-      <li><strong>UK Vehicle Data API</strong> — vehicle valuation lookups using registration numbers</li>
+      <li><strong>Google Firebase</strong> — authentication, encrypted data storage (Firestore), and AI processing (Gemini). Data is encrypted at rest and in transit. Governed by <a href="https://firebase.google.com/terms/data-processing-terms" rel="noopener">Google's Data Processing Terms</a>.</li>
+      <li><strong>UK Vehicle Data Global API</strong> — vehicle valuation and MOT history lookups using registration numbers. VRMs are transmitted via HTTPS. Only the VRM is shared; no user identity is sent.</li>
     </ul>
-    <p>Each third-party service is governed by its own privacy policy. We only share the minimum data necessary for each service to function.</p>
+    <p>We only share the minimum data necessary for each service to function.</p>
 
     <h2>4. Data Retention</h2>
-    <p>Your account data is retained for as long as your account is active. Vehicle images are not stored beyond the immediate processing session. You may delete your account and all associated data at any time (see section 7).</p>
+    <table style="width:100%; border-collapse:collapse; margin:12px 0;">
+      <thead>
+        <tr style="text-align:left; border-bottom:2px solid var(--border);">
+          <th style="padding:8px;">Data Type</th>
+          <th style="padding:8px;">Retention Period</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Account information</td>
+          <td style="padding:8px;">Until account deletion</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Saved scans (inc. VRM)</td>
+          <td style="padding:8px;">90 days, then auto-deleted</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Shared reports (inc. VRM)</td>
+          <td style="padding:8px;">30 days, then auto-deleted</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Vehicle data cache</td>
+          <td style="padding:8px;">90 days (VRM stored as irreversible hash only)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">AI inaccuracy reports</td>
+          <td style="padding:8px;">180 days, then auto-deleted</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Vehicle images</td>
+          <td style="padding:8px;">Not stored (transient processing only)</td>
+        </tr>
+        <tr>
+          <td style="padding:8px;">Usage data</td>
+          <td style="padding:8px;">Until account deletion</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>You may delete your account and all associated data at any time (see section 7).</p>
 
     <h2>5. Data Security</h2>
-    <p>All data transmitted between the app and our servers is encrypted in transit using HTTPS/TLS. Data stored in Firestore is encrypted at rest by Google Cloud.</p>
+    <p>All data transmitted between the app and our servers is encrypted in transit using HTTPS/TLS. Data stored in Firestore is encrypted at rest by Google Cloud. Vehicle data cache entries are indexed by a one-way SHA-256 hash so the registration number cannot be recovered from the cache index.</p>
 
     <h2>6. Your Rights (UK GDPR / Data Protection Act 2018)</h2>
     <p>Under UK data protection law, you have the right to:</p>
     <ul>
       <li><strong>Access</strong> — request a copy of the personal data we hold about you</li>
-      <li><strong>Rectification</strong> — request correction of inaccurate data</li>
+      <li><strong>Rectification</strong> — request correction of inaccurate data (you can also edit scan details directly in the app)</li>
       <li><strong>Erasure</strong> — request deletion of your data (see section 7)</li>
-      <li><strong>Portability</strong> — request your data in a portable format</li>
+      <li><strong>Portability</strong> — request your data in a portable format (Trader plan users can export data as CSV)</li>
       <li><strong>Object</strong> — object to processing of your data</li>
       <li><strong>Restrict</strong> — request restriction of processing</li>
     </ul>
-    <p>To exercise any of these rights, please contact us at the email address below.</p>
+    <p>To exercise any of these rights, please contact us at the email address below. We will respond within one month as required by law.</p>
 
     <h2>7. Account and Data Deletion</h2>
     <p>You can delete your account and all associated data at any time:</p>
@@ -85,7 +131,7 @@
       <li><strong>In the app:</strong> Go to Settings &gt; Delete Account</li>
       <li><strong>Via the web:</strong> Visit our <a href="/delete-account.html">account deletion page</a></li>
     </ul>
-    <p>Deletion removes your profile, scan history, AI reports, and all associated data from our systems. This action is permanent and cannot be undone.</p>
+    <p>Deletion removes your profile, scan history, shared reports, AI reports, usage data, and all associated data from our systems. This action is permanent and cannot be undone.</p>
 
     <h2>8. Children's Privacy</h2>
     <p>AutoSpotter is not directed at children under the age of 13. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, please contact us and we will delete it.</p>
@@ -104,8 +150,8 @@
     <p>We process your personal data on the following lawful bases under UK GDPR:</p>
     <ul>
       <li><strong>Consent</strong> — you consent to data processing when you sign in and accept our terms</li>
-      <li><strong>Contract</strong> — processing is necessary to provide the service you requested</li>
-      <li><strong>Legitimate interest</strong> — processing AI reports and improving the service</li>
+      <li><strong>Contract</strong> — processing is necessary to provide the service you requested (identification, valuation)</li>
+      <li><strong>Legitimate interest</strong> — caching vehicle data to reduce API costs and improve response times; processing AI reports to improve service accuracy</li>
     </ul>
   </div>
 

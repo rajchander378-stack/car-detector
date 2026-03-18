@@ -124,6 +124,43 @@
     }
     .scans-header h2 { margin: 0; font-size: 20px; color: var(--text); }
 
+    /* Settings modal */
+    .settings-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .settings-overlay.active { display: flex; }
+    .settings-modal {
+      background: #fff; border-radius: 14px; padding: 32px; width: 90%; max-width: 420px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.2); position: relative;
+    }
+    .settings-modal h2 { font-size: 20px; font-weight: 700; margin: 0 0 24px; }
+    .settings-modal .form-group { margin-bottom: 16px; }
+    .settings-modal label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+    .settings-modal input {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; box-sizing: border-box;
+    }
+    .settings-modal input[disabled] { background: #f5f5f5; color: #888; }
+    .settings-modal .hint { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+    .settings-modal .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+    .settings-modal .btn-cancel {
+      padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border);
+      background: #fff; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text);
+    }
+    .settings-modal .btn-save {
+      padding: 8px 20px; border-radius: 8px; border: none;
+      background: var(--primary); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600;
+    }
+    .settings-modal .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .settings-close {
+      position: absolute; top: 12px; right: 16px; background: none; border: none;
+      font-size: 22px; cursor: pointer; color: var(--text-secondary); line-height: 1;
+    }
+    .settings-danger { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .settings-danger a { color: #c62828; font-size: 13px; font-weight: 600; text-decoration: none; }
+    .settings-danger a:hover { text-decoration: underline; }
+
     @media (max-width: 600px) {
       #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
       .dash-plan-card { flex-direction: column; text-align: center; }
@@ -241,10 +278,10 @@
           <h4>Buy Scan Credits</h4>
           <p>Top up with 10, 50, or 100 scan packs</p>
         </a>
-        <a href="/delete-account.html" class="dash-action-card">
+        <a href="#" onclick="openSettings(); return false;" class="dash-action-card">
           <div class="action-icon">&#9881;&#65039;</div>
           <h4>Account Settings</h4>
-          <p>Delete account or manage data</p>
+          <p>View profile &amp; manage account</p>
         </a>
       </div>
 
@@ -266,6 +303,38 @@
     <a href="/disclaimer.html">Data Disclaimer</a>
     <br>&copy; 2026 Axiom Forge Software. All rights reserved.
   </footer>
+
+  <!-- Settings Modal -->
+  <div id="settings-overlay" class="settings-overlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-modal">
+      <button class="settings-close" onclick="closeSettings()">&times;</button>
+      <h2>Account Settings</h2>
+      <div class="form-group">
+        <label>Name</label>
+        <input id="settings-name" type="text" disabled>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="settings-email" type="email" disabled>
+      </div>
+      <div class="form-group">
+        <label>Phone number <span class="hint">(optional)</span></label>
+        <input id="settings-phone" type="tel" placeholder="e.g. 07700 900000">
+      </div>
+      <div class="form-group">
+        <label>Address <span class="hint">(optional)</span></label>
+        <input id="settings-address" type="text" placeholder="e.g. 10 Downing Street, London SW1A 2AA">
+      </div>
+      <div id="settings-msg" style="font-size:13px; margin-top:8px; display:none;"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+        <button id="settings-save-btn" class="btn-save" onclick="saveSettings()">Save</button>
+      </div>
+      <div class="settings-danger">
+        <a href="/delete-account.html">Delete my account</a>
+      </div>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -295,6 +364,53 @@
       if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
       auth.signOut();
       window.location.href = '/';
+    }
+
+    function openSettings() {
+      const user = auth.currentUser;
+      if (!user) return;
+      document.getElementById('settings-name').value = user.displayName || '';
+      document.getElementById('settings-email').value = user.email || '';
+      document.getElementById('settings-msg').style.display = 'none';
+      document.getElementById('settings-phone').value = '';
+      document.getElementById('settings-address').value = '';
+      db.collection('users').doc(user.uid).get().then(doc => {
+        if (doc.exists) {
+          document.getElementById('settings-phone').value = doc.data().phone || '';
+          document.getElementById('settings-address').value = doc.data().address || '';
+        }
+      });
+      document.getElementById('settings-overlay').classList.add('active');
+    }
+
+    function closeSettings() {
+      document.getElementById('settings-overlay').classList.remove('active');
+    }
+
+    async function saveSettings() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const btn = document.getElementById('settings-save-btn');
+      const msg = document.getElementById('settings-msg');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        await db.collection('users').doc(user.uid).set({
+          phone: document.getElementById('settings-phone').value.trim(),
+          address: document.getElementById('settings-address').value.trim(),
+        }, { merge: true });
+        msg.style.display = 'block';
+        msg.style.color = '#2e7d32';
+        msg.textContent = 'Settings saved successfully.';
+        setTimeout(() => closeSettings(), 1200);
+      } catch (err) {
+        msg.style.display = 'block';
+        msg.style.color = '#c62828';
+        msg.textContent = 'Failed to save: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+      }
     }
 
     function currentMonthKey() {
@@ -494,6 +610,9 @@
           reportId = existing.docs[0].id;
         } else {
           // Create shared report with all data sections
+          // GDPR: shared reports expire after 30 days
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30);
           const reportDoc = {
             owner_uid: user.uid,
             source_scan_id: scanId,
@@ -504,6 +623,7 @@
             model_details: scanData.model_details || null,
             tyre_details: scanData.tyre_details || null,
             shared_at: firebase.firestore.FieldValue.serverTimestamp(),
+            expires_at: firebase.firestore.Timestamp.fromDate(expiresAt),
           };
           const reportRef = await db.collection('shared_reports').add(reportDoc);
           reportId = reportRef.id;
@@ -588,6 +708,35 @@
         .onSnapshot(renderScans, () => {
           document.getElementById('scans-loading').textContent = 'Unable to load scans.';
         });
+
+      // GDPR: purge expired saved scans (>90 days) and shared reports (>30 days)
+      purgeExpiredData(uid);
+    }
+
+    async function purgeExpiredData(uid) {
+      try {
+        // Purge saved scans older than 90 days
+        const scanCutoff = new Date();
+        scanCutoff.setDate(scanCutoff.getDate() - 90);
+        const expiredScans = await db.collection('users').doc(uid)
+          .collection('saved_scans')
+          .where('saved_at', '<', firebase.firestore.Timestamp.fromDate(scanCutoff))
+          .get();
+        for (const doc of expiredScans.docs) {
+          await doc.ref.delete();
+        }
+
+        // Purge expired shared reports
+        const expiredReports = await db.collection('shared_reports')
+          .where('owner_uid', '==', uid)
+          .where('expires_at', '<', firebase.firestore.Timestamp.fromDate(new Date()))
+          .get();
+        for (const doc of expiredReports.docs) {
+          await doc.ref.delete();
+        }
+      } catch (e) {
+        // Background purge — swallow errors
+      }
     }
 
     async function loadDashboard(user) {

@@ -88,7 +88,15 @@
 - [x] **Host a privacy policy** — Full privacy policy created at `public/privacy-policy.html` covering: data collected, third-party sharing (Gemini, UK vehicle data API), retention/deletion, GDPR/UK DPA rights, lawful basis, children's privacy. Will be live at `https://car-detector-833e5.web.app/privacy-policy.html` after deploy. **Review the contact email** (`privacy@axiomforgesoftware.com`) and update if needed before deploying.
 - [ ] **HIGH PRIORITY — Demo credentials for Google reviewer** — Create a new Google account (needs a phone number for setup). Sign into AutoSpotter with it to verify it works. Provide credentials in the "App Access" section of Play Console so the reviewer can test the app.
 - [ ] **HIGH PRIORITY — Update google-services.json** — Add a new Android app in Firebase Console with package name `com.axiomforgesoftware.autospotter`, add the debug SHA-1 fingerprint (`3D:4D:4C:1C:7D:48:81:D1:2D:82:23:FF:61:54:80:39:B4:0D:B7:08`), download the new `google-services.json`, and replace `android/app/google-services.json`. **The app will not build until this is done.**
-- [ ] **HIGH PRIORITY — Number plate GDPR compliance** — VRMs are personal data under UK law when linked to other info. Verify plates are not persisted anywhere (Firestore, logs, Gemini). If scan history is added later, document a lawful basis (consent or legitimate interest). Consider a Data Protection Impact Assessment (DPIA) as recommended by the ICO for ANPR-like features.
+- [x] **HIGH PRIORITY — Number plate GDPR compliance** — Full compliance audit and remediation completed:
+  - Privacy policy rewritten with accurate VRM data flow, retention table, and data processor references
+  - Vehicle cache: removed plaintext `vrm_normalized` field; documents keyed by SHA-256 hash only
+  - Vehicle cache Firestore rules: blocked `vrm_normalized` writes, restricted delete to admin
+  - Shared reports: added 30-day `expires_at` TTL, expiry enforcement on report page, `noindex` meta tag
+  - AI inaccuracy reports: VRM stripped before submission
+  - Account deletion: cascades to shared_reports, garage, messages (previously only scans + AI reports)
+  - Auto-purge: saved scans (90 days) and shared reports (30 days) purged on dashboard/scan screen load
+  - Lawful basis documented: consent + contract + legitimate interest
 - [x] **Persist terms acceptance** — `_termsAccepted` in main.dart is in-memory only; users see terms on every app launch. Save acceptance to `shared_preferences` or Firestore so it persists across sessions.
 - [x] **Set up Firebase Hosting** — Added hosting config to `firebase.json` with `public/` directory. Created landing page, privacy policy, account deletion page, shared CSS, and 404 page. **To deploy:** run `firebase deploy --only hosting` to publish to `https://car-detector-833e5.web.app/`.
 

@@ -30,6 +30,11 @@ class _SavedScansScreenState extends State<SavedScansScreen>
       vsync: this,
       initialIndex: widget.showFavouritesTab ? 1 : 0,
     );
+    // GDPR: auto-purge scans older than the retention period (90 days)
+    final uid = _uid;
+    if (uid != null) {
+      _service.purgeExpiredScans(uid);
+    }
   }
 
   @override

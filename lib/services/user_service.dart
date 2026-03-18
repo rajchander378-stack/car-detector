@@ -60,6 +60,34 @@ class UserService {
       await doc.reference.delete();
     }
 
+    // Delete shared reports created by this user (GDPR: cascade delete)
+    final sharedReports = await firestore
+        .collection('shared_reports')
+        .where('owner_uid', isEqualTo: uid)
+        .get();
+    for (final doc in sharedReports.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete garage entries
+    final garageEntries = await firestore
+        .collection('users')
+        .doc(uid)
+        .collection('garage')
+        .get();
+    for (final doc in garageEntries.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete messages sent by this user
+    final messages = await firestore
+        .collection('messages')
+        .where('user_id', isEqualTo: uid)
+        .get();
+    for (final doc in messages.docs) {
+      await doc.reference.delete();
+    }
+
     // Delete saved scans
     await SavedScanService().deleteAllScans(uid);
 

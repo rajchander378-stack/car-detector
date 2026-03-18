@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
   <title id="page-title">Vehicle Report — AutoSpotter</title>
   <meta name="description" id="page-desc" content="AI-powered vehicle identification and valuation report by AutoSpotter.">
   <meta property="og:title" id="og-title" content="Vehicle Report — AutoSpotter">
@@ -482,6 +483,20 @@
         }
 
         const data = doc.data();
+
+        // GDPR: check if shared report has expired
+        if (data.expires_at) {
+          const expiryDate = data.expires_at.toDate ? data.expires_at.toDate() : new Date(data.expires_at);
+          if (expiryDate < new Date()) {
+            // Delete the expired report and show error
+            try { await db.collection('shared_reports').doc(reportId).delete(); } catch(e) {}
+            document.getElementById('report-content').style.display = 'none';
+            document.getElementById('error-section').style.display = 'block';
+            document.getElementById('error-section').innerHTML = '<div class="card" style="text-align:center;"><h2>Report Expired</h2><p>This shared report has expired and is no longer available. Shared reports are automatically deleted after 30 days for data protection compliance.</p><a href="/" class="btn btn-primary">Go to AutoSpotter</a></div>';
+            return;
+          }
+        }
+
         const id = data.identification || {};
         const val = data.valuation || null;
 

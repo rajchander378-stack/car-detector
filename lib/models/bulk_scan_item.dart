@@ -9,6 +9,9 @@ class BulkScanItem {
   String? error;
   bool saved;
 
+  /// Manually entered plate when Gemini didn't detect one.
+  String? manualNumberPlate;
+
   BulkScanItem({
     required this.imagePath,
     this.status = BulkScanStatus.pending,
@@ -21,4 +24,18 @@ class BulkScanItem {
       status == BulkScanStatus.completed &&
       identification != null &&
       identification!.identified;
+
+  /// The effective plate: manual entry takes precedence over AI-detected.
+  String? get effectivePlate =>
+      (manualNumberPlate != null && manualNumberPlate!.isNotEmpty)
+          ? manualNumberPlate
+          : identification?.numberPlate;
+
+  /// Whether this item has a usable number plate for pricing.
+  bool get hasPlate =>
+      isIdentified && effectivePlate != null && effectivePlate!.isNotEmpty;
+
+  /// Clean and normalise a UK number plate string.
+  static String cleanPlate(String plate) =>
+      plate.replaceAll(RegExp(r'\s+'), '').toUpperCase();
 }

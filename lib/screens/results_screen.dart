@@ -679,11 +679,16 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
+      // Strip VRM from identification data for GDPR compliance —
+      // AI reports are for debugging accuracy, not tracking vehicles.
+      final idJson = identification.toJson();
+      idJson.remove('number_plate');
+
       await FirebaseFirestore.instance.collection('ai_reports').add({
         'user_id': user?.uid,
         'user_email': user?.email,
         'reason': result,
-        'identification': identification.toJson(),
+        'identification': idJson,
         'timestamp': FieldValue.serverTimestamp(),
         'resolved': false,
       });

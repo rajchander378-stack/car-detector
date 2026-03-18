@@ -128,14 +128,22 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
 
         final identification = await _gemini.identifyCar(result.file);
 
+        // Clean the number plate if present
+        final cleaned = identification.numberPlate != null &&
+                identification.numberPlate!.trim().isNotEmpty
+            ? identification.copyWith(
+                numberPlate:
+                    BulkScanItem.cleanPlate(identification.numberPlate!))
+            : identification;
+
         setState(() {
-          item.identification = identification;
+          item.identification = cleaned;
           item.status = BulkScanStatus.completed;
           _completedCount++;
         });
 
         // Record usage for successful identifications
-        if (identification.identified && user != null) {
+        if (cleaned.identified && user != null) {
           PlanService().recordAiOnlyScan(user.uid);
         }
       } on GeminiTimeoutException {
@@ -153,7 +161,10 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
       }
     }
 
-    if (mounted) setState(() => _processing = false);
+    if (mounted) {
+      setState(() => _processing = false);
+      _showProcessingSummary();
+    }
   }
 
   Future<void> _retryItem(int index) async {
@@ -183,13 +194,20 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
       setState(() => item.status = BulkScanStatus.identifying);
       final identification = await _gemini.identifyCar(result.file);
 
+      final cleaned = identification.numberPlate != null &&
+              identification.numberPlate!.trim().isNotEmpty
+          ? identification.copyWith(
+              numberPlate:
+                  BulkScanItem.cleanPlate(identification.numberPlate!))
+          : identification;
+
       setState(() {
-        item.identification = identification;
+        item.identification = cleaned;
         item.status = BulkScanStatus.completed;
         _completedCount++;
       });
 
-      if (identification.identified && user != null) {
+      if (cleaned.identified && user != null) {
         PlanService().recordAiOnlyScan(user.uid);
       }
     } on GeminiTimeoutException {
@@ -220,9 +238,16 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
     int savedCount = 0;
     for (final item in identifiedItems) {
       try {
+        // Use manual plate if entered, otherwise use AI-detected plate
+        final id = item.manualNumberPlate != null &&
+                item.manualNumberPlate!.isNotEmpty
+            ? item.identification!
+                .copyWith(numberPlate: item.manualNumberPlate)
+            : item.identification!;
+
         await SavedScanService().saveScan(
           uid: user.uid,
-          identification: item.identification!,
+          identification: id,
         );
         setState(() => item.saved = true);
         savedCount++;
@@ -243,14 +268,145 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
     setState(() => _cancelled = true);
   }
 
+  void _showProcessingSummary() {
+    final withPlate = _items.where((i) => i.hasPlate).length;
+    final identifiedNoPlate = _items
+        .where((i) => i.isIdentified && !i.hasPlate)
+        .length;
+    final failed =
+        _items.where((i) => i.status == BulkScanStatus.failed).length;
+    final noPlateTotal = identifiedNoPlate + failed;
+
+    if (_items.isEmpty || _cancelled) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Scan Complete'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (withPlate > 0)
+              _summaryRow(
+                Icons.check_circle,
+                Colors.green,
+                '$withPlate image${withPlate == 1 ? '' : 's'} suitable for pricing',
+              ),
+            if (noPlateTotal > 0) ...[
+              const SizedBox(height: 8),
+              _summaryRow(
+                Icons.warning_amber_rounded,
+                Colors.orange,
+                '$noPlateTotal image${noPlateTotal == 1 ? '' : 's'} failed to '
+                    'recognise a number plate',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Please recapture these images or enter the '
+                'number plates manually.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(IconData icon, Color color, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(text, style: const TextStyle(fontSize: 14)),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _enterPlateManually(BulkScanItem item) async {
+    final controller = TextEditingController(
+      text: item.manualNumberPlate ?? '',
+    );
+
+    final plate = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Enter Number Plate'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (item.identification != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  item.identification!.displayName,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                hintText: 'e.g. AB12 CDE',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.directions_car),
+              ),
+              onSubmitted: (v) => Navigator.pop(ctx, v),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (plate != null && plate.trim().isNotEmpty) {
+      setState(() {
+        item.manualNumberPlate = BulkScanItem.cleanPlate(plate);
+      });
+    }
+  }
+
   void _viewDetails(BulkScanItem item) {
     if (item.identification == null) return;
+
+    // If a manual plate was entered, pass an updated identification
+    final id = item.manualNumberPlate != null &&
+            item.manualNumberPlate!.isNotEmpty
+        ? item.identification!.copyWith(numberPlate: item.manualNumberPlate)
+        : item.identification!;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ResultsScreen(
           imagePath: item.imagePath,
-          identification: item.identification!,
+          identification: id,
         ),
       ),
     );
@@ -279,6 +435,9 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
         _items.where((i) => i.isIdentified && !i.saved).length;
     final failedCount =
         _items.where((i) => i.status == BulkScanStatus.failed).length;
+    final readyForPricing = _items.where((i) => i.hasPlate).length;
+    final needsPlate =
+        _items.where((i) => i.isIdentified && !i.hasPlate).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -305,7 +464,8 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
                     ),
                     if (identifiedCount > 0)
                       Text(
-                        '$identifiedCount identified'
+                        '$readyForPricing ready'
+                        '${needsPlate > 0 ? ', $needsPlate need plate' : ''}'
                         '${failedCount > 0 ? ', $failedCount failed' : ''}',
                         style: TextStyle(
                           fontSize: 13,
@@ -351,7 +511,9 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
         borderRadius: BorderRadius.circular(12),
         side: item.status == BulkScanStatus.failed
             ? const BorderSide(color: Colors.red, width: 1.5)
-            : BorderSide.none,
+            : (item.isIdentified && !item.hasPlate)
+                ? BorderSide(color: Colors.orange[600]!, width: 1.5)
+                : BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -384,7 +546,8 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
                         fontSize: 15,
                       ),
                     ),
-                    if (item.identification!.numberPlate != null)
+                    if (item.effectivePlate != null &&
+                        item.effectivePlate!.isNotEmpty)
                       Container(
                         margin: const EdgeInsets.only(top: 4),
                         padding: const EdgeInsets.symmetric(
@@ -394,7 +557,7 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: Text(
-                          item.identification!.numberPlate!,
+                          item.effectivePlate!,
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -402,7 +565,29 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
                             color: Colors.black,
                           ),
                         ),
+                      )
+                    else ...[
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => _enterPlateManually(item),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit,
+                                size: 14, color: Colors.orange[700]),
+                            const SizedBox(width: 4),
+                            Text(
+                              'No plate — tap to enter',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ],
                   ] else if (item.status == BulkScanStatus.completed &&
                       !item.identification!.identified) ...[
                     Text(
@@ -472,11 +657,19 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (item.saved)
-                Icon(Icons.check_circle, size: 22, color: Colors.green[600])
-              else
-                const Icon(Icons.check_circle_outline,
-                    size: 22, color: Colors.green),
+              if (item.hasPlate) ...[
+                if (item.saved)
+                  Icon(Icons.check_circle,
+                      size: 22, color: Colors.green[600])
+                else
+                  const Icon(Icons.check_circle_outline,
+                      size: 22, color: Colors.green),
+              ] else
+                InkWell(
+                  onTap: () => _enterPlateManually(item),
+                  child: Icon(Icons.edit_note,
+                      size: 24, color: Colors.orange[600]),
+                ),
               const SizedBox(width: 4),
               InkWell(
                 onTap: () => _viewDetails(item),

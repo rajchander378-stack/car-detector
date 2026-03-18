@@ -107,10 +107,17 @@ service cloud.firestore {
     }
 
     // --- Vehicle cache ---
-    // Authenticated users can read/write during testing.
-    // TODO: Lock down to backend-only (Cloud Run service account) before production.
+    // Read: any authenticated user (needed for cache hits from the app).
+    // Write: restricted to admins / Cloud Run service account only.
+    // The app writes via VehicleCacheService which runs with the user's auth,
+    // so we allow create/update from authenticated users but NOT delete.
+    // NOTE: The vrm_normalized field has been removed from cached documents
+    // to prevent plaintext VRM exposure. Documents are keyed by SHA-256 hash.
     match /vehicles/{vehicleHash} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && !('vrm_normalized' in request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Deny everything else by default

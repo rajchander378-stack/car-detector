@@ -155,9 +155,14 @@
     <a href="#features">Features</a>
     <a href="/pricing.html">Pricing</a>
     <a href="/privacy-policy.html">Privacy</a>
+    <a id="dashboard-link" href="/dashboard.html" style="display:none;">Dashboard</a>
     <span id="auth-area">
       <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
-      <span id="user-info" style="display:none;"></span>
+      <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
+        <img id="user-photo" src="" alt="" style="width:26px; height:26px; border-radius:50%; vertical-align:middle;">
+        <span id="user-name" style="vertical-align:middle;"></span>
+        <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="doSignOut()">Sign out</button>
+      </span>
     </span>
   </nav>
 
@@ -399,29 +404,13 @@
     }
 
     auth.onAuthStateChanged(async (user) => {
-      const signInBtn = document.getElementById('sign-in-btn');
-      const userInfo = document.getElementById('user-info');
+      document.getElementById('sign-in-btn').style.display = user ? 'none' : 'inline-block';
+      document.getElementById('user-info').style.display = user ? 'inline-flex' : 'none';
+      document.getElementById('dashboard-link').style.display = user ? 'inline' : 'none';
 
       if (user) {
-        // Check if admin — redirect to admin page
-        let isAdmin = false;
-        try {
-          const doc = await db.collection('config').doc('admin').get();
-          if (doc.exists) {
-            const emails = doc.data().admin_emails || [];
-            if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
-              isAdmin = true;
-            }
-          }
-        } catch (e) {}
-
-        if (isAdmin) {
-          window.location.href = '/admin/';
-          return;
-        }
-
-        // Regular user — redirect to dashboard
-        window.location.href = '/dashboard.html';
+        document.getElementById('user-photo').src = user.photoURL || '';
+        document.getElementById('user-name').textContent = user.displayName || user.email;
       }
     });
   </script>
