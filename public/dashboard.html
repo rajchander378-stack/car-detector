@@ -528,6 +528,9 @@
           source_scan_id: scanId,
           identification: scanData.identification || {},
           valuation: scanData.valuation || null,
+          mot: scanData.mot || null,
+          valuation_updated: firebase.firestore.FieldValue.serverTimestamp(),
+          mot_updated: scanData.mot ? firebase.firestore.FieldValue.serverTimestamp() : null,
           added_at: firebase.firestore.FieldValue.serverTimestamp(),
         });
 

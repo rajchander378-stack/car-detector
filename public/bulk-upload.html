@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bulk Upload — AutoSpotter</title>
-  <meta name="description" content="Bulk upload car images for AI identification. Trader plan feature.">
+  <meta name="description" content="Bulk upload car images for AI identification and valuation. Trader plan feature.">
   <link rel="stylesheet" href="/style.css">
   <style>
     body { background: #fff; }
@@ -12,8 +12,62 @@
     nav a:hover { color: var(--primary); text-decoration: none; }
     #auth-area { margin-left: auto; }
     .result-card-bulk.needs-plate { border-left: 3px solid orange; }
+    .pricing-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+    .pricing-chip { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+    .pricing-chip.trade { background: #fff3e0; color: #e65100; }
+    .pricing-chip.private { background: #e3f2fd; color: #1565c0; }
+    .pricing-chip.dealer { background: #e8f5e9; color: #2e7d32; }
+    .pricing-chip.freshness { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .pricing-chip.freshness.fresh { background: #e8f5e9; color: #2e7d32; }
+    .pricing-chip.freshness.stale { background: #fff3e0; color: #e65100; }
+    .pricing-chip.freshness.new { background: #e3f2fd; color: #1565c0; }
+    .pricing-loading { font-size: 12px; color: var(--text-secondary); font-style: italic; }
+    .pricing-error { font-size: 12px; color: var(--danger); }
+    /* Freshness analysis card */
+    .freshness-card { background: #fff; border: 2px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+    .freshness-card h3 { margin: 0 0 16px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .freshness-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .freshness-item { background: #f8f9fa; border-radius: 10px; padding: 16px; text-align: center; border: 2px solid transparent; }
+    .freshness-item.fresh { border-color: #66bb6a; background: #e8f5e9; }
+    .freshness-item.stale { border-color: #ffa726; background: #fff3e0; }
+    .freshness-item.new { border-color: #42a5f5; background: #e3f2fd; }
+    .freshness-item .fi-count { font-size: 28px; font-weight: 800; }
+    .freshness-item.fresh .fi-count { color: #2e7d32; }
+    .freshness-item.stale .fi-count { color: #e65100; }
+    .freshness-item.new .fi-count { color: #1565c0; }
+    .freshness-item .fi-label { font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .freshness-item .fi-cost { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .freshness-item .fi-plates { font-size: 11px; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+    .freshness-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .freshness-actions .btn { padding: 10px 24px; font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; }
+    .freshness-actions .btn-db { background: #e8f5e9; color: #2e7d32; }
+    .freshness-actions .btn-db:hover { background: #c8e6c9; }
+    .freshness-actions .btn-fetch { background: var(--primary); color: #fff; }
+    .freshness-actions .btn-fetch:hover { opacity: 0.9; }
+    .data-age { font-size: 11px; margin-top: 4px; }
+    .data-age .age-fresh { color: #2e7d32; }
+    .data-age .age-stale { color: #e65100; }
+    .data-age .age-old { color: #c62828; }
+    .mot-pass { color: #2e7d32; font-weight: 600; }
+    .mot-fail { color: #c62828; font-weight: 600; }
+    /* Forecourt totals */
+    .totals-card { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 2px solid #66bb6a; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+    .totals-title { font-size: 18px; font-weight: 800; color: #2e7d32; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+    .totals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+    .total-item { background: #fff; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .total-item .total-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .total-item .total-value { font-size: 22px; font-weight: 800; color: #2e7d32; }
+    .total-item .total-count { font-size: 11px; color: #66bb6a; margin-top: 2px; }
+    /* Export dropdown */
+    .export-wrap { position: relative; display: inline-block; }
+    .export-menu { display: none; position: absolute; right: 0; top: 100%; margin-top: 4px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 180px; z-index: 20; overflow: hidden; }
+    .export-menu.open { display: block; }
+    .export-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); text-align: left; }
+    .export-menu button:hover { background: #f5f5f5; }
+    .export-menu button .ext { font-size: 11px; color: var(--text-secondary); margin-left: auto; font-weight: 600; }
     @media (max-width: 600px) {
       #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
+      .totals-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -39,7 +93,7 @@
 
   <header>
     <h1>Bulk Upload</h1>
-    <p>Upload multiple car images for AI identification</p>
+    <p>Upload multiple car images for AI identification and valuation</p>
   </header>
 
   <!-- Gate: not signed in -->
@@ -72,9 +126,9 @@
         <li>The vehicle must be clearly visible — not too far away, heavily obscured, or only partially visible.</li>
         <li>Must not be a screenshot from a website, video game, or another app.</li>
         <li>JPEG or PNG format only.</li>
-        <li>Minimum resolution: 200×200 pixels.</li>
+        <li>Minimum resolution: 200x200 pixels.</li>
         <li>Avoid extremely dark, bright, or blurry images.</li>
-        <li>Number plates should be legible where possible — this helps with valuation lookups.</li>
+        <li>Number plates should be legible where possible — this enables automatic valuation lookups.</li>
       </ul>
     </div>
 
@@ -109,11 +163,34 @@
     <!-- Summary banner -->
     <div id="summary-banner" class="card" style="display:none; border-left:4px solid var(--primary); margin-bottom:16px;"></div>
 
+    <!-- Freshness analysis card -->
+    <div id="freshness-card" class="freshness-card" style="display:none;">
+      <h3>&#128269; Data Freshness Analysis</h3>
+      <div class="freshness-grid" id="freshness-grid"></div>
+      <div class="freshness-actions" id="freshness-actions"></div>
+    </div>
+
+    <!-- Forecourt totals -->
+    <div id="totals-card" class="totals-card" style="display:none;">
+      <div class="totals-title">&#163; Forecourt Valuation Summary</div>
+      <div class="totals-grid" id="totals-grid"></div>
+    </div>
+
     <!-- Results -->
     <div id="results-section" style="display:none;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
         <h2 style="margin:0;">Results</h2>
-        <button id="export-btn" class="btn btn-primary" style="padding:8px 18px; font-size:13px;" onclick="exportCSV()">Export to CSV</button>
+        <div style="display:flex; gap:8px;">
+          <button id="pricing-btn" class="btn btn-primary" style="padding:8px 18px; font-size:13px; display:none;" onclick="fetchAllPricing()">Fetch Pricing</button>
+          <div class="export-wrap">
+            <button id="export-btn" class="btn btn-primary" style="padding:8px 18px; font-size:13px;" onclick="toggleExportMenu()">Export &#9662;</button>
+            <div id="export-menu" class="export-menu">
+              <button onclick="exportCSV(); closeExportMenu();">&#128196; Spreadsheet (CSV) <span class="ext">.csv</span></button>
+              <button onclick="exportExcel(); closeExportMenu();">&#128202; Excel Workbook <span class="ext">.xlsx</span></button>
+              <button onclick="exportPDF(); closeExportMenu();">&#128459; PDF Report <span class="ext">.pdf</span></button>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="results-list"></div>
     </div>
@@ -129,39 +206,116 @@
     <br>&copy; 2026 Axiom Forge Software. All rights reserved.
   </footer>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-vertexai-preview-compat.js"></script>
-  <script>
-    firebase.initializeApp({
+  <script src="/lib/xlsx.full.min.js"></script>
+  <script src="/lib/jspdf.umd.min.js"></script>
+  <script src="/lib/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Modular Firebase SDK (required for Vertex AI) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getVertexAI, getGenerativeModel } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-vertexai-preview.js';
+
+    const app = initializeApp({
       apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
       authDomain: 'car-detector-833e5.firebaseapp.com',
       projectId: 'car-detector-833e5',
     });
 
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const provider = new firebase.auth.GoogleAuthProvider();
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // ── Vertex AI model (initialised once) ──
+    const vertexAI = getVertexAI(app);
+
+    const SYSTEM_PROMPT = `You are a vehicle identification system. Analyse the provided image of a car and identify it as accurately as possible.
+Be specific about the generation and facelift where visual evidence supports it. Use UK English spelling.
+If you cannot identify the car, set identified to false.
+For year, provide a range if exact year is uncertain.
+Only identify trim level if visual evidence supports it.
+
+IMAGE VALIDATION RULES — you MUST check these BEFORE attempting identification:
+1. The image must contain exactly one vehicle as the primary subject.
+2. Must be a real photograph — not a drawing, sketch, 3D render, toy, or model car.
+3. The vehicle must be clearly visible — not too far away, heavily obscured, or only partially visible.
+4. Must not be a screenshot from a website, video game, or another app.
+5. Avoid extremely dark, bright, or blurry images that prevent identification.
+6. Number plates should be read if legible.
+
+If ANY of these rules are violated, set "identified" to false and provide a clear "error" message explaining which rule was violated. Do NOT attempt to identify the vehicle in this case.`;
+
+    const RESPONSE_SCHEMA = {
+      type: 'object',
+      properties: {
+        identified: { type: 'boolean', description: 'Whether a car was successfully identified' },
+        confidence: { type: 'number', description: 'Confidence score from 0.0 to 1.0' },
+        make: { type: 'string', description: 'Car manufacturer e.g. BMW, Toyota, Ford', nullable: true },
+        model: { type: 'string', description: 'Car model name e.g. 3 Series, Corolla', nullable: true },
+        year_min: { type: 'integer', description: 'Earliest likely model year', nullable: true },
+        year_max: { type: 'integer', description: 'Latest likely model year', nullable: true },
+        generation: { type: 'string', description: 'Generation or facelift designation e.g. G20, Mk8', nullable: true },
+        trim: { type: 'string', description: 'Trim level if identifiable e.g. M Sport, ST-Line', nullable: true },
+        body_style: { type: 'string', description: 'Body type: saloon, hatchback, estate, coupe, convertible, suv, mpv, or pickup', nullable: true },
+        colour: { type: 'string', description: 'Exterior colour of the vehicle', nullable: true },
+        distinguishing_features: { type: 'array', items: { type: 'string' }, description: 'Notable visual features', nullable: true },
+        notes: { type: 'string', description: 'Relevant observations or uncertainty notes', nullable: true },
+        error: { type: 'string', description: 'Error description if identification failed', nullable: true },
+        number_plate: { type: 'string', description: 'Number plate text if visible and legible', nullable: true },
+      },
+      required: ['identified', 'confidence'],
+    };
+
+    const model = getGenerativeModel(vertexAI, {
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+        responseSchema: RESPONSE_SCHEMA,
+      },
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    });
+
+    // ── Constants ──
+    const VDGL_API_KEY = 'D5D22850-71A0-4523-8DBA-7CE4B5361B3D';
+    const VDGL_BASE_URL = 'https://uk.api.vehicledataglobal.com';
+
+    // ── Smart Charging: per-section user-facing prices (43% margin) ──
+    const VDGL_SECTION_PRICES = {
+      valuation: 0.35,
+      mot: 0.11,
+      vehicle_details: 0.26,
+      tyre_details: 0.16,
+      full: 0.88,
+    };
+
+    // ── Freshness thresholds ──
+    const FRESHNESS_MS = {
+      valuation: 24 * 60 * 60 * 1000,   // 24 hours
+      mot: 7 * 24 * 60 * 60 * 1000,     // 7 days
+    };
 
     // ── State ──
     let selectedFiles = [];
     let results = [];
     let cancelled = false;
     let processing = false;
+    let fetchingPricing = false;
     let userPlan = null;
 
     // ── Auth ──
     async function doSignIn() {
-      try { await auth.signInWithPopup(provider); }
+      try { await signInWithPopup(auth, provider); }
       catch (err) {
         if (err.code === 'auth/popup-blocked') alert('Pop-ups are blocked. Please allow pop-ups for this site.');
         else if (err.code !== 'auth/popup-closed-by-user') alert('Sign-in failed: ' + err.message);
       }
     }
-    function doSignOut() { auth.signOut(); }
+    window.doSignIn = doSignIn;
+    window.doSignOut = () => signOut(auth);
 
-    auth.onAuthStateChanged(async (user) => {
+    onAuthStateChanged(auth, async (user) => {
       document.getElementById('sign-in-btn').style.display = user ? 'none' : 'inline-block';
       document.getElementById('user-info').style.display = user ? 'inline-flex' : 'none';
 
@@ -169,21 +323,18 @@
         document.getElementById('user-photo').src = user.photoURL || '';
         document.getElementById('user-name').textContent = user.displayName || user.email;
 
-        // Fetch plan
         userPlan = null;
         try {
-          const doc = await db.collection('users').doc(user.uid).get();
-          if (doc.exists) userPlan = (doc.data().plan || 'free').toLowerCase();
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          if (snap.exists()) userPlan = (snap.data().plan || 'free').toLowerCase();
           else userPlan = 'free';
         } catch (e) { userPlan = 'free'; }
 
-        // Show plan badge
         const badge = document.getElementById('user-plan-badge');
         badge.textContent = userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
         badge.className = 'plan-badge plan-badge-' + userPlan;
         badge.style.display = 'inline-block';
 
-        // Gate check
         if (userPlan === 'trader') {
           document.getElementById('gate-auth').style.display = 'none';
           document.getElementById('gate-plan').style.display = 'none';
@@ -236,47 +387,234 @@
       document.getElementById('results-section').style.display = 'none';
       document.getElementById('results-list').innerHTML = '';
       document.getElementById('summary-banner').style.display = 'none';
+      document.getElementById('pricing-btn').style.display = 'none';
+      document.getElementById('totals-card').style.display = 'none';
+      document.getElementById('freshness-card').style.display = 'none';
+      currentBulkAnalysis = null;
       results = [];
     }
+    window.clearFiles = clearFiles;
 
-    // ── Gemini via Firebase AI ──
-    const SYSTEM_PROMPT = `You are a vehicle identification system. Analyse the provided image of a car and identify it as accurately as possible.
-Be specific about the generation and facelift where visual evidence supports it. Use UK English spelling.
-If you cannot identify the car, set identified to false.
-For year, provide a range if exact year is uncertain.
-Only identify trim level if visual evidence supports it.
+    // ── Freshness analysis engine ──
+    function formatAge(ms) {
+      if (!ms || ms < 0) return 'just now';
+      const mins = Math.floor(ms / 60000);
+      if (mins < 60) return mins + 'm old';
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return hours + 'h old';
+      const days = Math.floor(hours / 24);
+      return days + 'd old';
+    }
 
-IMAGE VALIDATION RULES — you MUST check these BEFORE attempting identification:
-1. The image must contain exactly one vehicle as the primary subject.
-2. Must be a real photograph — not a drawing, sketch, 3D render, toy, or model car.
-3. The vehicle must be clearly visible — not too far away, heavily obscured, or only partially visible.
-4. Must not be a screenshot from a website, video game, or another app.
-5. Avoid extremely dark, bright, or blurry images that prevent identification.
-6. Number plates should be read if legible.
+    function ageClass(ms, threshold) {
+      if (!ms || ms < 0) return 'age-fresh';
+      if (ms <= threshold) return 'age-fresh';
+      if (ms <= threshold * 2) return 'age-stale';
+      return 'age-old';
+    }
 
-If ANY of these rules are violated, set "identified" to false and provide a clear "error" message explaining which rule was violated. Do NOT attempt to identify the vehicle in this case.`;
+    async function analyzeVehicleFreshness(plate) {
+      const normalizedPlate = cleanPlate(plate);
+      const result = { plate: normalizedPlate, status: 'new', sectionsNeeded: [], estimatedCost: VDGL_SECTION_PRICES.full, cachedData: null, valuationAge: null, motAge: null };
 
-    const RESPONSE_SCHEMA = {
-      type: 'object',
-      properties: {
-        identified: { type: 'boolean', description: 'Whether a car was successfully identified' },
-        confidence: { type: 'number', description: 'Confidence score from 0.0 to 1.0' },
-        make: { type: 'string', description: 'Car manufacturer e.g. BMW, Toyota, Ford', nullable: true },
-        model: { type: 'string', description: 'Car model name e.g. 3 Series, Corolla', nullable: true },
-        year_min: { type: 'integer', description: 'Earliest likely model year', nullable: true },
-        year_max: { type: 'integer', description: 'Latest likely model year', nullable: true },
-        generation: { type: 'string', description: 'Generation or facelift designation e.g. G20, Mk8', nullable: true },
-        trim: { type: 'string', description: 'Trim level if identifiable e.g. M Sport, ST-Line', nullable: true },
-        body_style: { type: 'string', description: 'Body type: saloon, hatchback, estate, coupe, convertible, suv, mpv, or pickup', nullable: true },
-        colour: { type: 'string', description: 'Exterior colour of the vehicle', nullable: true },
-        distinguishing_features: { type: 'array', items: { type: 'string' }, description: 'Notable visual features', nullable: true },
-        notes: { type: 'string', description: 'Relevant observations or uncertainty notes', nullable: true },
-        error: { type: 'string', description: 'Error description if identification failed', nullable: true },
-        number_plate: { type: 'string', description: 'Number plate text if visible and legible', nullable: true },
-      },
-      required: ['identified', 'confidence'],
-    };
+      try {
+        const cached = await lookupVehicleCache(normalizedPlate);
+        if (!cached || !cached.data) return result;
 
+        result.cachedData = cached.data;
+        const now = Date.now();
+
+        // Check valuation freshness
+        const valUpdated = cached.data.valuation_updated;
+        if (valUpdated && cached.data.valuation) {
+          const valTime = valUpdated.toDate ? valUpdated.toDate().getTime() : new Date(valUpdated).getTime();
+          result.valuationAge = now - valTime;
+          if (result.valuationAge > FRESHNESS_MS.valuation) {
+            result.sectionsNeeded.push('valuation');
+          }
+        } else if (!cached.data.valuation) {
+          result.sectionsNeeded.push('valuation');
+        }
+
+        // Check MOT freshness
+        const motUpdated = cached.data.mot_updated;
+        if (motUpdated && cached.data.mot_history) {
+          const motTime = motUpdated.toDate ? motUpdated.toDate().getTime() : new Date(motUpdated).getTime();
+          result.motAge = now - motTime;
+          if (result.motAge > FRESHNESS_MS.mot) {
+            result.sectionsNeeded.push('mot');
+          }
+        } else if (!cached.data.mot_history) {
+          result.sectionsNeeded.push('mot');
+        }
+
+        // Vehicle details & tyre details are static — only needed if missing
+        if (!cached.data.vehicle_details) result.sectionsNeeded.push('vehicle_details');
+        if (!cached.data.tyre_details) result.sectionsNeeded.push('tyre_details');
+
+        // Determine status
+        if (result.sectionsNeeded.length === 0) {
+          result.status = 'fresh';
+          result.estimatedCost = 0;
+        } else if (cached.data.valuation || cached.data.mot_history) {
+          result.status = 'stale';
+          const sectionCost = result.sectionsNeeded.reduce((sum, s) => sum + (VDGL_SECTION_PRICES[s] || 0), 0);
+          result.estimatedCost = Math.min(sectionCost, VDGL_SECTION_PRICES.full);
+        }
+        // else status stays 'new', cost stays full
+      } catch (e) {
+        // If cache lookup fails, treat as new
+      }
+      return result;
+    }
+
+    async function analyzeBulkFreshness(plates) {
+      const analyses = await Promise.all(plates.map(p => analyzeVehicleFreshness(p)));
+      const fresh = analyses.filter(a => a.status === 'fresh');
+      const stale = analyses.filter(a => a.status === 'stale');
+      const newItems = analyses.filter(a => a.status === 'new');
+      const totalCost = analyses.reduce((sum, a) => sum + a.estimatedCost, 0);
+      return { analyses, fresh, stale, new: newItems, totalCost };
+    }
+
+    function showFreshnessAnalysis(bulkAnalysis) {
+      const card = document.getElementById('freshness-card');
+      const grid = document.getElementById('freshness-grid');
+      const actions = document.getElementById('freshness-actions');
+      const { fresh, stale, totalCost } = bulkAnalysis;
+      const newItems = bulkAnalysis.new;
+
+      let gridHtml = '';
+      // Fresh column
+      gridHtml += '<div class="freshness-item fresh">';
+      gridHtml += '<div class="fi-count">' + fresh.length + '</div>';
+      gridHtml += '<div class="fi-label">In Database (Fresh)</div>';
+      gridHtml += '<div class="fi-cost">Free</div>';
+      if (fresh.length > 0) {
+        gridHtml += '<div class="fi-plates">' + fresh.map(a => a.plate).join(', ') + '</div>';
+      }
+      gridHtml += '</div>';
+
+      // Stale column
+      const staleCost = stale.reduce((s, a) => s + a.estimatedCost, 0);
+      gridHtml += '<div class="freshness-item stale">';
+      gridHtml += '<div class="fi-count">' + stale.length + '</div>';
+      gridHtml += '<div class="fi-label">Need Refresh</div>';
+      gridHtml += '<div class="fi-cost">&pound;' + staleCost.toFixed(2) + '</div>';
+      if (stale.length > 0) {
+        gridHtml += '<div class="fi-plates">' + stale.map(a => a.plate + ' (&pound;' + a.estimatedCost.toFixed(2) + ')').join(', ') + '</div>';
+      }
+      gridHtml += '</div>';
+
+      // New column
+      const newCost = newItems.reduce((s, a) => s + a.estimatedCost, 0);
+      gridHtml += '<div class="freshness-item new">';
+      gridHtml += '<div class="fi-count">' + newItems.length + '</div>';
+      gridHtml += '<div class="fi-label">New Lookups</div>';
+      gridHtml += '<div class="fi-cost">&pound;' + newCost.toFixed(2) + '</div>';
+      if (newItems.length > 0) {
+        gridHtml += '<div class="fi-plates">' + newItems.map(a => a.plate).join(', ') + '</div>';
+      }
+      gridHtml += '</div>';
+
+      grid.innerHTML = gridHtml;
+
+      let actionsHtml = '';
+      if (fresh.length > 0 || stale.length > 0) {
+        actionsHtml += '<button class="btn btn-db" onclick="useDatabaseRecords()">Use Database Records (Free)</button>';
+      }
+      actionsHtml += '<button class="btn btn-fetch" onclick="fetchAllWithCharging()">Fetch All Data (&pound;' + totalCost.toFixed(2) + ')</button>';
+      actions.innerHTML = actionsHtml;
+
+      card.style.display = 'block';
+    }
+
+    // Store bulk analysis for use by action buttons
+    let currentBulkAnalysis = null;
+
+    async function useDatabaseRecords() {
+      if (!currentBulkAnalysis) return;
+      document.getElementById('freshness-card').style.display = 'none';
+
+      for (const r of results) {
+        if (!hasValidPlate(r) || !isValidUkPlate(getEffectivePlate(r))) continue;
+        const plate = getEffectivePlate(r);
+        const analysis = currentBulkAnalysis.analyses.find(a => a.plate === plate);
+        if (!analysis || !analysis.cachedData) continue;
+
+        r._freshnessAnalysis = analysis;
+        r._pricingSource = 'database';
+        r._fullVehicleData = analysis.cachedData;
+        r._pricing = extractPrices(analysis.cachedData.valuation);
+        r._vehicleInfo = extractVehicleInfo(analysis.cachedData);
+        r._motInfo = extractMotInfo(analysis.cachedData);
+        const idx = results.indexOf(r);
+        updatePricingDisplay(r, idx);
+      }
+
+      showPricingSummary();
+    }
+    window.useDatabaseRecords = useDatabaseRecords;
+
+    async function fetchAllWithCharging() {
+      if (!currentBulkAnalysis) return;
+      document.getElementById('freshness-card').style.display = 'none';
+
+      fetchingPricing = true;
+      const btn = document.getElementById('pricing-btn');
+      btn.style.display = 'inline-block';
+      btn.disabled = true;
+      btn.textContent = 'Fetching...';
+
+      const toProcess = results.filter(r => hasValidPlate(r) && isValidUkPlate(getEffectivePlate(r)) && !r._pricing);
+      let done = 0;
+
+      for (const r of toProcess) {
+        const plate = getEffectivePlate(r);
+        const analysis = currentBulkAnalysis.analyses.find(a => a.plate === plate);
+        const idx = results.indexOf(r);
+        r._freshnessAnalysis = analysis || null;
+
+        // Fresh vehicles: use database records, no API call
+        if (analysis && analysis.status === 'fresh' && analysis.cachedData) {
+          r._pricingSource = 'database';
+          r._fullVehicleData = analysis.cachedData;
+          r._pricing = extractPrices(analysis.cachedData.valuation);
+          r._vehicleInfo = extractVehicleInfo(analysis.cachedData);
+          r._motInfo = extractMotInfo(analysis.cachedData);
+          updatePricingDisplay(r, idx);
+        } else {
+          // Stale or new: fetch from API
+          // TODO (production): implement per-section API calls for stale vehicles
+          // TODO (production): credit deduction before API call
+          // TODO (production): intelligent package selection — individual sections vs DataPackage2
+          updatePricingStatus(r, 'loading');
+          try {
+            const data = await fetchVehicleData(plate);
+            r._pricing = extractPrices(data.valuation);
+            r._pricingSource = data.source === 'cache' ? 'database' : 'api';
+            r._fullVehicleData = data.fullData;
+            r._vehicleInfo = extractVehicleInfo(data.fullData);
+            r._motInfo = extractMotInfo(data.fullData);
+            updatePricingDisplay(r, idx);
+          } catch (err) {
+            r._pricingError = err.message;
+            updatePricingStatus(r, 'error', err.message);
+          }
+        }
+
+        done++;
+        btn.textContent = 'Fetching... (' + done + '/' + toProcess.length + ')';
+      }
+
+      fetchingPricing = false;
+      btn.textContent = 'Fetch Pricing';
+      btn.disabled = false;
+      showPricingSummary();
+    }
+    window.fetchAllWithCharging = fetchAllWithCharging;
+
+    // ── Image identification via Vertex AI ──
     function fileToGenerativePart(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -289,34 +627,26 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       });
     }
 
-    async function identifyImage(model, file) {
-      // Pre-validation
+    async function identifyImage(file) {
       if (file.size > 20 * 1024 * 1024) {
         return { identified: false, confidence: 0, error: 'File too large (max 20 MB)', _filename: file.name };
       }
 
       const part = await fileToGenerativePart(file);
 
-      // 30s timeout
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
-
       try {
         const result = await model.generateContent({
           contents: [{ role: 'user', parts: [{ text: 'Identify this vehicle.' }, part] }],
         });
-        clearTimeout(timeout);
 
         const text = result.response.text();
         const parsed = JSON.parse(text);
         parsed._filename = file.name;
-        // Clean number plate if present
         if (parsed.number_plate && parsed.number_plate.trim()) {
           parsed.number_plate = cleanPlate(parsed.number_plate);
         }
         return parsed;
       } catch (err) {
-        clearTimeout(timeout);
         return { identified: false, confidence: 0, error: err.message || 'Processing failed', _filename: file.name };
       }
     }
@@ -332,24 +662,15 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       document.getElementById('progress-section').style.display = 'block';
       document.getElementById('results-section').style.display = 'block';
       document.getElementById('results-list').innerHTML = '';
+      document.getElementById('pricing-btn').style.display = 'none';
+      document.getElementById('cancel-btn').style.display = 'inline-block';
+      document.getElementById('cancel-btn').textContent = 'Cancel';
+      document.getElementById('cancel-btn').disabled = false;
 
       const total = selectedFiles.length;
       let completed = 0;
       updateProgress(0, total);
 
-      // Init Firebase AI model
-      const ai = firebase.vertexAI();
-      const model = ai.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-        },
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      });
-
-      // Process with concurrency of 3
       const CONCURRENCY = 3;
       let index = 0;
 
@@ -358,7 +679,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
           const i = index++;
           const file = selectedFiles[i];
           try {
-            const result = await identifyImage(model, file);
+            const result = await identifyImage(file);
             result._objectUrl = URL.createObjectURL(file);
             results.push(result);
             appendResultCard(result);
@@ -380,10 +701,30 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       document.getElementById('start-btn').disabled = false;
       document.getElementById('cancel-btn').style.display = 'none';
       showProcessingSummary();
-    }
 
+      // Analyze freshness instead of auto-fetching
+      const withPlates = results.filter(r => hasValidPlate(r) && isValidUkPlate(getEffectivePlate(r)));
+      if (withPlates.length > 0 && !cancelled) {
+        const plates = withPlates.map(r => getEffectivePlate(r));
+        try {
+          currentBulkAnalysis = await analyzeBulkFreshness(plates);
+          showFreshnessAnalysis(currentBulkAnalysis);
+        } catch (e) {
+          // Fallback: offer manual fetch if analysis fails
+          document.getElementById('pricing-btn').style.display = 'inline-block';
+        }
+      }
+    }
+    window.startProcessing = startProcessing;
+
+    // ── Plate utilities ──
     function cleanPlate(plate) {
       return plate.replace(/\s+/g, '').toUpperCase();
+    }
+
+    function isValidUkPlate(plate) {
+      if (!plate || plate.length < 2 || plate.length > 8) return false;
+      return /^[A-Z0-9]{2,8}$/.test(plate);
     }
 
     function hasValidPlate(r) {
@@ -395,10 +736,329 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       return (r._manualPlate && r._manualPlate.trim()) || r.number_plate || '';
     }
 
+    // ── SHA-256 hash (Web Crypto API) ──
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // ── Vehicle cache & VDGL API ──
+    async function lookupVehicleCache(normalizedPlate) {
+      const hash = await sha256(normalizedPlate);
+      const docRef = doc(db, 'vehicles', hash);
+      const snapshot = await getDoc(docRef);
+      if (!snapshot.exists()) return null;
+      return { hash, data: snapshot.data(), docRef };
+    }
+
+    async function callVdglApi(normalizedPlate, packageName) {
+      const params = new URLSearchParams({
+        vrm: normalizedPlate,
+        package: packageName,
+      });
+      const url = '/api/vdgl?' + params.toString();
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('VDGL proxy returned ' + resp.status);
+      const json = await resp.json();
+      if (json.error) throw new Error(json.error);
+      const info = json.ResponseInformation || {};
+      if (!info.IsSuccessStatusCode) {
+        throw new Error(info.StatusMessage || 'VDGL lookup failed');
+      }
+      return json;
+    }
+
+    async function fetchVehicleData(normalizedPlate) {
+      // 1. Check cache
+      const cached = await lookupVehicleCache(normalizedPlate);
+      if (cached && cached.data.valuation) {
+        // Cache hit — bump scan count in background
+        updateDoc(cached.docRef, {
+          scan_count: increment(1),
+          last_scanned: serverTimestamp(),
+        }).catch(() => {});
+        return { valuation: cached.data.valuation, source: 'database', fullData: cached.data };
+      }
+
+      // 2. Cache miss — call VDGL DataPackage2
+      const json = await callVdglApi(normalizedPlate, 'DataPackage2');
+      const resultsData = json.Results || {};
+
+      const valuation = resultsData.ValuationDetails || null;
+      const vehicleDetails = resultsData.VehicleDetails || null;
+      const modelDetails = resultsData.ModelDetails || null;
+      const motHistory = resultsData.MotHistoryDetails || null;
+      const tyreDetails = resultsData.TyreDetails || null;
+
+      // 3. Write to Firestore cache
+      const hash = await sha256(normalizedPlate);
+      const now = serverTimestamp();
+      const cacheDoc = {};
+      if (valuation) cacheDoc.valuation = valuation;
+      if (vehicleDetails) cacheDoc.vehicle_details = vehicleDetails;
+      if (modelDetails) cacheDoc.model_details = modelDetails;
+      if (motHistory) cacheDoc.mot_history = motHistory;
+      if (tyreDetails) cacheDoc.tyre_details = tyreDetails;
+      cacheDoc.valuation_updated = now;
+      cacheDoc.mot_updated = now;
+      cacheDoc.created_at = now;
+      cacheDoc.scan_count = 1;
+      cacheDoc.last_scanned = now;
+
+      setDoc(doc(db, 'vehicles', hash), cacheDoc).catch(() => {});
+
+      return { valuation, source: 'api', fullData: cacheDoc };
+    }
+
+    function extractPrices(valuation) {
+      if (!valuation) return null;
+      // API response nests prices under ValuationFigures;
+      // cached (Firestore) data uses snake_case at top level.
+      const figures = valuation.ValuationFigures || valuation;
+      const dealer = figures.DealerForecourt || figures.dealer_forecourt || null;
+      const privateSale = figures.PrivateClean || figures.private_clean || null;
+      const trade = figures.TradeRetail || figures.trade_retail || null;
+      const partExchange = figures.PartExchange || figures.part_exchange || null;
+      const auction = figures.Auction || figures.auction || null;
+      if (!dealer && !privateSale && !trade) return null;
+      return { dealer, private: privateSale, trade, partExchange, auction };
+    }
+
+    // ── Extract vehicle details ──
+    function extractVehicleInfo(fullData) {
+      if (!fullData) return null;
+      const vd = fullData.vehicle_details || fullData.VehicleDetails || {};
+      const md = fullData.model_details || fullData.ModelDetails || {};
+      return {
+        vin: vd.Vin || vd.vin || '',
+        fuelType: vd.DvlaFuelType || vd.dvla_fuel_type || md.FuelType || md.fuel_type || '',
+        engineCc: vd.EngineCapacityCc || vd.engine_capacity_cc || md.EngineCapacityCc || md.engine_capacity_cc || '',
+        transmission: md.TransmissionType || md.transmission_type || '',
+        driveType: md.DriveType || md.drive_type || '',
+        bhp: md.Bhp || md.bhp || '',
+        combinedMpg: md.CombinedMpg || md.combined_mpg || '',
+        co2: vd.DvlaCo2 || vd.dvla_co2 || md.ManufacturerCo2 || md.manufacturer_co2 || '',
+        previousKeepers: vd.NumberOfPreviousKeepers || vd.number_of_previous_keepers || '',
+        dateFirstRegistered: vd.DateFirstRegistered || vd.date_first_registered || '',
+        roadTax12m: vd.VedStandard12Months || vd.ved_standard_12_months || '',
+        isImported: vd.IsImported || vd.is_imported || false,
+        isScrapped: vd.IsScrapped || vd.is_scrapped || false,
+      };
+    }
+
+    // ── Extract most recent MOT data ──
+    function extractMotInfo(fullData) {
+      if (!fullData) return null;
+      const mot = fullData.mot_history || fullData.MotHistoryDetails || {};
+      const info = {
+        motDueDate: mot.MotDueDate || mot.mot_due_date || '',
+        latestTestDate: mot.LatestTestDate || mot.latest_test_date || '',
+        daysSinceLastMot: mot.DaysSinceLastMot || mot.days_since_last_mot || '',
+      };
+
+      // Get most recent test from the list
+      const tests = mot.MotTestDetailsList || mot.mot_test_details_list || [];
+      if (tests.length > 0) {
+        const latest = tests[0]; // API returns most recent first
+        info.lastTestPassed = latest.TestPassed != null ? latest.TestPassed : latest.test_passed;
+        info.lastTestDate = latest.TestDate || latest.test_date || '';
+        info.lastMileage = latest.OdometerReading || latest.odometer_reading || '';
+        info.lastMileageUnit = latest.OdometerUnit || latest.odometer_unit || 'mi';
+        info.lastExpiryDate = latest.ExpiryDate || latest.expiry_date || '';
+
+        // Count defects on most recent test
+        const defects = latest.AnnotationList || latest.annotation_list || [];
+        info.advisoryCount = defects.filter(d => (d.Type || d.type || '').toLowerCase() === 'advisory').length;
+        info.failureCount = defects.filter(d => (d.Type || d.type || '').toLowerCase() !== 'advisory').length;
+      }
+
+      // Count overall passes/failures
+      const totalPasses = tests.filter(t => (t.TestPassed != null ? t.TestPassed : t.test_passed) === true).length;
+      const totalFailures = tests.filter(t => (t.TestPassed != null ? t.TestPassed : t.test_passed) === false).length;
+      info.totalPasses = totalPasses;
+      info.totalFailures = totalFailures;
+
+      if (!info.motDueDate && !info.latestTestDate && tests.length === 0) return null;
+      return info;
+    }
+
+    function formatDateStr(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch { return dateStr; }
+    }
+
+    function isMotOverdue(motDueDate) {
+      if (!motDueDate) return false;
+      try { return new Date(motDueDate) < new Date(); } catch { return false; }
+    }
+
+    // ── Fetch pricing for all results ──
+    async function fetchAllPricing() {
+      if (fetchingPricing) return;
+      fetchingPricing = true;
+      const btn = document.getElementById('pricing-btn');
+      btn.disabled = true;
+      btn.textContent = 'Fetching...';
+
+      const toPrice = results.filter(r => hasValidPlate(r) && isValidUkPlate(getEffectivePlate(r)) && !r._pricing);
+      let done = 0;
+
+      for (const r of toPrice) {
+        const plate = getEffectivePlate(r);
+        const idx = results.indexOf(r);
+        updatePricingStatus(r, 'loading');
+
+        try {
+          const data = await fetchVehicleData(plate);
+          const prices = extractPrices(data.valuation);
+          r._pricing = prices;
+          r._pricingSource = data.source;
+          r._fullVehicleData = data.fullData;
+          r._vehicleInfo = extractVehicleInfo(data.fullData);
+          r._motInfo = extractMotInfo(data.fullData);
+          updatePricingDisplay(r, idx);
+        } catch (err) {
+          r._pricingError = err.message;
+          updatePricingStatus(r, 'error', err.message);
+        }
+        done++;
+        btn.textContent = 'Fetching... (' + done + '/' + toPrice.length + ')';
+      }
+
+      fetchingPricing = false;
+      btn.textContent = 'Fetch Pricing';
+      btn.disabled = false;
+      showPricingSummary();
+    }
+    window.fetchAllPricing = fetchAllPricing;
+
+    function updatePricingStatus(r, status, message) {
+      const card = r._cardEl;
+      if (!card) return;
+      let area = card.querySelector('.pricing-area');
+      if (!area) {
+        area = document.createElement('div');
+        area.className = 'pricing-area';
+        card.querySelector('.result-card-bulk-info').appendChild(area);
+      }
+      if (status === 'loading') {
+        area.innerHTML = '<span class="pricing-loading">Fetching valuation...</span>';
+      } else if (status === 'error') {
+        area.innerHTML = '<span class="pricing-error">Pricing failed: ' + escapeHtml(message || 'Unknown error') + '</span>';
+      }
+    }
+
+    function updatePricingDisplay(r, idx) {
+      const card = r._cardEl;
+      if (!card) return;
+      let area = card.querySelector('.pricing-area');
+      if (!area) {
+        area = document.createElement('div');
+        area.className = 'pricing-area';
+        card.querySelector('.result-card-bulk-info').appendChild(area);
+      }
+
+      const prices = r._pricing;
+      if (!prices) {
+        area.innerHTML = '<span class="pricing-error">No pricing data available</span>';
+        return;
+      }
+
+      // Freshness cost chip
+      const fa = r._freshnessAnalysis;
+      let html = '';
+      if (fa) {
+        if (fa.status === 'fresh') {
+          html += '<span class="pricing-chip freshness fresh">Database &#10003;</span> ';
+        } else if (fa.status === 'stale') {
+          html += '<span class="pricing-chip freshness stale">Refresh: &pound;' + fa.estimatedCost.toFixed(2) + '</span> ';
+        } else {
+          html += '<span class="pricing-chip freshness new">New lookup: &pound;' + VDGL_SECTION_PRICES.full.toFixed(2) + '</span> ';
+        }
+      }
+
+      // Data age indicators
+      if (fa && (fa.valuationAge != null || fa.motAge != null)) {
+        html += '<div class="data-age">';
+        if (fa.valuationAge != null) {
+          const cls = ageClass(fa.valuationAge, FRESHNESS_MS.valuation);
+          html += '<span class="' + cls + '">Valuation: ' + formatAge(fa.valuationAge) + '</span>';
+        }
+        if (fa.motAge != null) {
+          const cls = ageClass(fa.motAge, FRESHNESS_MS.mot);
+          html += (fa.valuationAge != null ? ' &middot; ' : '') + '<span class="' + cls + '">MOT: ' + formatAge(fa.motAge) + '</span>';
+        }
+        html += '</div>';
+      }
+
+      html += '<div class="pricing-row">';
+      if (prices.dealer) html += '<span class="pricing-chip dealer">Dealer: &pound;' + formatPrice(prices.dealer) + '</span>';
+      if (prices.private) html += '<span class="pricing-chip private">Private: &pound;' + formatPrice(prices.private) + '</span>';
+      if (prices.trade) html += '<span class="pricing-chip trade">Trade: &pound;' + formatPrice(prices.trade) + '</span>';
+      if (prices.partExchange) html += '<span class="pricing-chip trade">P/X: &pound;' + formatPrice(prices.partExchange) + '</span>';
+      if (prices.auction) html += '<span class="pricing-chip trade">Auction: &pound;' + formatPrice(prices.auction) + '</span>';
+      html += '</div>';
+
+      // Vehicle details
+      const vi = r._vehicleInfo;
+      if (vi) {
+        html += '<div style="margin-top:8px; font-size:12px; color:var(--text-secondary); line-height:1.6;">';
+        const details = [];
+        if (vi.fuelType) details.push(vi.fuelType);
+        if (vi.engineCc) details.push(vi.engineCc + 'cc');
+        if (vi.bhp) details.push(vi.bhp + ' BHP');
+        if (vi.transmission) details.push(vi.transmission);
+        if (vi.driveType) details.push(vi.driveType);
+        if (vi.combinedMpg) details.push(vi.combinedMpg + ' MPG');
+        if (details.length) html += details.join(' &middot; ');
+        const extras = [];
+        if (vi.previousKeepers !== '') extras.push(vi.previousKeepers + ' prev. keeper' + (vi.previousKeepers == 1 ? '' : 's'));
+        if (vi.dateFirstRegistered) extras.push('Reg: ' + formatDateStr(vi.dateFirstRegistered));
+        if (vi.co2) extras.push('CO₂: ' + vi.co2 + 'g/km');
+        if (vi.roadTax12m) extras.push('Tax: £' + vi.roadTax12m + '/yr');
+        if (extras.length) html += '<br>' + extras.join(' &middot; ');
+        if (vi.isImported) html += '<br><span style="color:orange;">⚠ Imported</span>';
+        if (vi.isScrapped) html += '<br><span style="color:red;">⚠ Scrapped</span>';
+        html += '</div>';
+      }
+
+      // MOT info — most recent test
+      const mot = r._motInfo;
+      if (mot) {
+        html += '<div style="margin-top:6px; font-size:12px; line-height:1.6;">';
+        if (mot.lastTestPassed != null) {
+          const passed = mot.lastTestPassed;
+          html += '<span style="font-weight:600; color:' + (passed ? 'green' : 'red') + ';">MOT: ' + (passed ? 'PASS' : 'FAIL') + '</span>';
+          if (mot.lastTestDate) html += ' <span style="color:var(--text-secondary);">(' + formatDateStr(mot.lastTestDate) + ')</span>';
+          if (mot.lastMileage) html += ' <span style="color:var(--text-secondary);">&middot; ' + Number(mot.lastMileage).toLocaleString() + ' ' + (mot.lastMileageUnit || 'mi') + '</span>';
+          if (mot.advisoryCount > 0) html += ' <span style="color:orange;">&middot; ' + mot.advisoryCount + ' advisor' + (mot.advisoryCount === 1 ? 'y' : 'ies') + '</span>';
+          if (mot.failureCount > 0) html += ' <span style="color:red;">&middot; ' + mot.failureCount + ' failure' + (mot.failureCount === 1 ? '' : 's') + '</span>';
+        }
+        if (mot.motDueDate) {
+          const overdue = isMotOverdue(mot.motDueDate);
+          html += '<br><span style="color:' + (overdue ? 'red; font-weight:600;' : 'var(--text-secondary);') + '">MOT due: ' + formatDateStr(mot.motDueDate) + (overdue ? ' (OVERDUE)' : '') + '</span>';
+        }
+        html += '</div>';
+      }
+
+      area.innerHTML = html;
+    }
+
+    function formatPrice(value) {
+      const num = typeof value === 'string' ? parseFloat(value) : value;
+      if (isNaN(num)) return value;
+      return num.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
     function showProcessingSummary() {
       if (results.length === 0 || cancelled) return;
-      const withPlate = results.filter(r => hasValidPlate(r)).length;
+      const withPlate = results.filter(r => hasValidPlate(r) && isValidUkPlate(getEffectivePlate(r))).length;
       const identifiedNoPlate = results.filter(r => r.identified && !hasValidPlate(r)).length;
+      const invalidPlate = results.filter(r => hasValidPlate(r) && !isValidUkPlate(getEffectivePlate(r))).length;
       const failed = results.filter(r => !r.identified).length;
       const noPlateTotal = identifiedNoPlate + failed;
 
@@ -407,12 +1067,41 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       if (withPlate > 0) {
         html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:green;font-size:18px;">&#10003;</span> <span><strong>' + withPlate + '</strong> image' + (withPlate === 1 ? '' : 's') + ' suitable for pricing</span></div>';
       }
+      if (invalidPlate > 0) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:orange;font-size:18px;">&#9888;</span> <span><strong>' + invalidPlate + '</strong> image' + (invalidPlate === 1 ? '' : 's') + ' with invalid plate format</span></div>';
+      }
       if (noPlateTotal > 0) {
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:orange;font-size:18px;">&#9888;</span> <span><strong>' + noPlateTotal + '</strong> image' + (noPlateTotal === 1 ? '' : 's') + ' failed to recognise a number plate</span></div>';
-        html += '<p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0 26px;">Please recapture these images or enter the number plates manually using the edit buttons below.</p>';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:orange;font-size:18px;">&#9888;</span> <span><strong>' + noPlateTotal + '</strong> image' + (noPlateTotal === 1 ? '' : 's') + ' without a number plate</span></div>';
+        html += '<p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0 26px;">Enter plates manually using the edit buttons below, then click "Fetch Pricing".</p>';
       }
       summaryEl.innerHTML = html;
       summaryEl.style.display = 'block';
+
+      const unpricedWithPlate = results.filter(r => hasValidPlate(r) && isValidUkPlate(getEffectivePlate(r)) && !r._pricing).length;
+      document.getElementById('pricing-btn').style.display = unpricedWithPlate > 0 ? 'inline-block' : 'none';
+    }
+
+    function showPricingSummary() {
+      const priced = results.filter(r => r._pricing).length;
+      const priceFailed = results.filter(r => r._pricingError).length;
+
+      if (priced === 0 && priceFailed === 0) return;
+
+      const summaryEl = document.getElementById('summary-banner');
+      let html = summaryEl.innerHTML;
+      if (priced > 0) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:green;font-size:18px;">&#163;</span> <span><strong>' + priced + '</strong> vehicle' + (priced === 1 ? '' : 's') + ' priced successfully</span></div>';
+      }
+      if (priceFailed > 0) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:red;font-size:18px;">&#10007;</span> <span><strong>' + priceFailed + '</strong> pricing lookup' + (priceFailed === 1 ? '' : 's') + ' failed</span></div>';
+      }
+      summaryEl.innerHTML = html;
+
+      // Show forecourt totals
+      showTotals();
+
+      const unpriced = results.filter(r => hasValidPlate(r) && isValidUkPlate(getEffectivePlate(r)) && !r._pricing && !r._pricingError).length;
+      document.getElementById('pricing-btn').style.display = unpriced > 0 ? 'inline-block' : 'none';
     }
 
     function cancelProcessing() {
@@ -420,6 +1109,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       document.getElementById('cancel-btn').textContent = 'Cancelling...';
       document.getElementById('cancel-btn').disabled = true;
     }
+    window.cancelProcessing = cancelProcessing;
 
     function updateProgress(done, total) {
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -448,7 +1138,6 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         if (r.body_style) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.body_style + '</span>';
         if (r.colour) html += ' <span style="font-size:13px; color:var(--text-secondary);">&middot; ' + r.colour + '</span>';
 
-        // Plate display or manual entry prompt
         const plate = getEffectivePlate(r);
         html += '<br><span class="plate-area" data-idx="' + (results.length - 1) + '">';
         if (plate) {
@@ -460,6 +1149,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         html += '</span>';
 
         html += '<br><span style="font-size:12px; color:var(--text-secondary);">Confidence: ' + Math.round((r.confidence || 0) * 100) + '%</span>';
+        html += '<div class="pricing-area"></div>';
       } else {
         html += '<strong style="color:var(--danger);">Not identified</strong>';
         if (r.error) html += '<br><span style="font-size:13px; color:var(--danger);">' + escapeHtml(r.error) + '</span>';
@@ -479,8 +1169,9 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       if (input === null) return;
       const cleaned = cleanPlate(input);
       r._manualPlate = cleaned;
+      r._pricing = null;
+      r._pricingError = null;
 
-      // Re-render just this card's plate area
       const card = r._cardEl;
       if (card) {
         const plateArea = card.querySelector('.plate-area');
@@ -492,12 +1183,13 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
             plateArea.innerHTML = '<button class="btn-enter-plate" onclick="editPlate(' + idx + ')" style="background:none;border:1px solid orange;border-radius:4px;cursor:pointer;color:orange;font-size:12px;padding:2px 8px;font-weight:500;">&#9998; No plate — click to enter</button>';
           }
         }
-        // Update card border
+        const pricingArea = card.querySelector('.pricing-area');
+        if (pricingArea) pricingArea.innerHTML = '';
         card.classList.toggle('needs-plate', !hasValidPlate(r));
       }
-      // Refresh summary
       showProcessingSummary();
     }
+    window.editPlate = editPlate;
 
     function escapeHtml(str) {
       const d = document.createElement('div');
@@ -505,26 +1197,228 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       return d.innerHTML;
     }
 
+    // ── Export menu ──
+    function toggleExportMenu() {
+      document.getElementById('export-menu').classList.toggle('open');
+    }
+    function closeExportMenu() {
+      document.getElementById('export-menu').classList.remove('open');
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.export-wrap')) closeExportMenu();
+    });
+    window.toggleExportMenu = toggleExportMenu;
+    window.closeExportMenu = closeExportMenu;
+
+    // ── Forecourt totals ──
+    function computeTotals() {
+      const priced = results.filter(r => r._pricing);
+      if (priced.length === 0) return null;
+      const sum = (key) => priced.reduce((s, r) => s + (parseFloat(r._pricing[key]) || 0), 0);
+      return {
+        count: priced.length,
+        dealer: sum('dealer'),
+        private: sum('private'),
+        trade: sum('trade'),
+        partExchange: sum('partExchange'),
+        auction: sum('auction'),
+      };
+    }
+
+    function showTotals() {
+      const totals = computeTotals();
+      const card = document.getElementById('totals-card');
+      if (!totals) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      const grid = document.getElementById('totals-grid');
+      const items = [
+        { label: 'Dealer Forecourt', value: totals.dealer },
+        { label: 'Private Sale', value: totals.private },
+        { label: 'Trade Retail', value: totals.trade },
+        { label: 'Part Exchange', value: totals.partExchange },
+        { label: 'Auction', value: totals.auction },
+      ].filter(i => i.value > 0);
+
+      grid.innerHTML = items.map(i =>
+        '<div class="total-item">'
+        + '<div class="total-label">' + i.label + '</div>'
+        + '<div class="total-value">&pound;' + formatPrice(i.value) + '</div>'
+        + '<div class="total-count">' + totals.count + ' vehicle' + (totals.count === 1 ? '' : 's') + '</div>'
+        + '</div>'
+      ).join('');
+    }
+
+    // ── Export data helper ──
+    function getExportRows() {
+      return results.filter(r => r.identified).map(r => {
+        const vi = r._vehicleInfo || {};
+        const mot = r._motInfo || {};
+        return {
+          'Registration': getEffectivePlate(r),
+          'Make': r.make || '',
+          'Model': r.model || '',
+          'Year': r.year_min ? (r.year_min === r.year_max ? String(r.year_min) : r.year_min + '–' + (r.year_max || '?')) : '',
+          'Generation': r.generation || '',
+          'Trim': r.trim || '',
+          'Body Style': r.body_style || '',
+          'Colour': r.colour || '',
+          'Fuel Type': vi.fuelType || '',
+          'Engine (cc)': vi.engineCc || '',
+          'BHP': vi.bhp || '',
+          'Transmission': vi.transmission || '',
+          'MPG': vi.combinedMpg || '',
+          'CO2 (g/km)': vi.co2 || '',
+          'Prev. Keepers': vi.previousKeepers !== '' && vi.previousKeepers !== undefined ? vi.previousKeepers : '',
+          'First Registered': vi.dateFirstRegistered ? formatDateStr(vi.dateFirstRegistered) : '',
+          'MOT Due': mot.motDueDate ? formatDateStr(mot.motDueDate) : '',
+          'Last MOT Result': mot.lastTestPassed != null ? (mot.lastTestPassed ? 'Pass' : 'Fail') : '',
+          'Last MOT Date': mot.lastTestDate ? formatDateStr(mot.lastTestDate) : '',
+          'Last MOT Mileage': mot.lastMileage ? Number(mot.lastMileage).toLocaleString() : '',
+          'MOT Advisories': mot.advisoryCount || '',
+          'Dealer (£)': r._pricing ? (r._pricing.dealer || '') : '',
+          'Private (£)': r._pricing ? (r._pricing.private || '') : '',
+          'Trade (£)': r._pricing ? (r._pricing.trade || '') : '',
+          'Part Ex (£)': r._pricing ? (r._pricing.partExchange || '') : '',
+          'Auction (£)': r._pricing ? (r._pricing.auction || '') : '',
+          'Confidence': r.confidence ? Math.round(r.confidence * 100) + '%' : '',
+          'Notes': r.notes || '',
+        };
+      });
+    }
+
+    function getExportFilename(ext) {
+      return 'autospotter_bulk_' + new Date().toISOString().slice(0, 10) + '.' + ext;
+    }
+
     // ── CSV export ──
     function exportCSV() {
-      if (results.length === 0) return;
-      const headers = ['filename','identified','confidence','make','model','year_min','year_max','generation','trim','body_style','colour','number_plate','notes','error'];
-      const rows = results.map(r => headers.map(h => {
-        const v = h === 'filename' ? r._filename
-          : h === 'number_plate' ? getEffectivePlate(r)
-          : r[h];
-        if (v == null) return '';
+      const rows = getExportRows();
+      if (rows.length === 0) return;
+      const headers = Object.keys(rows[0]);
+      const csvRows = rows.map(r => headers.map(h => {
+        let v = r[h];
+        if (v == null) v = '';
         const s = String(v);
         return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
       }).join(','));
-
-      const csv = headers.join(',') + '\n' + rows.join('\n');
+      const csv = headers.join(',') + '\n' + csvRows.join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'autospotter_bulk_results_' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.download = getExportFilename('csv');
       a.click();
     }
+    window.exportCSV = exportCSV;
+
+    // ── Excel export ──
+    function exportExcel() {
+      const rows = getExportRows();
+      if (rows.length === 0) return;
+      const totals = computeTotals();
+
+      // Data rows
+      const wsData = [Object.keys(rows[0])];
+      rows.forEach(r => wsData.push(Object.values(r)));
+
+      // Blank row then totals
+      if (totals) {
+        wsData.push([]);
+        // Columns: Reg,Make,Model,Year,Gen,Trim,Body,Colour,Fuel,CC,BHP,Trans,MPG,CO2,Keepers,FirstReg,MOTDue,MOTResult,MOTDate,MOTMiles,Advisories, Dealer,Private,Trade,PX,Auction,Confidence,Notes
+        const totalsRow = new Array(28).fill('');
+        totalsRow[0] = 'TOTALS';
+        totalsRow[21] = totals.dealer || '';
+        totalsRow[22] = totals.private || '';
+        totalsRow[23] = totals.trade || '';
+        totalsRow[24] = totals.partExchange || '';
+        totalsRow[25] = totals.auction || '';
+        totalsRow[26] = rows.length + ' vehicles';
+        wsData.push(totalsRow);
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      // Auto-width columns
+      ws['!cols'] = Object.keys(rows[0]).map((h, i) => {
+        const maxLen = Math.max(h.length, ...rows.map(r => String(Object.values(r)[i] || '').length));
+        return { wch: Math.min(maxLen + 2, 30) };
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Vehicles');
+      XLSX.writeFile(wb, getExportFilename('xlsx'));
+    }
+    window.exportExcel = exportExcel;
+
+    // ── PDF export ──
+    function exportPDF() {
+      const rows = getExportRows();
+      if (rows.length === 0) return;
+      const totals = computeTotals();
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+      // Title
+      doc.setFontSize(18);
+      doc.setTextColor(13, 71, 161);
+      doc.text('AutoSpotter — Bulk Vehicle Report', 14, 18);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text('Generated: ' + new Date().toLocaleDateString('en-GB') + '  |  ' + rows.length + ' vehicle' + (rows.length === 1 ? '' : 's'), 14, 25);
+
+      // Table
+      const headers = ['Reg', 'Make', 'Model', 'Year', 'Colour', 'Fuel', 'MOT', 'MOT Date', 'Mileage', 'Dealer (£)', 'Private (£)', 'Trade (£)', 'P/X (£)', 'Auction (£)'];
+      const body = rows.map(r => [
+        r['Registration'], r['Make'], r['Model'], r['Year'], r['Colour'],
+        r['Fuel Type'],
+        r['Last MOT Result'],
+        r['Last MOT Date'],
+        r['Last MOT Mileage'],
+        r['Dealer (£)'] ? Number(r['Dealer (£)']).toLocaleString() : '',
+        r['Private (£)'] ? Number(r['Private (£)']).toLocaleString() : '',
+        r['Trade (£)'] ? Number(r['Trade (£)']).toLocaleString() : '',
+        r['Part Ex (£)'] ? Number(r['Part Ex (£)']).toLocaleString() : '',
+        r['Auction (£)'] ? Number(r['Auction (£)']).toLocaleString() : '',
+      ]);
+
+      // Totals row
+      if (totals) {
+        body.push([
+          { content: 'TOTALS', styles: { fontStyle: 'bold' } }, '', '', '', '', '', '', '', '',
+          { content: totals.dealer ? '£' + formatPrice(totals.dealer) : '', styles: { fontStyle: 'bold' } },
+          { content: totals.private ? '£' + formatPrice(totals.private) : '', styles: { fontStyle: 'bold' } },
+          { content: totals.trade ? '£' + formatPrice(totals.trade) : '', styles: { fontStyle: 'bold' } },
+          { content: totals.partExchange ? '£' + formatPrice(totals.partExchange) : '', styles: { fontStyle: 'bold' } },
+          { content: totals.auction ? '£' + formatPrice(totals.auction) : '', styles: { fontStyle: 'bold' } },
+        ]);
+      }
+
+      doc.autoTable({
+        head: [headers],
+        body: body,
+        startY: 30,
+        theme: 'grid',
+        headStyles: { fillColor: [13, 71, 161], fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8 },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        columnStyles: {
+          9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' },
+          12: { halign: 'right' }, 13: { halign: 'right' },
+        },
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(180);
+        doc.text('AutoSpotter by Axiom Forge Software  |  Estimates only — see data disclaimer', 14, doc.internal.pageSize.height - 8);
+        doc.text('Page ' + i + ' of ' + pageCount, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 8);
+      }
+
+      doc.save(getExportFilename('pdf'));
+    }
+    window.exportPDF = exportPDF;
   </script>
 </body>
 </html>

@@ -287,6 +287,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
       if (!cacheResult.wasCacheHit) {
         await PlanService().recordValuationScan(user.uid);
       }
+      if (!mounted) return;
       setState(() {
         _report = report;
         _valuation = report.valuation;
@@ -296,12 +297,14 @@ class _ResultsScreenState extends State<ResultsScreen> {
       // Refresh allowance for button hint
       _loadAllowance();
     } on ValuationException catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.message;
         _loading = false;
         _retryStatus = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Unable to fetch valuation. Please check your connection and try again.';
         _loading = false;
@@ -312,8 +315,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPopNow = _saved || _valuation == null || !identification.identified;
     return PopScope(
-      canPop: false,
+      canPop: canPopNow,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final shouldPop = await _onWillPop();

@@ -26,12 +26,21 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": {
+    "source": "functions"
+  },
   "hosting": {
     "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/vdgl",
+        "function": "vdglProxy"
+      }
     ],
     "headers": [
       {

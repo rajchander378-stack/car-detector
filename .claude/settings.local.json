@@ -52,7 +52,9 @@
       "WebFetch(domain:uk.api.vehicledataglobal.com)",
       "Bash(gcloud:*)",
       "Bash(mkdir:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:vehicledataglobal.com)",
+      "WebFetch(domain:www.scribd.com)"
     ]
   }
 }
