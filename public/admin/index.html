@@ -27,6 +27,30 @@
       line-height: 1.5;
     }
 
+    /* Site nav — matches global style.css nav */
+    .site-nav {
+      text-align: center;
+      padding: 12px 20px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 101;
+    }
+    .site-nav a {
+      margin: 0 12px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .site-nav a:hover { color: var(--primary); }
+    .site-nav a.active { color: var(--primary); font-weight: 700; }
+    @media (max-width: 600px) {
+      .site-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+      .site-nav a { margin: 0 4px; }
+    }
+
     /* Top bar */
     .topbar {
       background: var(--primary);
@@ -36,7 +60,7 @@
       justify-content: space-between;
       align-items: center;
       position: sticky;
-      top: 0;
+      top: 46px;
       z-index: 100;
     }
     .topbar h1 { font-size: 18px; font-weight: 600; }
@@ -487,6 +511,94 @@
       background: white;
     }
 
+    /* VDGL usage */
+    .vdgl-cost-big {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--danger);
+    }
+    .vdgl-chart-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 120px;
+      padding: 0 4px;
+    }
+    .vdgl-bar {
+      flex: 1;
+      min-width: 18px;
+      max-width: 40px;
+      background: var(--primary);
+      border-radius: 4px 4px 0 0;
+      position: relative;
+      transition: height 0.3s;
+      cursor: default;
+    }
+    .vdgl-bar:hover { opacity: 0.85; }
+    .vdgl-bar-label {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .vdgl-bar-value {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .vdgl-chart-wrap {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .vdgl-chart-wrap h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .vdgl-period-btns {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-left: 12px;
+    }
+    .vdgl-period-btns button {
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      background: var(--card-bg);
+      color: var(--text-secondary);
+    }
+    .vdgl-period-btns button.active {
+      background: var(--primary);
+      color: white;
+    }
+    .pkg-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pkg-DataPackage2 { background: #e3f2fd; color: #1565c0; }
+    .pkg-ValuationDetails { background: #fff3e0; color: #e65100; }
+    .pkg-MotHistoryDetails { background: #f3e5f5; color: #6a1b9a; }
+    .pkg-VehicleDetails { background: #e8f5e9; color: #2e7d32; }
+    .pkg-TyreDetails { background: #fce4ec; color: #c62828; }
+
     /* Responsive */
     @media (max-width: 768px) {
       .table-wrap { overflow-x: auto; }
@@ -496,6 +608,19 @@
   </style>
 </head>
 <body>
+
+<!-- Site Navigation -->
+<div class="site-nav">
+  <a href="/">Home</a>
+  <a href="/dashboard.html">Dashboard</a>
+  <a href="/garage.html">My Garage</a>
+  <a id="inbox-link" href="/inbox.html" style="display:none;">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
+  <a href="/pricing.html">Pricing</a>
+  <a id="bulk-link" href="/bulk-upload.html" style="display:none; font-weight:600; color:#d4a017;">Bulk Upload</a>
+  <a href="/admin/" class="active">Admin</a>
+  <a href="/contact.html">Contact</a>
+  <a href="/privacy-policy.html">Privacy</a>
+</div>
 
 <!-- Login Screen -->
 <div id="login-screen" class="login-screen" style="display:none;">
@@ -524,7 +649,8 @@
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('lockouts',this)">Lockouts</button>
       <button class="tab-btn" onclick="switchTab('users',this)">Users</button>
-      <button class="tab-btn" onclick="switchTab('messages',this)">Messages <span id="msg-badge" style="display:none;background:var(--danger);color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;"></span></button>
+      <a href="/inbox.html" class="tab-btn" style="text-decoration:none;">Inbox</a>
+      <button class="tab-btn" onclick="switchTab('vdgl',this)">VDGL</button>
     </div>
 
     <!-- Lockouts Tab -->
@@ -633,55 +759,75 @@
       </div>
     </div>
 
-    <!-- Messages Tab -->
-    <div id="tab-messages" class="tab-content">
+    <!-- VDGL Usage Tab -->
+    <div id="tab-vdgl" class="tab-content">
+      <!-- Stats -->
       <div class="stats">
         <div class="stat-card">
-          <div class="number" id="stat-total-msgs">-</div>
-          <div class="label">Total Messages</div>
+          <div class="number" id="vdgl-calls-today">-</div>
+          <div class="label">Calls Today</div>
         </div>
         <div class="stat-card">
-          <div class="number" id="stat-unreplied" style="color:var(--danger)">-</div>
-          <div class="label">Awaiting Reply</div>
+          <div class="number vdgl-cost-big" id="vdgl-cost-today">-</div>
+          <div class="label">Cost Today</div>
         </div>
         <div class="stat-card">
-          <div class="number" id="stat-urgent" style="color:var(--warning)">-</div>
-          <div class="label">Urgent</div>
+          <div class="number" id="vdgl-calls-month">-</div>
+          <div class="label">Calls This Month</div>
         </div>
         <div class="stat-card">
-          <div class="number" id="stat-replied" style="color:var(--success)">-</div>
-          <div class="label">Replied</div>
+          <div class="number vdgl-cost-big" id="vdgl-cost-month">-</div>
+          <div class="label">Cost This Month</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="vdgl-errors-month" style="color:var(--danger)">-</div>
+          <div class="label">Errors This Month</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="vdgl-success-rate" style="color:var(--success)">-</div>
+          <div class="label">Success Rate</div>
         </div>
       </div>
 
-      <div class="filters">
-        <button class="filter-btn active" data-filter="all" onclick="setMsgFilter('all',this)">All</button>
-        <button class="filter-btn" data-filter="unreplied" onclick="setMsgFilter('unreplied',this)">Awaiting Reply</button>
-        <button class="filter-btn" data-filter="urgent" onclick="setMsgFilter('urgent',this)">Urgent</button>
-        <button class="filter-btn" data-filter="high" onclick="setMsgFilter('high',this)">High</button>
-        <button class="filter-btn" data-filter="replied" onclick="setMsgFilter('replied',this)">Replied</button>
+      <!-- Daily chart -->
+      <div class="vdgl-chart-wrap">
+        <h3 style="display:inline;">Daily API Calls
+          <span class="vdgl-period-btns">
+            <button class="active" onclick="setVdglPeriod(14,this)">14d</button>
+            <button onclick="setVdglPeriod(30,this)">30d</button>
+          </span>
+        </h3>
+        <div id="vdgl-chart" class="vdgl-chart-bar" style="margin-top:24px;margin-bottom:24px;"></div>
       </div>
 
-      <div id="msgs-loading" class="loading">Loading messages...</div>
-      <div id="msgs-table-section" style="display:none;">
+      <!-- Package breakdown -->
+      <div class="vdgl-chart-wrap">
+        <h3>Package Breakdown (This Month)</h3>
+        <div id="vdgl-pkg-breakdown" style="font-size:14px;">Loading...</div>
+      </div>
+
+      <!-- Recent calls table -->
+      <div id="vdgl-loading" class="loading">Loading VDGL usage data...</div>
+      <div id="vdgl-table-section" style="display:none;">
+        <h3 style="margin-bottom:12px;">Recent API Calls</h3>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Priority</th>
-                <th>From</th>
-                <th>Subject</th>
-                <th>Message</th>
-                <th>Received</th>
-                <th>Actions</th>
+                <th>Time</th>
+                <th>VRM Hash</th>
+                <th>Package</th>
+                <th>Cost</th>
+                <th>Source</th>
+                <th>Status</th>
               </tr>
             </thead>
-            <tbody id="msgs-body"></tbody>
+            <tbody id="vdgl-body"></tbody>
           </table>
         </div>
-        <div id="msgs-empty" class="empty" style="display:none;">
-          <div class="empty-icon">&#128172;</div>
-          <p>No messages found</p>
+        <div id="vdgl-empty" class="empty" style="display:none;">
+          <div class="empty-icon">&#128200;</div>
+          <p>No VDGL API calls recorded yet</p>
         </div>
       </div>
     </div>
@@ -716,7 +862,7 @@
   const provider = new firebase.auth.GoogleAuthProvider();
 
   let currentFilter = 'all';
-  let currentMsgFilter = 'all';
+
   let allEvents = [];
   let allUsers = [];
   let allMessages = [];
@@ -793,6 +939,10 @@
     if (unsubscribe) unsubscribe();
     if (unsubscribeUsers) unsubscribeUsers();
     if (unsubscribeMessages) unsubscribeMessages();
+    if (unsubscribeVdgl) unsubscribeVdgl();
+    if (unsubscribeVdglCalls) unsubscribeVdglCalls();
+    if (window._inboxBadgeUnsub) { window._inboxBadgeUnsub(); window._inboxBadgeUnsub = null; }
+    document.getElementById('inbox-link').style.display = 'none';
     auth.signOut();
   }
 
@@ -813,6 +963,19 @@
     startListening();
     startListeningUsers();
     startListeningMessages();
+    startListeningVdgl();
+
+    // Site nav: show inbox link + badge, bulk upload link
+    document.getElementById('inbox-link').style.display = '';
+    document.getElementById('bulk-link').style.display = '';
+    if (window._inboxBadgeUnsub) window._inboxBadgeUnsub();
+    window._inboxBadgeUnsub = db.collection('messages')
+      .where('to_uid', '==', user.uid).where('read', '==', false)
+      .onSnapshot(s => {
+        const b = document.getElementById('inbox-badge');
+        if (s.size > 0) { b.textContent = s.size; b.style.display = 'inline'; }
+        else { b.style.display = 'none'; }
+      });
   }
 
   // --- Real-time data ---
@@ -1133,130 +1296,64 @@
     return 'offline';
   }
 
-  // --- Messages ---
+  // --- Messages (data for user detail panel) ---
 
   function startListeningMessages() {
     unsubscribeMessages = db.collection('messages')
       .orderBy('created_at', 'desc')
-      .limit(200)
+      .limit(500)
       .onSnapshot((snapshot) => {
         allMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        updateMsgStats();
-        renderMsgsTable();
-        document.getElementById('msgs-loading').style.display = 'none';
-        document.getElementById('msgs-table-section').style.display = 'block';
       }, (err) => {
         console.error('Messages listener error:', err);
-        document.getElementById('msgs-loading').textContent = 'Failed to load messages. Check Firestore rules.';
       });
   }
 
-  function updateMsgStats() {
-    const total = allMessages.length;
-    const unreplied = allMessages.filter(m => !m.admin_reply).length;
-    const urgent = allMessages.filter(m => m.priority === 'urgent' && !m.admin_reply).length;
-    const replied = allMessages.filter(m => m.admin_reply).length;
-
-    document.getElementById('stat-total-msgs').textContent = total;
-    document.getElementById('stat-unreplied').textContent = unreplied;
-    document.getElementById('stat-urgent').textContent = urgent;
-    document.getElementById('stat-replied').textContent = replied;
-
-    // Update badge on tab
-    const badge = document.getElementById('msg-badge');
-    if (unreplied > 0) {
-      badge.textContent = unreplied;
-      badge.style.display = 'inline';
-    } else {
-      badge.style.display = 'none';
-    }
+  function toMsAdmin(ts) {
+    if (!ts) return 0;
+    if (ts.toDate) return ts.toDate().getTime();
+    if (ts.seconds) return ts.seconds * 1000;
+    return 0;
   }
 
-  function setMsgFilter(filter, btn) {
-    currentMsgFilter = filter;
-    document.querySelectorAll('#tab-messages .filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderMsgsTable();
+  function threadHasReply(thread) {
+    return thread.some(m => m.admin_reply) || thread.some(m => m.is_admin_msg);
   }
 
-  function renderMsgsTable() {
-    const tbody = document.getElementById('msgs-body');
-    const empty = document.getElementById('msgs-empty');
+  async function sendMessageToUser(userId) {
+    const subjectEl = document.getElementById('admin-compose-subject');
+    const bodyEl = document.getElementById('admin-compose-body');
+    const subject = subjectEl.value.trim();
+    const body = bodyEl.value.trim();
+    if (!subject || !body) { alert('Please fill in subject and message.'); return; }
 
-    let filtered = allMessages;
-    if (currentMsgFilter === 'unreplied') {
-      filtered = allMessages.filter(m => !m.admin_reply);
-    } else if (currentMsgFilter === 'urgent') {
-      filtered = allMessages.filter(m => m.priority === 'urgent');
-    } else if (currentMsgFilter === 'high') {
-      filtered = allMessages.filter(m => m.priority === 'high');
-    } else if (currentMsgFilter === 'replied') {
-      filtered = allMessages.filter(m => m.admin_reply);
-    }
+    const adminUser = auth.currentUser;
+    const targetUser = allUsers.find(u => u.id === userId);
+    const toEmail = targetUser ? (targetUser.email || '') : '';
 
-    if (filtered.length === 0) {
-      tbody.innerHTML = '';
-      empty.style.display = 'block';
-      return;
-    }
-    empty.style.display = 'none';
-
-    tbody.innerHTML = filtered.map(msg => {
-      const priority = msg.priority || 'normal';
-      const priorityBadge = '<span class="priority priority-' + priority + '">' + priority + '</span>';
-      const from = escapeHtml(msg.user_name || msg.user_email || 'Unknown');
-      const email = escapeHtml(msg.user_email || '');
-      const subject = escapeHtml(msg.subject || '-');
-      const body = escapeHtml(msg.body || '');
-      const ts = msg.created_at ? formatTimestamp(msg.created_at.toDate()) : 'Pending...';
-
-      let actionsHtml;
-      if (msg.admin_reply) {
-        actionsHtml = '<div class="admin-reply-text"><strong>Replied:</strong> '
-          + escapeHtml(msg.admin_reply) + '</div>';
-        if (msg.replied_by) {
-          actionsHtml += '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">'
-            + escapeHtml(msg.replied_by) + '</div>';
-        }
-      } else {
-        actionsHtml = '<div class="reply-area">'
-          + '<textarea id="reply-' + msg.id + '" placeholder="Type your reply..."></textarea>'
-          + '<button onclick="replyToMessage(\'' + msg.id + '\')">Reply</button>'
-          + '</div>';
-      }
-
-      const fromLink = msg.user_id
-        ? '<span class="user-link" onclick="showUserDetail(\'' + msg.user_id + '\')">' + from + '</span>'
-        : '<strong>' + from + '</strong>';
-
-      return '<tr>'
-        + '<td>' + priorityBadge + '</td>'
-        + '<td>' + fromLink + '<br><span style="font-size:11px;color:var(--text-secondary);">' + email + '</span></td>'
-        + '<td><strong>' + subject + '</strong></td>'
-        + '<td><div class="msg-body-text" title="' + body + '">' + body + '</div></td>'
-        + '<td style="white-space:nowrap;">' + ts + '</td>'
-        + '<td style="min-width:200px;">' + actionsHtml + '</td>'
-        + '</tr>';
-    }).join('');
-  }
-
-  async function replyToMessage(msgId) {
-    const textarea = document.getElementById('reply-' + msgId);
-    const replyText = textarea.value.trim();
-    if (!replyText) {
-      alert('Please type a reply before sending.');
-      return;
-    }
-
-    const user = auth.currentUser;
     try {
-      await db.collection('messages').doc(msgId).update({
-        admin_reply: replyText,
-        replied_at: firebase.firestore.FieldValue.serverTimestamp(),
-        replied_by: user.email,
+      const docRef = await db.collection('messages').add({
+        thread_id: null,
+        from_uid: adminUser.uid,
+        from_email: adminUser.email || '',
+        from_name: adminUser.displayName || 'Admin',
+        to_uid: userId,
+        to_email: toEmail,
+        subject: subject,
+        body: body,
+        priority: 'normal',
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        read: false,
+        deleted_by: [],
+        is_admin_msg: true,
+        user_id: adminUser.uid,
       });
+      await docRef.update({ thread_id: docRef.id });
+      subjectEl.value = '';
+      bodyEl.value = '';
+      alert('Message sent successfully.');
     } catch (e) {
-      alert('Failed to send reply: ' + e.message);
+      alert('Failed to send message: ' + e.message);
     }
   }
 
@@ -1265,7 +1362,7 @@
   function showUserDetail(userId) {
     const user = allUsers.find(u => u.id === userId);
     const userLockouts = allEvents.filter(e => e.user_id === userId);
-    const userMessages = allMessages.filter(m => m.user_id === userId);
+    const userMessages = allMessages.filter(m => m.user_id === userId || m.from_uid === userId || m.to_uid === userId);
     const content = document.getElementById('user-detail-content');
 
     // Header
@@ -1312,6 +1409,13 @@
     html += '</span>';
     html += '</div></div>';
 
+    // Send Message section
+    html += '<div class="detail-section"><h3>Send Message</h3>';
+    html += '<input id="admin-compose-subject" type="text" placeholder="Subject" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:8px;font-family:inherit;">';
+    html += '<textarea id="admin-compose-body" placeholder="Type your message..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-height:80px;resize:vertical;font-family:inherit;margin-bottom:8px;"></textarea>';
+    html += '<button class="admin-action-btn success" onclick="sendMessageToUser(\'' + userId + '\')">Send Message</button>';
+    html += '</div>';
+
     // Usage section (loaded async)
     html += '<div class="detail-section"><h3>Usage This Month</h3>';
     html += '<div id="usage-detail-' + userId + '" style="color:var(--text-secondary);font-size:13px;">Loading usage data...</div>';
@@ -1347,25 +1451,52 @@
     }
     html += '</div>';
 
-    // Messages section
-    html += '<div class="detail-section"><h3>Messages (' + userMessages.length + ')</h3>';
-    if (userMessages.length === 0) {
+    // Messages section — group by thread
+    const userThreadMap = new Map();
+    userMessages.forEach(m => {
+      const tid = m.thread_id || m.id;
+      if (!userThreadMap.has(tid)) userThreadMap.set(tid, []);
+      userThreadMap.get(tid).push(m);
+    });
+    userThreadMap.forEach(msgs => msgs.sort((a, b) => toMsAdmin(a.created_at) - toMsAdmin(b.created_at)));
+    const userThreads = [...userThreadMap.values()].sort((a, b) => toMsAdmin(b[b.length - 1].created_at) - toMsAdmin(a[a.length - 1].created_at));
+
+    html += '<div class="detail-section"><h3>Conversations (' + userThreads.length + ')</h3>';
+    if (userThreads.length === 0) {
       html += '<p style="color:var(--text-secondary);font-size:13px;">No messages</p>';
     } else {
       html += '<ul class="detail-item-list">';
-      userMessages.forEach(msg => {
-        const ts = msg.created_at ? formatTimestamp(msg.created_at.toDate()) : 'Pending';
-        const priority = msg.priority || 'normal';
+      userThreads.forEach(thread => {
+        const first = thread[0];
+        const latest = thread[thread.length - 1];
+        const ts = first.created_at ? formatTimestamp(first.created_at.toDate()) : 'Pending';
+        const priority = first.priority || 'normal';
+        const hasReply = threadHasReply(thread);
         html += '<li>';
         html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-        html += '<span style="font-weight:600;">' + escapeHtml(msg.subject || '-') + '</span>';
+        html += '<span style="font-weight:600;">' + escapeHtml(first.subject || '-') + '</span>';
         html += '<span class="priority priority-' + priority + '">' + priority + '</span>';
         html += '</div>';
-        html += '<div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">' + escapeHtml(msg.body || '') + '</div>';
-        html += '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + ts + '</div>';
-        if (msg.admin_reply) {
-          html += '<div class="admin-reply-text" style="margin-top:6px;"><strong>Reply:</strong> ' + escapeHtml(msg.admin_reply) + '</div>';
-        } else {
+        // Show conversation as bubbles
+        thread.forEach(m => {
+          const isAdmin = m.is_admin_msg;
+          const sender = isAdmin ? 'Admin' : (m.from_name || m.user_name || 'User');
+          const mTs = m.created_at ? formatTimestamp(m.created_at.toDate()) : '';
+          html += '<div style="font-size:13px;margin-top:6px;padding:6px 10px;border-radius:8px;background:'
+            + (isAdmin ? '#e8f5e9' : '#f5f5f5') + ';">';
+          html += '<div style="font-size:11px;font-weight:600;color:var(--text-secondary);">' + escapeHtml(sender) + ' &middot; ' + mTs + '</div>';
+          html += escapeHtml(m.body || '');
+          html += '</div>';
+          // Legacy admin_reply
+          if (m.admin_reply && !thread.some(x => x.is_admin_msg)) {
+            const rTs = m.replied_at ? formatTimestamp(m.replied_at.toDate()) : '';
+            html += '<div style="font-size:13px;margin-top:6px;padding:6px 10px;border-radius:8px;background:#e8f5e9;">';
+            html += '<div style="font-size:11px;font-weight:600;color:var(--text-secondary);">Admin &middot; ' + rTs + '</div>';
+            html += escapeHtml(m.admin_reply);
+            html += '</div>';
+          }
+        });
+        if (!hasReply) {
           html += '<div style="font-size:12px;color:var(--warning);margin-top:4px;font-style:italic;">Awaiting reply</div>';
         }
         html += '</li>';
@@ -1498,6 +1629,194 @@
     } catch (e) {
       alert('Failed to add credits: ' + e.message);
     }
+  }
+
+  // --- VDGL Usage ---
+
+  const VDGL_PACKAGE_COSTS = {
+    DataPackage2: 0.50,
+    ValuationDetails: 0.20,
+    MotHistoryDetails: 0.06,
+    VehicleDetails: 0.15,
+    TyreDetails: 0.09,
+  };
+
+  let vdglCounters = [];
+  let vdglRecentCalls = [];
+  let vdglPeriodDays = 14;
+  let unsubscribeVdgl = null;
+  let unsubscribeVdglCalls = null;
+
+  function startListeningVdgl() {
+    const now = new Date();
+    const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+    // Listen to daily counters for current month
+    unsubscribeVdgl = db.collection('vdgl_counters')
+      .where('month', '==', monthKey)
+      .orderBy('last_call', 'desc')
+      .onSnapshot((snapshot) => {
+        vdglCounters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateVdglStats();
+        renderVdglChart();
+        renderVdglPkgBreakdown();
+      }, (err) => {
+        console.error('VDGL counters listener error:', err);
+      });
+
+    // Listen to recent individual calls
+    unsubscribeVdglCalls = db.collection('vdgl_usage')
+      .orderBy('timestamp', 'desc')
+      .limit(100)
+      .onSnapshot((snapshot) => {
+        vdglRecentCalls = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderVdglTable();
+        document.getElementById('vdgl-loading').style.display = 'none';
+        document.getElementById('vdgl-table-section').style.display = 'block';
+      }, (err) => {
+        console.error('VDGL calls listener error:', err);
+        document.getElementById('vdgl-loading').textContent = 'Failed to load VDGL data. Check Firestore rules.';
+      });
+  }
+
+  function updateVdglStats() {
+    const now = new Date();
+    const todayKey = now.toISOString().split('T')[0];
+    const monthKey = todayKey.substring(0, 7);
+
+    // Today's stats
+    const todayCounter = vdglCounters.find(c => c.id === todayKey);
+    const callsToday = todayCounter ? (todayCounter.calls || 0) : 0;
+    const costToday = todayCounter ? (todayCounter.cost_gbp || 0) : 0;
+    const errorsToday = todayCounter ? (todayCounter.error_count || 0) : 0;
+
+    // Month totals (sum all counters)
+    let callsMonth = 0, costMonth = 0, errorsMonth = 0, successMonth = 0;
+    vdglCounters.forEach(c => {
+      callsMonth += c.calls || 0;
+      costMonth += c.cost_gbp || 0;
+      errorsMonth += c.error_count || 0;
+      successMonth += c.success_count || 0;
+    });
+
+    const successRate = callsMonth > 0
+      ? Math.round((successMonth / callsMonth) * 100) + '%'
+      : '-';
+
+    document.getElementById('vdgl-calls-today').textContent = callsToday;
+    document.getElementById('vdgl-cost-today').textContent = '\u00A3' + costToday.toFixed(2);
+    document.getElementById('vdgl-calls-month').textContent = callsMonth;
+    document.getElementById('vdgl-cost-month').textContent = '\u00A3' + costMonth.toFixed(2);
+    document.getElementById('vdgl-errors-month').textContent = errorsMonth;
+    document.getElementById('vdgl-success-rate').textContent = successRate;
+  }
+
+  function setVdglPeriod(days, btn) {
+    vdglPeriodDays = days;
+    document.querySelectorAll('.vdgl-period-btns button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderVdglChart();
+  }
+
+  function renderVdglChart() {
+    const chart = document.getElementById('vdgl-chart');
+    const now = new Date();
+    const days = [];
+
+    for (let i = vdglPeriodDays - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      const counter = vdglCounters.find(c => c.id === key);
+      days.push({
+        key: key,
+        label: d.getDate() + '/' + (d.getMonth() + 1),
+        calls: counter ? (counter.calls || 0) : 0,
+        cost: counter ? (counter.cost_gbp || 0) : 0,
+        errors: counter ? (counter.error_count || 0) : 0,
+      });
+    }
+
+    const maxCalls = Math.max(1, ...days.map(d => d.calls));
+
+    chart.innerHTML = days.map(d => {
+      const heightPct = Math.max(2, (d.calls / maxCalls) * 100);
+      const bgColor = d.errors > 0 ? '#ef5350' : 'var(--primary)';
+      const tooltip = d.key + ': ' + d.calls + ' calls, \u00A3' + d.cost.toFixed(2);
+      return '<div class="vdgl-bar" style="height:' + heightPct + '%;background:' + bgColor + ';" title="' + tooltip + '">'
+        + (d.calls > 0 ? '<span class="vdgl-bar-value">' + d.calls + '</span>' : '')
+        + '<span class="vdgl-bar-label">' + d.label + '</span>'
+        + '</div>';
+    }).join('');
+  }
+
+  function renderVdglPkgBreakdown() {
+    const el = document.getElementById('vdgl-pkg-breakdown');
+    const pkgTotals = {};
+
+    vdglCounters.forEach(c => {
+      Object.keys(c).forEach(key => {
+        if (key.startsWith('pkg_')) {
+          const pkgName = key.substring(4);
+          pkgTotals[pkgName] = (pkgTotals[pkgName] || 0) + c[key];
+        }
+      });
+    });
+
+    const packages = Object.keys(pkgTotals);
+    if (packages.length === 0) {
+      el.innerHTML = '<p style="color:var(--text-secondary);">No data yet this month.</p>';
+      return;
+    }
+
+    el.innerHTML = '<table style="width:100%;font-size:14px;">'
+      + '<thead><tr><th>Package</th><th>Calls</th><th>Unit Cost</th><th>Total Cost</th></tr></thead>'
+      + '<tbody>'
+      + packages.sort().map(pkg => {
+        const count = pkgTotals[pkg];
+        const unitCost = VDGL_PACKAGE_COSTS[pkg] || 0;
+        const totalCost = count * unitCost;
+        return '<tr>'
+          + '<td><span class="pkg-badge pkg-' + pkg + '">' + pkg + '</span></td>'
+          + '<td>' + count + '</td>'
+          + '<td>\u00A3' + unitCost.toFixed(2) + '</td>'
+          + '<td style="font-weight:600;">\u00A3' + totalCost.toFixed(2) + '</td>'
+          + '</tr>';
+      }).join('')
+      + '</tbody></table>';
+  }
+
+  function renderVdglTable() {
+    const tbody = document.getElementById('vdgl-body');
+    const empty = document.getElementById('vdgl-empty');
+
+    if (vdglRecentCalls.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = vdglRecentCalls.map(call => {
+      const ts = call.timestamp ? formatTimestamp(call.timestamp.toDate()) : 'Pending...';
+      const hash = escapeHtml(call.vrm_hash || '-');
+      const pkg = call.package || '-';
+      const pkgBadge = '<span class="pkg-badge pkg-' + pkg + '">' + pkg + '</span>';
+      const cost = '\u00A3' + (call.cost_gbp || 0).toFixed(2);
+      const source = escapeHtml(call.source || '-');
+      const statusBadge = call.success
+        ? '<span class="status status-resolved">OK</span>'
+        : '<span class="status status-new">Error</span>';
+
+      return '<tr>'
+        + '<td style="white-space:nowrap;">' + ts + '</td>'
+        + '<td style="font-family:monospace;font-size:12px;">' + hash + '</td>'
+        + '<td>' + pkgBadge + '</td>'
+        + '<td>' + cost + '</td>'
+        + '<td>' + source + '</td>'
+        + '<td>' + statusBadge + '</td>'
+        + '</tr>';
+    }).join('');
   }
 </script>
 </body>

@@ -18,7 +18,7 @@
       color: white; padding: 32px 20px; text-align: center;
     }
     .dash-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: white; }
-    .dash-header p { font-size: 14px; opacity: 0.85; }
+    .dash-header p { font-size: 14px; color: #ffffff; opacity: 1; }
 
     .dash-container { max-width: 900px; margin: 0 auto; padding: 24px 20px 64px; }
 
@@ -175,7 +175,8 @@
   <nav>
     <a href="/">Home</a>
     <a href="/dashboard.html" class="active">Dashboard</a>
-    <a href="/garage.html">My Vehicles</a>
+    <a href="/garage.html">My Garage</a>
+    <a id="inbox-link" href="/inbox.html" style="display:none;">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
     <a href="/pricing.html">Pricing</a>
     <a id="bulk-link" href="/bulk-upload.html" style="display:none; font-weight:600; color:#d4a017;">Bulk Upload</a>
     <a id="admin-link" href="/admin/" style="display:none; font-weight:600; color:var(--primary);">Admin</a>
@@ -260,7 +261,7 @@
         </a>
         <a href="/garage.html" class="dash-action-card">
           <div class="action-icon">&#128663;</div>
-          <h4>My Vehicles</h4>
+          <h4>My Garage</h4>
           <p>View and track your saved vehicles</p>
         </a>
         <a href="/contact.html" class="dash-action-card">
@@ -905,13 +906,22 @@
         document.getElementById('user-name').textContent = user.displayName || user.email;
         document.getElementById('gate-auth').style.display = 'none';
         document.getElementById('dash-content').style.display = 'block';
+        document.getElementById('inbox-link').style.display = '';
         await loadDashboard(user);
+        // Inbox badge
+        db.collection('messages').where('to_uid','==',user.uid).where('read','==',false)
+          .onSnapshot(s => {
+            const b = document.getElementById('inbox-badge');
+            if (s.size > 0) { b.textContent = s.size; b.style.display = 'inline'; }
+            else { b.style.display = 'none'; }
+          });
       } else {
         document.getElementById('gate-auth').style.display = 'block';
         document.getElementById('dash-content').style.display = 'none';
         document.getElementById('user-plan-badge').style.display = 'none';
         document.getElementById('bulk-link').style.display = 'none';
         document.getElementById('admin-link').style.display = 'none';
+        document.getElementById('inbox-link').style.display = 'none';
         if (scansUnsubscribe) { scansUnsubscribe(); scansUnsubscribe = null; }
       }
     });

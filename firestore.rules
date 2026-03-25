@@ -96,13 +96,20 @@ service cloud.firestore {
     }
 
     // --- Messages ---
-    // Users can read/create messages they own. Admins can read all and reply.
+    // Users can create, read their own messages (sent or received). Admins can read/update all.
     match /messages/{messageId} {
       allow create: if request.auth != null
-        && request.resource.data.user_id == request.auth.uid;
+        && request.resource.data.from_uid == request.auth.uid;
       allow read: if request.auth != null
-        && (resource.data.user_id == request.auth.uid || isAdmin());
-      allow update: if isAdmin();
+        && (resource.data.from_uid == request.auth.uid
+            || resource.data.to_uid == request.auth.uid
+            || resource.data.user_id == request.auth.uid
+            || isAdmin());
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.to_uid
+            || request.auth.uid == resource.data.from_uid
+            || request.auth.uid == resource.data.user_id
+            || isAdmin());
       allow delete: if false;
     }
 
@@ -118,6 +125,20 @@ service cloud.firestore {
       allow create, update: if request.auth != null
         && !('vrm_normalized' in request.resource.data);
       allow delete: if isAdmin();
+    }
+
+    // --- VDGL Usage Logs ---
+    // Only admins can read. Written by Cloud Functions (admin SDK bypasses rules).
+    match /vdgl_usage/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Written by Cloud Function via admin SDK
+    }
+
+    // --- VDGL Daily Counters ---
+    // Only admins can read. Written by Cloud Functions (admin SDK bypasses rules).
+    match /vdgl_counters/{dayId} {
+      allow read: if isAdmin();
+      allow write: if false; // Written by Cloud Function via admin SDK
     }
 
     // Deny everything else by default

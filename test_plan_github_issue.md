@@ -123,10 +123,10 @@ Test each completed feature on a physical device. Tick the box when verified wor
 
 ## Plans & Pricing
 
-- [ ] **Monthly plan prices** — Confirm pricing page shows Free (£0), Basic (£9.99/mo), Trader (£59.99/mo).
-- [ ] **Overage rates** — Confirm pricing page shows Basic overage at 90p, Trader overage at 85p.
-- [ ] **Pack prices** — Confirm pricing page shows 10 Pack (£8.99), 50 Pack (£44.99), 100 Pack (£84.99).
-- [ ] **Comparison table** — Confirm the plan comparison table matches the plan card prices and overage rates.
+- [x] **Monthly plan prices** — Confirm pricing page shows Free (£0), Basic (£9.99/mo), Trader (£59.99/mo).
+- [x] **Overage rates** — Confirm pricing page shows Basic overage at 90p, Trader overage at 85p.
+- [x] **Pack prices** — Confirm pricing page shows 10 Pack (£8.99), 50 Pack (£44.99), 100 Pack (£84.99).
+- [x] **Comparison table** — Confirm the plan comparison table matches the plan card prices and overage rates.
 - [ ] **Debug plan switcher** — In debug mode, open settings, confirm the segmented plan switcher (Free/Basic/Trader) is visible.
 - [ ] **Debug plan switcher works** — Switch to Trader via the debug switcher, confirm plan changes immediately and features unlock.
 - [ ] **Debug switcher hidden in release** — Build a release version, confirm the plan switcher is NOT visible in settings.
@@ -151,8 +151,8 @@ Test each completed feature on a physical device. Tick the box when verified wor
 - [ ] **Specifications section** — Confirm specs section shows engine, transmission, performance, economy, NCAP rating.
 - [ ] **Tyres section** — Confirm tyres section shows front/rear sizes, pressures, PCD, torque.
 - [ ] **Collapse/expand toggle** — Click a section header, confirm it expands. Click again, confirm it collapses.
-- [ ] **Report not found** — Visit `/report.html?id=nonexistent`, confirm "Report Not Found" error state appears.
-- [ ] **Mobile responsive** — View the report page on a narrow screen, confirm layout is readable and sections stack correctly.
+- [x] **Report not found** — Visit `/report.html?id=nonexistent`, confirm "Report Not Found" error state appears.
+- [x] **Mobile responsive** — View the report page on a narrow screen, confirm layout is readable and sections stack correctly.
 
 ## REST API (if testing locally or deployed)
 
@@ -164,18 +164,18 @@ Test each completed feature on a physical device. Tick the box when verified wor
 
 ## Firebase Hosting / Web Pages
 
-- [ ] **Landing page** — Visit `https://car-detector-833e5.web.app/`, confirm landing page loads.
-- [ ] **Privacy policy page** — Visit `/privacy-policy.html`, confirm it loads with correct content.
+- [x] **Landing page** — Visit `https://car-detector-833e5.web.app/`, confirm landing page loads.
+- [x] **Privacy policy page** — Visit `/privacy-policy.html`, confirm it loads with correct content.
 - [ ] **Pricing page** — Visit `/pricing.html`, confirm plan cards, pack cards, and comparison table load with correct prices.
-- [ ] **Dashboard page** — Sign in on `/dashboard.html`, confirm stats, plan card, usage bar, saved scans, and quick actions load.
-- [ ] **Garage page** — Sign in on `/garage.html`, confirm saved vehicles load with limit info and remove buttons.
+- [x] **Dashboard page** — Sign in on `/dashboard.html`, confirm stats, plan card, usage bar, saved scans, and quick actions load.
+- [x] **Garage page** — Sign in on `/garage.html`, confirm saved vehicles load with limit info and remove buttons.
 - [ ] **Report page** — Visit `/report.html?id=<valid_id>`, confirm full report loads with all sections.
-- [ ] **Disclaimer page** — Visit `/disclaimer.html`, confirm it loads.
-- [ ] **Contact page** — Visit `/contact.html`, confirm it loads.
-- [ ] **Bulk upload page** — Sign in as Trader on `/bulk-upload.html`, confirm it loads.
-- [ ] **Delete account page** — Visit `/delete-account.html`, confirm it loads with the deletion flow.
+- [x] **Disclaimer page** — Visit `/disclaimer.html`, confirm it loads.
+- [x] **Contact page** — Visit `/contact.html`, confirm it loads.
+- [x] **Bulk upload page** — Sign in as Trader on `/bulk-upload.html`, confirm it loads.
+- [x] **Delete account page** — Visit `/delete-account.html`, confirm it loads with the deletion flow.
 - [ ] **Admin page** — Sign in as admin on `/admin/`, confirm it loads.
-- [ ] **404 page** — Visit a non-existent URL, confirm custom 404 page appears.
+- [x] **404 page** — Visit a non-existent URL, confirm custom 404 page appears.
 - [ ] **Staging deployment** — Run `firebase hosting:channel:deploy staging --expires 7d`, confirm staging URL works.
 
 ---

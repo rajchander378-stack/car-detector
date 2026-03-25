@@ -50,6 +50,39 @@
     .data-age .age-old { color: #c62828; }
     .mot-pass { color: #2e7d32; font-weight: 600; }
     .mot-fail { color: #c62828; font-weight: 600; }
+    /* Debug panel */
+    .debug-panel { background: #1a1a2e; color: #e0e0e0; border-radius: 14px; padding: 20px; margin-bottom: 20px; font-family: 'Courier New', monospace; font-size: 13px; }
+    .debug-panel h3 { color: #00e676; margin: 0 0 14px; font-size: 14px; font-family: inherit; }
+    .debug-panel .debug-section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #2a2a4a; }
+    .debug-panel .debug-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .debug-panel .debug-section-title { color: #90caf9; font-weight: 700; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .debug-panel .debug-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+    .debug-panel label { min-width: 110px; color: #b0bec5; font-size: 12px; }
+    .debug-panel input, .debug-panel select { background: #2a2a4a; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 5px 10px; font-size: 13px; font-family: inherit; }
+    .debug-panel input[type="text"] { width: 110px; }
+    .debug-panel input[type="number"] { width: 70px; }
+    .debug-panel button { background: #00e676; color: #1a1a2e; border: none; border-radius: 6px; padding: 6px 14px; font-weight: 700; cursor: pointer; font-size: 12px; }
+    .debug-panel button:hover { background: #69f0ae; }
+    .debug-panel button.dbg-warn { background: #ffa726; color: #1a1a2e; }
+    .debug-panel button.dbg-warn:hover { background: #ffb74d; }
+    .debug-panel button.dbg-danger { background: #ef5350; color: #fff; }
+    .debug-panel button.dbg-danger:hover { background: #e57373; }
+    .debug-panel .debug-log { background: #0d0d1a; border-radius: 8px; padding: 10px; margin-top: 12px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.6; }
+    .debug-panel .log-fresh { color: #69f0ae; }
+    .debug-panel .log-stale { color: #ffb74d; }
+    .debug-panel .log-new { color: #64b5f6; }
+    .debug-panel .log-error { color: #ef5350; }
+    .debug-panel .log-info { color: #b0bec5; }
+    .debug-panel .log-ok { color: #00e676; }
+    .debug-toggle { position: fixed; bottom: 16px; right: 16px; z-index: 999; background: #1a1a2e; color: #00e676; border: 2px solid #00e676; border-radius: 50%; width: 44px; height: 44px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .debug-toggle:hover { background: #00e676; color: #1a1a2e; }
+    .garage-save-btn:hover:not(:disabled) { background: #c8e6c9 !important; }
+    .garage-save-btn:disabled { opacity: 0.8; cursor: default; }
+    /* Retry toast */
+    .retry-toast { position: fixed; bottom: 20px; left: 20px; z-index: 998; background: #fff3e0; border: 1px solid #ffcc80; border-radius: 10px; padding: 10px 16px; display: none; align-items: center; gap: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); font-size: 13px; color: #e65100; max-width: 320px; animation: slideUp 0.3s ease; }
+    .retry-toast .retry-spinner { width: 18px; height: 18px; border: 2.5px solid #ffcc80; border-top-color: #e65100; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     /* Forecourt totals */
     .totals-card { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 2px solid #66bb6a; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
     .totals-title { font-size: 18px; font-weight: 800; color: #2e7d32; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
@@ -79,6 +112,8 @@
     <a href="/#features">Features</a>
     <a href="/pricing.html">Pricing</a>
     <a href="/bulk-upload.html" class="active">Bulk Upload</a>
+    <a href="/garage.html">My Garage</a>
+    <a id="inbox-link" href="/inbox.html" style="display:none;">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
     <a href="/privacy-policy.html">Privacy</a>
     <span id="auth-area">
       <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
@@ -170,6 +205,81 @@
       <div class="freshness-actions" id="freshness-actions"></div>
     </div>
 
+    <!-- Debug panel (toggle with bottom-right button) -->
+    <div id="debug-panel" class="debug-panel">
+      <h3>&#9881; Freshness Debug Panel</h3>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Inject Test Vehicle into Cache</div>
+        <div class="debug-row">
+          <label>Plate:</label>
+          <input type="text" id="dbg-plate" placeholder="AB12CDE" style="text-transform:uppercase;">
+          <label>Val age:</label>
+          <select id="dbg-val-age">
+            <option value="1">1 hour (fresh)</option>
+            <option value="12">12 hours (fresh)</option>
+            <option value="25">25 hours (stale)</option>
+            <option value="72">3 days (stale)</option>
+            <option value="0">No valuation</option>
+          </select>
+        </div>
+        <div class="debug-row">
+          <label>MOT age:</label>
+          <select id="dbg-mot-age">
+            <option value="24">1 day (fresh)</option>
+            <option value="120">5 days (fresh)</option>
+            <option value="192">8 days (stale)</option>
+            <option value="720">30 days (stale)</option>
+            <option value="0">No MOT</option>
+          </select>
+          <label>Has details:</label>
+          <input type="checkbox" id="dbg-has-details" checked>
+        </div>
+        <div class="debug-row">
+          <button onclick="dbgInjectVehicle()">Inject to Firestore</button>
+          <button class="dbg-danger" onclick="dbgRemoveVehicle()">Remove from Cache</button>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Test Freshness Analysis</div>
+        <div class="debug-row">
+          <label>Plates (comma):</label>
+          <input type="text" id="dbg-test-plates" placeholder="AB12CDE, XY34FGH" style="width:260px;">
+          <button onclick="dbgTestFreshness()">Analyse</button>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Quick Scenario Tests</div>
+        <div class="debug-row">
+          <button onclick="dbgScenarioAllFresh()">All Fresh</button>
+          <button class="dbg-warn" onclick="dbgScenarioMixed()">Mixed (F+S+N)</button>
+          <button class="dbg-danger" onclick="dbgScenarioAllNew()">All New</button>
+          <button class="dbg-warn" onclick="dbgScenarioStaleVal()">Stale Val Only</button>
+          <button class="dbg-warn" onclick="dbgScenarioStaleMot()">Stale MOT Only</button>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Inspect Cache</div>
+        <div class="debug-row">
+          <label>Plate:</label>
+          <input type="text" id="dbg-inspect-plate" placeholder="AB12CDE" style="text-transform:uppercase;">
+          <button onclick="dbgInspectCache()">Inspect</button>
+        </div>
+      </div>
+
+      <div class="debug-log" id="debug-log">Freshness debug log ready.\n</div>
+    </div>
+    <!-- Retry toast -->
+    <div class="retry-toast" id="retry-toast">
+      <div class="retry-spinner"></div>
+      <div id="retry-toast-msg">Retrying plate lookup...</div>
+    </div>
+
+    <button class="debug-toggle" id="debug-toggle" onclick="document.getElementById('debug-panel').style.display = document.getElementById('debug-panel').style.display === 'none' ? 'block' : 'none'" title="Toggle debug panel">&#9881;</button>
+
     <!-- Forecourt totals -->
     <div id="totals-card" class="totals-card" style="display:none;">
       <div class="totals-title">&#163; Forecourt Valuation Summary</div>
@@ -193,6 +303,13 @@
         </div>
       </div>
       <div id="results-list"></div>
+
+      <!-- Garage link bar (shown after saving vehicles) -->
+      <div id="garage-link-bar" style="display:none; margin-top:20px; padding:16px 20px; background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border:2px solid #66bb6a; border-radius:12px; text-align:center;">
+        <span class="garage-link-count" style="font-size:14px; font-weight:600; color:#2e7d32;"></span>
+        <span style="font-size:14px; color:#2e7d32;"> &mdash; </span>
+        <a href="/garage.html" style="font-size:14px; font-weight:700; color:#1b5e20; text-decoration:underline;">View My Garage &rarr;</a>
+      </div>
     </div>
 
   </div>
@@ -214,7 +331,7 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, increment, serverTimestamp, collection, addDoc, getDocs, query, where, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
     import { getVertexAI, getGenerativeModel } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-vertexai-preview.js';
 
     const app = initializeApp({
@@ -296,6 +413,9 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       mot: 7 * 24 * 60 * 60 * 1000,     // 7 days
     };
 
+    // ── Garage limits (must match dashboard) ──
+    const GARAGE_LIMITS = { free: 2, basic: 20, trader: Infinity };
+
     // ── State ──
     let selectedFiles = [];
     let results = [];
@@ -344,6 +464,14 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
           document.getElementById('gate-plan').style.display = 'block';
           document.getElementById('bulk-content').style.display = 'none';
         }
+        // Inbox badge
+        document.getElementById('inbox-link').style.display = '';
+        const inboxQ = query(collection(db, 'messages'), where('to_uid','==',user.uid), where('read','==',false));
+        onSnapshot(inboxQ, (s) => {
+          const b = document.getElementById('inbox-badge');
+          if (s.size > 0) { b.textContent = s.size; b.style.display = 'inline'; }
+          else { b.style.display = 'none'; }
+        });
       } else {
         userPlan = null;
         document.getElementById('user-plan-badge').style.display = 'none';
@@ -585,12 +713,12 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
           updatePricingDisplay(r, idx);
         } else {
           // Stale or new: fetch from API
-          // TODO (production): implement per-section API calls for stale vehicles
           // TODO (production): credit deduction before API call
-          // TODO (production): intelligent package selection — individual sections vs DataPackage2
+          // TODO (production): intelligent package selection — individual sections vs DataPackage2 for stale
+          const isStale = analysis && analysis.status === 'stale';
           updatePricingStatus(r, 'loading');
           try {
-            const data = await fetchVehicleData(plate);
+            const data = await fetchVehicleDataWithRetry(plate, { forceRefresh: isStale });
             r._pricing = extractPrices(data.valuation);
             r._pricingSource = data.source === 'cache' ? 'database' : 'api';
             r._fullVehicleData = data.fullData;
@@ -599,7 +727,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
             updatePricingDisplay(r, idx);
           } catch (err) {
             r._pricingError = err.message;
-            updatePricingStatus(r, 'error', err.message);
+            updatePricingStatus(r, 'error', err.message, idx);
           }
         }
 
@@ -736,6 +864,64 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       return (r._manualPlate && r._manualPlate.trim()) || r.number_plate || '';
     }
 
+    // ── Vehicle age from UK plate ──
+    // New-format UK plates (Sept 2001+): AA00 AAA — two letters, two-digit age id, three letters
+    // Age id 02–49 = March–Aug of year 2000+id, 51–99 = Sept–Feb of year 2000+(id-50)
+    function getVehicleAgeFromPlate(plate) {
+      const cleaned = cleanPlate(plate);
+      // Match new-format: 2 letters + 2 digits + 3 letters
+      const match = cleaned.match(/^[A-Z]{2}(\d{2})[A-Z]{3}$/);
+      if (!match) return { known: false };
+
+      const ageId = parseInt(match[1], 10);
+      let regYear, regHalf;
+
+      if (ageId >= 2 && ageId <= 49) {
+        regYear = 2000 + ageId;
+        regHalf = 'March';
+      } else if (ageId >= 51 && ageId <= 99) {
+        regYear = 2000 + (ageId - 50);
+        regHalf = 'September';
+      } else if (ageId === 0) {
+        // 00 was not used in new format (started at 51 in Sept 2001)
+        return { known: false };
+      } else if (ageId === 1) {
+        // 01 plates = March 2001 (but new format started Sept 2001 with 51)
+        return { known: false };
+      } else if (ageId === 50) {
+        // 50 not used
+        return { known: false };
+      } else {
+        return { known: false };
+      }
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // 1-12
+
+      // Calculate approximate age in years
+      let ageYears;
+      if (regHalf === 'March') {
+        ageYears = currentYear - regYear + (currentMonth < 3 ? -1 : 0);
+      } else {
+        ageYears = currentYear - regYear + (currentMonth < 9 ? -1 : 0);
+      }
+
+      // Sanity check — if age is negative or unreasonably high, skip
+      if (ageYears < 0 || regYear > currentYear + 1) return { known: false };
+
+      return {
+        known: true,
+        regYear,
+        regHalf,
+        ageYears,
+        label: ageYears === 0 ? 'Under 1 year old'
+          : ageYears === 1 ? '~1 year old'
+          : '~' + ageYears + ' years old',
+        regLabel: regHalf + ' ' + regYear,
+      };
+    }
+
     // ── SHA-256 hash (Web Crypto API) ──
     async function sha256(str) {
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -768,19 +954,21 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       return json;
     }
 
-    async function fetchVehicleData(normalizedPlate) {
-      // 1. Check cache
-      const cached = await lookupVehicleCache(normalizedPlate);
-      if (cached && cached.data.valuation) {
-        // Cache hit — bump scan count in background
-        updateDoc(cached.docRef, {
-          scan_count: increment(1),
-          last_scanned: serverTimestamp(),
-        }).catch(() => {});
-        return { valuation: cached.data.valuation, source: 'database', fullData: cached.data };
+    async function fetchVehicleData(normalizedPlate, { forceRefresh = false } = {}) {
+      // 1. Check cache (skip if caller says data is stale)
+      if (!forceRefresh) {
+        const cached = await lookupVehicleCache(normalizedPlate);
+        if (cached && cached.data.valuation) {
+          // Cache hit — bump scan count in background
+          updateDoc(cached.docRef, {
+            scan_count: increment(1),
+            last_scanned: serverTimestamp(),
+          }).catch(() => {});
+          return { valuation: cached.data.valuation, source: 'database', fullData: cached.data };
+        }
       }
 
-      // 2. Cache miss — call VDGL DataPackage2
+      // 2. Cache miss or forced refresh — call VDGL DataPackage2
       const json = await callVdglApi(normalizedPlate, 'DataPackage2');
       const resultsData = json.Results || {};
 
@@ -790,7 +978,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       const motHistory = resultsData.MotHistoryDetails || null;
       const tyreDetails = resultsData.TyreDetails || null;
 
-      // 3. Write to Firestore cache
+      // 3. Write to Firestore cache (merge so we don't lose other fields)
       const hash = await sha256(normalizedPlate);
       const now = serverTimestamp();
       const cacheDoc = {};
@@ -801,11 +989,11 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       if (tyreDetails) cacheDoc.tyre_details = tyreDetails;
       cacheDoc.valuation_updated = now;
       cacheDoc.mot_updated = now;
-      cacheDoc.created_at = now;
-      cacheDoc.scan_count = 1;
+      cacheDoc.scan_count = increment(1);
       cacheDoc.last_scanned = now;
 
-      setDoc(doc(db, 'vehicles', hash), cacheDoc).catch(() => {});
+      const docRef = doc(db, 'vehicles', hash);
+      setDoc(docRef, cacheDoc, { merge: true }).catch(() => {});
 
       return { valuation, source: 'api', fullData: cacheDoc };
     }
@@ -828,21 +1016,40 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
     function extractVehicleInfo(fullData) {
       if (!fullData) return null;
       const vd = fullData.vehicle_details || fullData.VehicleDetails || {};
+      // API nests under VehicleIdentification/VehicleStatus/VehicleHistory; cached data is flat
+      const vdId = vd.VehicleIdentification || vd.vehicle_identification || vd;
+      const vdStatus = vd.VehicleStatus || vd.vehicle_status || vd;
+      const vdHist = vd.VehicleHistory || vd.vehicle_history || {};
+      const vdTech = vd.DvlaTechnicalDetails || vd.dvla_technical_details || {};
+      const vdColour = vdHist.ColourDetails || vdHist.colour_details || {};
+      const vdVed = (vdStatus.VehicleExciseDutyDetails || vdStatus.vehicle_excise_duty_details || {});
+      const vedRate = vdVed.VedRate || vdVed.ved_rate || {};
+      const vedStd = vedRate.Standard || vedRate.standard || {};
+
       const md = fullData.model_details || fullData.ModelDetails || {};
+      const mdId = md.Identification || md.identification || md;
+      const mdEngine = md.Engine || md.engine || {};
+      const mdPerf = md.Performance || md.performance || {};
+      const mdTrans = md.Transmission || md.transmission || {};
+      const mdBody = md.BodyStyle || md.body_style || {};
       return {
-        vin: vd.Vin || vd.vin || '',
-        fuelType: vd.DvlaFuelType || vd.dvla_fuel_type || md.FuelType || md.fuel_type || '',
-        engineCc: vd.EngineCapacityCc || vd.engine_capacity_cc || md.EngineCapacityCc || md.engine_capacity_cc || '',
-        transmission: md.TransmissionType || md.transmission_type || '',
-        driveType: md.DriveType || md.drive_type || '',
-        bhp: md.Bhp || md.bhp || '',
-        combinedMpg: md.CombinedMpg || md.combined_mpg || '',
-        co2: vd.DvlaCo2 || vd.dvla_co2 || md.ManufacturerCo2 || md.manufacturer_co2 || '',
-        previousKeepers: vd.NumberOfPreviousKeepers || vd.number_of_previous_keepers || '',
-        dateFirstRegistered: vd.DateFirstRegistered || vd.date_first_registered || '',
-        roadTax12m: vd.VedStandard12Months || vd.ved_standard_12_months || '',
-        isImported: vd.IsImported || vd.is_imported || false,
-        isScrapped: vd.IsScrapped || vd.is_scrapped || false,
+        make: vdId.DvlaMake || vdId.dvla_make || mdId.Make || mdId.make || '',
+        model: vdId.DvlaModel || vdId.dvla_model || mdId.Model || mdId.model || '',
+        colour: vdColour.CurrentColour || vdColour.current_colour || '',
+        vin: vdId.Vin || vdId.vin || '',
+        fuelType: vdId.DvlaFuelType || vdId.dvla_fuel_type || mdEngine.FuelType || mdEngine.fuel_type || '',
+        engineCc: vdTech.EngineCapacityCc || vdTech.engine_capacity_cc || mdEngine.EngineCapacityCc || mdEngine.engine_capacity_cc || '',
+        transmission: mdTrans.TransmissionType || mdTrans.transmission_type || '',
+        driveType: mdTrans.DriveType || mdTrans.drive_type || '',
+        bhp: mdPerf.Bhp || mdPerf.bhp || '',
+        combinedMpg: mdPerf.CombinedMpg || mdPerf.combined_mpg || '',
+        co2: vdTech.DvlaCo2 || vdTech.dvla_co2 || mdPerf.ManufacturerCo2 || mdPerf.manufacturer_co2 || '',
+        previousKeepers: vdId.NumberOfPreviousKeepers || vdId.number_of_previous_keepers || '',
+        dateFirstRegistered: vdId.DateFirstRegistered || vdId.date_first_registered || '',
+        roadTax12m: vedStd.TwelveMonths || vedStd.twelve_months || '',
+        isImported: vdStatus.IsImported || vdStatus.is_imported || false,
+        isScrapped: vdStatus.IsScrapped || vdStatus.is_scrapped || false,
+        yearOfManufacture: vdId.YearOfManufacture || vdId.year_of_manufacture || null,
       };
     }
 
@@ -913,7 +1120,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         updatePricingStatus(r, 'loading');
 
         try {
-          const data = await fetchVehicleData(plate);
+          const data = await fetchVehicleDataWithRetry(plate);
           const prices = extractPrices(data.valuation);
           r._pricing = prices;
           r._pricingSource = data.source;
@@ -923,7 +1130,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
           updatePricingDisplay(r, idx);
         } catch (err) {
           r._pricingError = err.message;
-          updatePricingStatus(r, 'error', err.message);
+          updatePricingStatus(r, 'error', err.message, idx);
         }
         done++;
         btn.textContent = 'Fetching... (' + done + '/' + toPrice.length + ')';
@@ -936,7 +1143,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
     }
     window.fetchAllPricing = fetchAllPricing;
 
-    function updatePricingStatus(r, status, message) {
+    function updatePricingStatus(r, status, message, idx) {
       const card = r._cardEl;
       if (!card) return;
       let area = card.querySelector('.pricing-area');
@@ -948,7 +1155,22 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       if (status === 'loading') {
         area.innerHTML = '<span class="pricing-loading">Fetching valuation...</span>';
       } else if (status === 'error') {
-        area.innerHTML = '<span class="pricing-error">Pricing failed: ' + escapeHtml(message || 'Unknown error') + '</span>';
+        let html = '';
+        const isInvalidPlate = message && (message.includes('InvalidSearchTerm') || message.includes('not found') || message.includes('No vehicle'));
+        if (isInvalidPlate) {
+          html += '<div style="background:#fff3e0; border:1px solid #ffcc80; border-radius:8px; padding:10px 14px; margin-top:6px;">';
+          html += '<div style="font-size:13px; font-weight:600; color:#e65100;">Registration not recognised</div>';
+          html += '<div style="font-size:12px; color:#bf360c; margin-top:4px; line-height:1.5;">';
+          html += 'This plate could not be found in the DVLA database. This often happens with personalised or private plates where the styling makes them harder to read automatically.';
+          html += '</div>';
+          if (idx != null) {
+            html += '<button onclick="editPlate(' + idx + ')" style="margin-top:8px; background:#e65100; color:#fff; border:none; border-radius:6px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">Correct the plate number</button>';
+          }
+          html += '</div>';
+        } else {
+          html += '<span class="pricing-error">Pricing failed: ' + escapeHtml(message || 'Unknown error') + '</span>';
+        }
+        area.innerHTML = html;
       }
     }
 
@@ -1003,6 +1225,22 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       if (prices.auction) html += '<span class="pricing-chip trade">Auction: &pound;' + formatPrice(prices.auction) + '</span>';
       html += '</div>';
 
+      // Vehicle age from plate
+      const plate = getEffectivePlate(r);
+      const plateAge = getVehicleAgeFromPlate(plate);
+      if (plateAge.known) {
+        html += '<div style="margin-top:8px; font-size:12px; line-height:1.5;">';
+        html += '<span style="font-weight:600; color:var(--text);">Vehicle age: </span>';
+        html += '<span style="color:var(--text-secondary);">' + plateAge.label + '</span>';
+        html += ' <span style="font-size:11px; color:var(--text-secondary);">(registered ' + plateAge.regLabel + ')</span>';
+        html += '</div>';
+      } else {
+        html += '<div style="margin-top:8px; font-size:12px; line-height:1.5;">';
+        html += '<span style="font-weight:600; color:var(--text);">Vehicle age: </span>';
+        html += '<span style="color:var(--text-secondary); font-style:italic;">Cannot be determined from plate — likely a private or personalised registration</span>';
+        html += '</div>';
+      }
+
       // Vehicle details
       const vi = r._vehicleInfo;
       if (vi) {
@@ -1044,6 +1282,11 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         }
         html += '</div>';
       }
+
+      // Save to Garage button (only for successfully priced vehicles)
+      html += '<div style="margin-top:10px;">';
+      html += '<button class="btn garage-save-btn" data-idx="' + idx + '" style="padding:4px 12px; font-size:12px; background:#e8f5e9; color:#2e7d32; border:none; border-radius:6px; cursor:pointer; font-weight:600;" onclick="addToGarageFromBulk(' + idx + ', this)">Save to Garage</button>';
+      html += '</div>';
 
       area.innerHTML = html;
     }
@@ -1188,6 +1431,15 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         card.classList.toggle('needs-plate', !hasValidPlate(r));
       }
       showProcessingSummary();
+
+      // Show Fetch Pricing button so user can retry after correction
+      if (cleaned && isValidUkPlate(cleaned)) {
+        const pricingBtn = document.getElementById('pricing-btn');
+        if (pricingBtn) {
+          pricingBtn.style.display = 'inline-block';
+          pricingBtn.disabled = false;
+        }
+      }
     }
     window.editPlate = editPlate;
 
@@ -1419,6 +1671,481 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       doc.save(getExportFilename('pdf'));
     }
     window.exportPDF = exportPDF;
+
+    // ── Retry toast helpers ─────────────────────────────────────────────────
+    function showRetryToast(plate) {
+      const toast = document.getElementById('retry-toast');
+      const msg = document.getElementById('retry-toast-msg');
+      msg.textContent = 'Retrying lookup for ' + plate + '...';
+      toast.style.display = 'flex';
+    }
+    function hideRetryToast() {
+      document.getElementById('retry-toast').style.display = 'none';
+    }
+
+    async function fetchVehicleDataWithRetry(plate, opts) {
+      try {
+        return await fetchVehicleData(plate, opts);
+      } catch (firstErr) {
+        // Show retry toast and wait before retrying
+        showRetryToast(plate);
+        await new Promise(res => setTimeout(res, 2000));
+        try {
+          const result = await fetchVehicleData(plate, opts);
+          hideRetryToast();
+          return result;
+        } catch (secondErr) {
+          hideRetryToast();
+          throw secondErr; // second failure — let caller handle
+        }
+      }
+    }
+
+    // ── Save to / Remove from Garage (Bulk Upload) ─────────────────────────
+    // Track garage doc IDs so we can remove without re-querying
+    const bulkGarageIndex = {}; // idx → garageDocId
+
+    async function addToGarageFromBulk(idx, btn) {
+      const user = auth.currentUser;
+      if (!user) { alert('Please sign in first.'); return; }
+
+      const r = results[idx];
+      if (!r || !r._pricing) return;
+
+      const originalText = btn.textContent;
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        // Check garage limit
+        const garageCol = collection(db, 'users', user.uid, 'garage');
+        const garageSnap = await getDocs(garageCol);
+        const garageLimit = GARAGE_LIMITS[userPlan] || 2;
+        if (garageSnap.size >= garageLimit) {
+          alert('You\'ve reached your ' + (userPlan || 'Free') + ' plan limit of ' + garageLimit + ' saved vehicles. Upgrade your plan for more.');
+          btn.textContent = originalText;
+          btn.disabled = false;
+          return;
+        }
+
+        // Check if already in garage by plate
+        const plate = getEffectivePlate(r);
+        const existingQ = query(garageCol, where('identification.number_plate', '==', plate), limit(1));
+        const existing = await getDocs(existingQ);
+        if (!existing.empty) {
+          // Already exists — store ref and flip to remove state
+          bulkGarageIndex[idx] = existing.docs[0].id;
+          flipToRemove(btn, idx);
+          return;
+        }
+
+        // Build garage document — use AI-identified data, enrich with VDGL if available
+        const vi = r._vehicleInfo || {};
+        const identification = {
+          number_plate: plate,
+          make: r.make || vi.make || '',
+          model: r.model || vi.model || '',
+          year_min: r.year_min || vi.yearOfManufacture || null,
+          year_max: r.year_max || vi.yearOfManufacture || null,
+          generation: r.generation || '',
+          trim: r.trim || '',
+          trim_level: r.trim_level || '',
+          body_style: r.body_style || '',
+          colour: r.colour || vi.colour || '',
+          confidence: r.confidence || null,
+          fuel_type: vi.fuelType || '',
+        };
+
+        const prices = r._pricing;
+        const valuation = {};
+        if (prices.dealer) valuation.dealer_forecourt = prices.dealer;
+        if (prices.private) valuation.private_clean = prices.private;
+        if (prices.trade) valuation.trade_retail = prices.trade;
+        if (prices.partExchange) valuation.part_exchange = prices.partExchange;
+        if (prices.auction) valuation.auction = prices.auction;
+
+        let mot = null;
+        if (r._fullVehicleData && r._fullVehicleData.mot_history) {
+          mot = r._fullVehicleData.mot_history;
+        }
+
+        const garageDoc = {
+          identification,
+          valuation: Object.keys(valuation).length > 0 ? valuation : null,
+          mot,
+          valuation_updated: serverTimestamp(),
+          mot_updated: mot ? serverTimestamp() : null,
+          added_at: serverTimestamp(),
+          source: 'bulk_upload',
+        };
+
+        const newRef = await addDoc(garageCol, garageDoc);
+        bulkGarageIndex[idx] = newRef.id;
+        flipToRemove(btn, idx);
+        updateGarageLink();
+      } catch (err) {
+        console.error('Failed to save to garage:', err);
+        alert('Failed to save vehicle. Please try again.');
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+    window.addToGarageFromBulk = addToGarageFromBulk;
+
+    async function removeFromGarageByBulk(idx, btn) {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      btn.textContent = 'Removing...';
+      btn.disabled = true;
+
+      try {
+        const garageDocId = bulkGarageIndex[idx];
+        if (garageDocId) {
+          await deleteDoc(doc(db, 'users', user.uid, 'garage', garageDocId));
+        } else {
+          // Fallback: query by plate
+          const plate = getEffectivePlate(results[idx]);
+          const garageCol = collection(db, 'users', user.uid, 'garage');
+          const q = query(garageCol, where('identification.number_plate', '==', plate), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty) await deleteDoc(snap.docs[0].ref);
+        }
+
+        delete bulkGarageIndex[idx];
+        flipToSave(btn, idx);
+        updateGarageLink();
+      } catch (err) {
+        console.error('Failed to remove from garage:', err);
+        alert('Failed to remove vehicle. Please try again.');
+        flipToRemove(btn, idx);
+      }
+    }
+    window.removeFromGarageByBulk = removeFromGarageByBulk;
+
+    function flipToRemove(btn, idx) {
+      btn.textContent = 'Remove from Garage';
+      btn.style.background = '#ffebee';
+      btn.style.color = '#c62828';
+      btn.disabled = false;
+      btn.setAttribute('onclick', 'removeFromGarageByBulk(' + idx + ', this)');
+    }
+
+    function flipToSave(btn, idx) {
+      btn.textContent = 'Save to Garage';
+      btn.style.background = '#e8f5e9';
+      btn.style.color = '#2e7d32';
+      btn.disabled = false;
+      btn.setAttribute('onclick', 'addToGarageFromBulk(' + idx + ', this)');
+    }
+
+    // Show/update "View My Garage" link when vehicles have been saved
+    function updateGarageLink() {
+      const count = Object.keys(bulkGarageIndex).length;
+      const link = document.getElementById('garage-link-bar');
+      if (!link) return;
+      if (count > 0) {
+        link.style.display = 'block';
+        link.querySelector('.garage-link-count').textContent = count + ' vehicle' + (count === 1 ? '' : 's') + ' saved';
+      } else {
+        link.style.display = 'none';
+      }
+    }
+
+    // ── Freshness Debug Panel ──────────────────────────────────────────────
+    function dbgLog(msg, cls) {
+      const log = document.getElementById('debug-log');
+      if (!log) return;
+      const span = document.createElement('span');
+      span.className = cls || '';
+      span.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+      log.appendChild(span);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function dbgClearLog() {
+      const log = document.getElementById('debug-log');
+      if (log) log.innerHTML = '';
+    }
+
+    // Inject a fake vehicle record into Firestore cache with controlled timestamps
+    async function dbgInjectVehicle() {
+      const plate = document.getElementById('dbg-plate').value.replace(/\s+/g, '').toUpperCase();
+      if (!plate) { dbgLog('Enter a plate number', 'log-error'); return; }
+
+      const valAgeHours = parseInt(document.getElementById('dbg-val-age').value);
+      const motAgeHours = parseInt(document.getElementById('dbg-mot-age').value);
+      const hasDetails = document.getElementById('dbg-has-details').checked;
+
+      const now = new Date();
+      const cacheDoc = {
+        scan_count: 1,
+        last_scanned: now,
+      };
+
+      // Valuation (controlled age)
+      if (valAgeHours > 0) {
+        cacheDoc.valuation = {
+          ValuationFigures: {
+            DealerForecourt: Math.floor(5000 + Math.random() * 25000),
+            PrivateClean: Math.floor(4000 + Math.random() * 20000),
+            TradeClean: Math.floor(3000 + Math.random() * 18000),
+            PartExchange: Math.floor(2500 + Math.random() * 15000),
+            Auction: Math.floor(2000 + Math.random() * 12000),
+          }
+        };
+        cacheDoc.valuation_updated = new Date(now.getTime() - valAgeHours * 3600000);
+      }
+
+      // MOT history (controlled age)
+      if (motAgeHours > 0) {
+        cacheDoc.mot_history = {
+          RecordCount: 2,
+          RecordList: [
+            { TestDate: '2025-11-15', TestResult: 'Pass', OdometerReading: '45000', ExpiryDate: '2026-11-14' },
+            { TestDate: '2024-11-10', TestResult: 'Pass', OdometerReading: '33000', ExpiryDate: '2025-11-09' },
+          ]
+        };
+        cacheDoc.mot_updated = new Date(now.getTime() - motAgeHours * 3600000);
+      }
+
+      // Vehicle & tyre details
+      if (hasDetails) {
+        cacheDoc.vehicle_details = { Make: 'DEBUG', Model: 'TestCar', Colour: 'Blue', FuelType: 'Petrol', YearOfManufacture: 2020 };
+        cacheDoc.tyre_details = { FrontTyreSize: '205/55R16', RearTyreSize: '205/55R16' };
+      }
+
+      try {
+        const hash = await sha256(plate);
+        const docRef = doc(db, 'vehicles', hash);
+        await setDoc(docRef, cacheDoc, { merge: true });
+
+        const parts = [];
+        if (valAgeHours > 0) parts.push('val=' + valAgeHours + 'h ago');
+        else parts.push('no valuation');
+        if (motAgeHours > 0) parts.push('mot=' + motAgeHours + 'h ago');
+        else parts.push('no mot');
+        if (hasDetails) parts.push('+details');
+
+        dbgLog('Injected ' + plate + ' → ' + parts.join(', '), 'log-ok');
+      } catch (e) {
+        dbgLog('Inject failed: ' + e.message, 'log-error');
+      }
+    }
+    window.dbgInjectVehicle = dbgInjectVehicle;
+
+    // Remove a vehicle from Firestore cache
+    async function dbgRemoveVehicle() {
+      const plate = document.getElementById('dbg-plate').value.replace(/\s+/g, '').toUpperCase();
+      if (!plate) { dbgLog('Enter a plate number', 'log-error'); return; }
+      try {
+        const hash = await sha256(plate);
+        await deleteDoc(doc(db, 'vehicles', hash));
+        dbgLog('Removed ' + plate + ' from cache', 'log-info');
+      } catch (e) {
+        dbgLog('Remove failed: ' + e.message, 'log-error');
+      }
+    }
+    window.dbgRemoveVehicle = dbgRemoveVehicle;
+
+    // Inspect cache for a plate
+    async function dbgInspectCache() {
+      const plate = document.getElementById('dbg-inspect-plate').value.replace(/\s+/g, '').toUpperCase();
+      if (!plate) { dbgLog('Enter a plate number', 'log-error'); return; }
+      try {
+        const cached = await lookupVehicleCache(plate);
+        if (!cached || !cached.data) {
+          dbgLog(plate + ': NOT in cache', 'log-new');
+          return;
+        }
+        const d = cached.data;
+        const now = Date.now();
+        let lines = plate + ' cache contents:';
+
+        if (d.valuation_updated) {
+          const ts = d.valuation_updated.toDate ? d.valuation_updated.toDate() : new Date(d.valuation_updated);
+          const ageH = ((now - ts.getTime()) / 3600000).toFixed(1);
+          const fresh = (now - ts.getTime()) <= FRESHNESS_MS.valuation;
+          lines += '\n  Valuation: ' + (d.valuation ? 'YES' : 'NO') + ' | updated: ' + ageH + 'h ago | ' + (fresh ? 'FRESH' : 'STALE');
+        } else {
+          lines += '\n  Valuation: ' + (d.valuation ? 'YES (no timestamp!)' : 'NO');
+        }
+
+        if (d.mot_updated) {
+          const ts = d.mot_updated.toDate ? d.mot_updated.toDate() : new Date(d.mot_updated);
+          const ageH = ((now - ts.getTime()) / 3600000).toFixed(1);
+          const fresh = (now - ts.getTime()) <= FRESHNESS_MS.mot;
+          lines += '\n  MOT: ' + (d.mot_history ? 'YES' : 'NO') + ' | updated: ' + ageH + 'h ago | ' + (fresh ? 'FRESH' : 'STALE');
+        } else {
+          lines += '\n  MOT: ' + (d.mot_history ? 'YES (no timestamp!)' : 'NO');
+        }
+
+        lines += '\n  Vehicle details: ' + (d.vehicle_details ? 'YES' : 'NO');
+        lines += '\n  Tyre details: ' + (d.tyre_details ? 'YES' : 'NO');
+        lines += '\n  Scans: ' + (d.scan_count || 0);
+
+        dbgLog(lines, 'log-info');
+      } catch (e) {
+        dbgLog('Inspect failed: ' + e.message, 'log-error');
+      }
+    }
+    window.dbgInspectCache = dbgInspectCache;
+
+    // Test freshness analysis on specific plates
+    async function dbgTestFreshness() {
+      const raw = document.getElementById('dbg-test-plates').value;
+      if (!raw.trim()) { dbgLog('Enter comma-separated plates', 'log-error'); return; }
+      const plates = raw.split(',').map(p => p.trim().replace(/\s+/g, '').toUpperCase()).filter(Boolean);
+      dbgLog('Analysing ' + plates.length + ' plate(s)...', 'log-info');
+
+      try {
+        const analysis = await analyzeBulkFreshness(plates);
+        dbgLog('Results: ' + analysis.fresh.length + ' fresh, ' + analysis.stale.length + ' stale, ' + analysis.new.length + ' new', 'log-info');
+        dbgLog('Total cost estimate: £' + analysis.totalCost.toFixed(2), 'log-info');
+
+        for (const a of analysis.analyses) {
+          const cls = a.status === 'fresh' ? 'log-fresh' : a.status === 'stale' ? 'log-stale' : 'log-new';
+          let detail = a.plate + ': ' + a.status.toUpperCase() + ' (£' + a.estimatedCost.toFixed(2) + ')';
+          if (a.sectionsNeeded.length > 0) detail += ' needs: ' + a.sectionsNeeded.join(', ');
+          if (a.valuationAge !== null) detail += ' | val age: ' + (a.valuationAge / 3600000).toFixed(1) + 'h';
+          if (a.motAge !== null) detail += ' | mot age: ' + (a.motAge / 3600000).toFixed(1) + 'h';
+          dbgLog(detail, cls);
+        }
+
+        // Also show the freshness card in the UI
+        currentBulkAnalysis = analysis;
+        showFreshnessAnalysis(analysis);
+        dbgLog('Freshness card displayed in UI', 'log-ok');
+      } catch (e) {
+        dbgLog('Analysis failed: ' + e.message, 'log-error');
+      }
+    }
+    window.dbgTestFreshness = dbgTestFreshness;
+
+    // ── Quick Scenario Tests ──
+    // These inject 3 test plates, then run freshness analysis + show the card
+    const DBG_PLATES = ['DBG01TST', 'DBG02TST', 'DBG03TST'];
+
+    async function dbgScenarioAllFresh() {
+      dbgClearLog();
+      dbgLog('=== Scenario: All Fresh ===', 'log-ok');
+      for (const p of DBG_PLATES) {
+        const hash = await sha256(p);
+        await setDoc(doc(db, 'vehicles', hash), {
+          valuation: { ValuationFigures: { DealerForecourt: 10000, PrivateClean: 8000, TradeClean: 7000, PartExchange: 6000, Auction: 5000 } },
+          valuation_updated: new Date(),
+          mot_history: { RecordCount: 1, RecordList: [{ TestDate: '2025-11-01', TestResult: 'Pass', OdometerReading: '30000' }] },
+          mot_updated: new Date(),
+          vehicle_details: { Make: 'DEBUG', Model: 'Fresh', Colour: 'Green', FuelType: 'Petrol', YearOfManufacture: 2021 },
+          tyre_details: { FrontTyreSize: '205/55R16' },
+          scan_count: 1, last_scanned: new Date(),
+        }, { merge: true });
+        dbgLog('Injected ' + p + ' (all fresh)', 'log-fresh');
+      }
+      document.getElementById('dbg-test-plates').value = DBG_PLATES.join(', ');
+      await dbgTestFreshness();
+    }
+    window.dbgScenarioAllFresh = dbgScenarioAllFresh;
+
+    async function dbgScenarioMixed() {
+      dbgClearLog();
+      dbgLog('=== Scenario: Mixed (Fresh + Stale + New) ===', 'log-ok');
+      const now = Date.now();
+
+      // Fresh
+      const h0 = await sha256(DBG_PLATES[0]);
+      await setDoc(doc(db, 'vehicles', h0), {
+        valuation: { ValuationFigures: { DealerForecourt: 15000, PrivateClean: 12000, TradeClean: 10000, PartExchange: 9000, Auction: 8000 } },
+        valuation_updated: new Date(),
+        mot_history: { RecordCount: 1, RecordList: [{ TestDate: '2025-11-01', TestResult: 'Pass' }] },
+        mot_updated: new Date(),
+        vehicle_details: { Make: 'DEBUG', Model: 'Fresh', Colour: 'Green', FuelType: 'Petrol', YearOfManufacture: 2022 },
+        tyre_details: { FrontTyreSize: '205/55R16' },
+        scan_count: 1, last_scanned: new Date(),
+      }, { merge: true });
+      dbgLog('Injected ' + DBG_PLATES[0] + ' (fresh)', 'log-fresh');
+
+      // Stale (valuation 48h old, MOT 10 days old)
+      const h1 = await sha256(DBG_PLATES[1]);
+      await setDoc(doc(db, 'vehicles', h1), {
+        valuation: { ValuationFigures: { DealerForecourt: 8000, PrivateClean: 6500, TradeClean: 5500, PartExchange: 5000, Auction: 4000 } },
+        valuation_updated: new Date(now - 48 * 3600000),
+        mot_history: { RecordCount: 1, RecordList: [{ TestDate: '2025-06-01', TestResult: 'Pass' }] },
+        mot_updated: new Date(now - 10 * 24 * 3600000),
+        vehicle_details: { Make: 'DEBUG', Model: 'Stale', Colour: 'Orange', FuelType: 'Diesel', YearOfManufacture: 2018 },
+        tyre_details: { FrontTyreSize: '195/65R15' },
+        scan_count: 3, last_scanned: new Date(),
+      }, { merge: true });
+      dbgLog('Injected ' + DBG_PLATES[1] + ' (stale: val 48h, mot 10d)', 'log-stale');
+
+      // New — delete if exists
+      const h2 = await sha256(DBG_PLATES[2]);
+      try {
+        await deleteDoc(doc(db, 'vehicles', h2));
+      } catch (e) { /* ignore */ }
+      dbgLog('Removed ' + DBG_PLATES[2] + ' (will be new)', 'log-new');
+
+      document.getElementById('dbg-test-plates').value = DBG_PLATES.join(', ');
+      await dbgTestFreshness();
+    }
+    window.dbgScenarioMixed = dbgScenarioMixed;
+
+    async function dbgScenarioAllNew() {
+      dbgClearLog();
+      dbgLog('=== Scenario: All New ===', 'log-new');
+      for (const p of DBG_PLATES) {
+        const hash = await sha256(p);
+        try { await deleteDoc(doc(db, 'vehicles', hash)); } catch (e) { /* ignore */ }
+        dbgLog('Removed ' + p + ' (will be new)', 'log-new');
+      }
+      document.getElementById('dbg-test-plates').value = DBG_PLATES.join(', ');
+      await dbgTestFreshness();
+    }
+    window.dbgScenarioAllNew = dbgScenarioAllNew;
+
+    async function dbgScenarioStaleVal() {
+      dbgClearLog();
+      dbgLog('=== Scenario: Stale Valuation Only (MOT fresh) ===', 'log-stale');
+      const now = Date.now();
+      for (const p of DBG_PLATES) {
+        const hash = await sha256(p);
+        await setDoc(doc(db, 'vehicles', hash), {
+          valuation: { ValuationFigures: { DealerForecourt: 12000, PrivateClean: 10000, TradeClean: 8500, PartExchange: 7500, Auction: 6500 } },
+          valuation_updated: new Date(now - 30 * 3600000), // 30h old
+          mot_history: { RecordCount: 1, RecordList: [{ TestDate: '2025-10-01', TestResult: 'Pass' }] },
+          mot_updated: new Date(), // fresh
+          vehicle_details: { Make: 'DEBUG', Model: 'StaleVal', Colour: 'Amber', FuelType: 'Hybrid', YearOfManufacture: 2020 },
+          tyre_details: { FrontTyreSize: '205/55R16' },
+          scan_count: 2, last_scanned: new Date(),
+        }, { merge: true });
+        dbgLog('Injected ' + p + ' (val 30h stale, mot fresh)', 'log-stale');
+      }
+      document.getElementById('dbg-test-plates').value = DBG_PLATES.join(', ');
+      await dbgTestFreshness();
+    }
+    window.dbgScenarioStaleVal = dbgScenarioStaleVal;
+
+    async function dbgScenarioStaleMot() {
+      dbgClearLog();
+      dbgLog('=== Scenario: Stale MOT Only (valuation fresh) ===', 'log-stale');
+      const now = Date.now();
+      for (const p of DBG_PLATES) {
+        const hash = await sha256(p);
+        await setDoc(doc(db, 'vehicles', hash), {
+          valuation: { ValuationFigures: { DealerForecourt: 18000, PrivateClean: 15000, TradeClean: 13000, PartExchange: 11000, Auction: 9500 } },
+          valuation_updated: new Date(), // fresh
+          mot_history: { RecordCount: 1, RecordList: [{ TestDate: '2025-08-01', TestResult: 'Pass' }] },
+          mot_updated: new Date(now - 9 * 24 * 3600000), // 9 days old
+          vehicle_details: { Make: 'DEBUG', Model: 'StaleMOT', Colour: 'Red', FuelType: 'Electric', YearOfManufacture: 2023 },
+          tyre_details: { FrontTyreSize: '225/45R17' },
+          scan_count: 2, last_scanned: new Date(),
+        }, { merge: true });
+        dbgLog('Injected ' + p + ' (val fresh, mot 9d stale)', 'log-stale');
+      }
+      document.getElementById('dbg-test-plates').value = DBG_PLATES.join(', ');
+      await dbgTestFreshness();
+    }
+    window.dbgScenarioStaleMot = dbgScenarioStaleMot;
   </script>
 </body>
 </html>

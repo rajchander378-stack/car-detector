@@ -54,7 +54,13 @@
       "Bash(mkdir:*)",
       "Bash(curl:*)",
       "WebFetch(domain:vehicledataglobal.com)",
-      "WebFetch(domain:www.scribd.com)"
+      "WebFetch(domain:www.scribd.com)",
+      "Bash(npm init:*)",
+      "Bash(npx playwright:*)",
+      "Bash(node:*)",
+      "Bash(PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json npx playwright test --reporter=json)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(npx firebase-tools:*)"
     ]
   }
 }

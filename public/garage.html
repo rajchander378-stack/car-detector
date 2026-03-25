@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Vehicles — AutoSpotter</title>
+  <title>My Garage — AutoSpotter</title>
   <meta name="description" content="Your saved vehicles — track valuations over time.">
   <link rel="stylesheet" href="/style.css">
   <style>
@@ -17,7 +17,7 @@
       color: white; padding: 32px 20px; text-align: center;
     }
     .garage-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: white; }
-    .garage-header p { font-size: 14px; opacity: 0.85; }
+    .garage-header p { font-size: 14px; color: #ffffff; opacity: 1; }
 
     .garage-container { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
 
@@ -38,12 +38,27 @@
     .btn-export-pdf { border-color: #d32f2f; color: #d32f2f; }
     .btn-export-pdf:hover:not(:disabled) { background: #d32f2f; color: #fff; }
 
+    /* Add vehicle bar */
+    .add-vehicle-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 16px; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 2px solid #66bb6a; border-radius: 12px; flex-wrap: wrap; }
+    .add-vehicle-bar input[type="text"] { padding: 8px 14px; border: 2px solid #66bb6a; border-radius: 8px; font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; background: #fff; color: #000; width: 140px; font-family: inherit; }
+    .add-vehicle-bar input[type="text"]::placeholder { font-weight: 400; letter-spacing: 0; text-transform: none; color: #999; font-size: 13px; }
+    .add-vehicle-bar .btn-add { padding: 8px 20px; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; background: #2e7d32; color: #fff; cursor: pointer; }
+    .add-vehicle-bar .btn-add:hover { background: #1b5e20; }
+    .add-vehicle-bar .btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
+    .add-vehicle-bar .add-status { font-size: 13px; color: #2e7d32; }
+    .add-vehicle-bar .add-error { font-size: 13px; color: #c62828; }
+    .add-vehicle-spinner { display: inline-block; width: 16px; height: 16px; border: 2.5px solid #c8e6c9; border-top-color: #2e7d32; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* Selection & filter bar */
     .filter-bar { display: none; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; padding: 12px 16px; background: #f0f4f8; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
     .filter-bar label { font-weight: 600; color: var(--text-secondary); }
+    .filter-bar select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 600; background: #fff; cursor: pointer; }
     .filter-bar input[type="date"] { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+    .filter-bar input[type="number"] { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 60px; }
     .filter-bar .btn-sm { padding: 4px 12px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); cursor: pointer; }
     .filter-bar .btn-sm:hover { background: var(--border); }
+    .filter-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .selection-info { font-size: 13px; font-weight: 600; color: var(--primary, #1565c0); margin-left: auto; }
 
     /* Card checkbox overlay */
@@ -89,7 +104,8 @@
   <nav>
     <a href="/">Home</a>
     <a href="/dashboard.html">Dashboard</a>
-    <a href="/garage.html" class="active">My Vehicles</a>
+    <a href="/garage.html" class="active">My Garage</a>
+    <a id="inbox-link" href="/inbox.html" style="display:none;">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
     <a href="/pricing.html">Pricing</a>
     <a id="bulk-link" href="/bulk-upload.html" style="display:none; font-weight:600; color:#d4a017;">Bulk Upload</a>
     <span id="auth-area">
@@ -117,7 +133,7 @@
   <!-- Garage content -->
   <div id="garage-content" style="display:none;">
     <div class="garage-header">
-      <h1>My Vehicles</h1>
+      <h1>My Garage</h1>
       <p id="garage-subtitle">Your saved vehicles</p>
     </div>
 
@@ -126,6 +142,14 @@
       <div class="garage-limit-info" id="garage-limit">
         <span id="garage-limit-text">Loading...</span>
         <a href="/pricing.html" id="garage-upgrade-link" style="display:none; font-size:13px; font-weight:600;">Upgrade for more</a>
+      </div>
+
+      <!-- Add vehicle by plate -->
+      <div class="add-vehicle-bar" id="add-vehicle-bar" style="display:none;">
+        <label style="font-size:13px; font-weight:700; color:#1b5e20;">Add a vehicle:</label>
+        <input type="text" id="add-plate-input" placeholder="Enter reg" maxlength="8" onkeydown="if(event.key==='Enter')addByPlate()">
+        <button class="btn-add" id="add-plate-btn" onclick="addByPlate()">Look up &amp; Add</button>
+        <span id="add-plate-status"></span>
       </div>
 
       <!-- Toolbar: view toggle + exports -->
@@ -142,11 +166,27 @@
 
       <!-- Filter bar (Trader only) -->
       <div class="filter-bar" id="filter-bar">
-        <label>Date range:</label>
-        <input type="date" id="filter-from" onchange="applyDateFilter()">
-        <span>to</span>
-        <input type="date" id="filter-to" onchange="applyDateFilter()">
-        <button class="btn-sm" onclick="clearDateFilter()">Clear dates</button>
+        <label>Filter by:</label>
+        <select id="filter-type" onchange="switchFilterType()">
+          <option value="added">Date Added</option>
+          <option value="mot">MOT Due Date</option>
+          <option value="age">Vehicle Age</option>
+        </select>
+
+        <div class="filter-fields" id="filter-fields-date">
+          <input type="date" id="filter-from" onchange="applyFilter()">
+          <span>to</span>
+          <input type="date" id="filter-to" onchange="applyFilter()">
+        </div>
+
+        <div class="filter-fields" id="filter-fields-age" style="display:none;">
+          <input type="number" id="filter-age-min" min="0" max="50" placeholder="Min" onchange="applyFilter()">
+          <span>to</span>
+          <input type="number" id="filter-age-max" min="0" max="50" placeholder="Max" onchange="applyFilter()">
+          <span style="color:var(--text-secondary);">years old</span>
+        </div>
+
+        <button class="btn-sm" onclick="clearAllFilters()">Clear</button>
         <span style="color:var(--text-secondary);">|</span>
         <button class="btn-sm" onclick="selectAll()">Select all</button>
         <button class="btn-sm" onclick="selectNone()">Deselect all</button>
@@ -181,6 +221,7 @@
               <th data-col="trade" onclick="sortTable('trade')">Trade Price <span class="sort-arrow">&#x25B2;</span></th>
               <th data-col="mot" onclick="sortTable('mot')">MOT Due <span class="sort-arrow">&#x25B2;</span></th>
               <th data-col="val_age" onclick="sortTable('val_age')">Data Age <span class="sort-arrow">&#x25B2;</span></th>
+              <th data-col="vehicle_age" onclick="sortTable('vehicle_age')">Vehicle Age <span class="sort-arrow">&#x25B2;</span></th>
               <th data-col="added" onclick="sortTable('added')">Date Added <span class="sort-arrow">&#x25B2;</span></th>
               <th></th>
             </tr>
@@ -261,17 +302,98 @@
     function freshnessHtml(item) {
       const now = Date.now();
       let html = '';
+      // Valuation data age
       if (item.valuation_updated) {
-        const age = now - getTimestampMs(item.valuation_updated);
-        const cls = freshnessClass(age, VALUATION_MAX_AGE_MS);
-        html += '<span class="freshness-badge ' + cls + '">Val: ' + formatAge(age) + '</span>';
+        const ts = getTimestampMs(item.valuation_updated);
+        if (ts) {
+          const age = now - ts;
+          const cls = freshnessClass(age, VALUATION_MAX_AGE_MS);
+          html += '<span class="freshness-badge ' + cls + '">Val: ' + formatAge(age) + '</span>';
+        }
       }
-      if (item.mot_updated) {
-        const age = now - getTimestampMs(item.mot_updated);
-        const cls = freshnessClass(age, MOT_MAX_AGE_MS);
-        html += '<span class="freshness-badge ' + cls + '">MOT: ' + formatAge(age) + '</span>';
+      // MOT due countdown (replaces redundant MOT data age badge)
+      const mot = item.mot || {};
+      const motDueStr = mot.MotDueDate || mot.mot_due_date || mot.mot_due || '';
+      if (motDueStr) {
+        const dueDate = new Date(motDueStr);
+        if (!isNaN(dueDate)) {
+          const diffMs = dueDate.getTime() - now;
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          let label, cls;
+          if (diffDays < 0) {
+            label = 'MOT: OVERDUE';
+            cls = 'stale';
+          } else if (diffDays === 0) {
+            label = 'MOT: due today';
+            cls = 'stale';
+          } else if (diffDays <= 30) {
+            label = 'MOT: due in ' + diffDays + 'd';
+            cls = 'amber';
+          } else {
+            const months = Math.floor(diffDays / 30);
+            label = 'MOT: due in ' + (months > 0 ? months + 'mo' : diffDays + 'd');
+            cls = 'fresh';
+          }
+          html += '<span class="freshness-badge ' + cls + '">' + label + '</span>';
+        }
       }
       return html;
+    }
+
+    // ── Vehicle age from UK plate ──
+    function cleanPlate(plate) {
+      return (plate || '').replace(/\s+/g, '').toUpperCase();
+    }
+
+    function getVehicleAgeFromPlate(plate) {
+      const cleaned = cleanPlate(plate);
+      const match = cleaned.match(/^[A-Z]{2}(\d{2})[A-Z]{3}$/);
+      if (!match) return { known: false };
+
+      const ageId = parseInt(match[1], 10);
+      let regYear, regHalf;
+
+      if (ageId >= 2 && ageId <= 49) {
+        regYear = 2000 + ageId;
+        regHalf = 'March';
+      } else if (ageId >= 51 && ageId <= 99) {
+        regYear = 2000 + (ageId - 50);
+        regHalf = 'September';
+      } else {
+        return { known: false };
+      }
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+
+      let ageYears;
+      if (regHalf === 'March') {
+        ageYears = currentYear - regYear + (currentMonth < 3 ? -1 : 0);
+      } else {
+        ageYears = currentYear - regYear + (currentMonth < 9 ? -1 : 0);
+      }
+
+      if (ageYears < 0 || regYear > currentYear + 1) return { known: false };
+
+      return {
+        known: true,
+        regYear,
+        regHalf,
+        ageYears,
+        label: ageYears === 0 ? 'Under 1 year old'
+          : ageYears === 1 ? '~1 year old'
+          : '~' + ageYears + ' years old',
+        regLabel: regHalf + ' ' + regYear,
+      };
+    }
+
+    function vehicleAgeHtml(plate) {
+      const age = getVehicleAgeFromPlate(plate);
+      if (age.known) {
+        return '<span class="freshness-badge fresh" style="font-size:11px;">' + age.label + ' (reg. ' + age.regLabel + ')</span>';
+      }
+      return '<span class="freshness-badge" style="font-size:11px; background:#f5f5f5; color:var(--text-secondary);">Age: cannot be determined from plate</span>';
     }
 
     // ── SHA-256 for vehicle doc lookup ──
@@ -282,7 +404,7 @@
 
     // ── Backfill timestamps from shared vehicle DB ──
     async function backfillTimestamps(uid) {
-      const items = garageData.filter(i => !i.valuation_updated && !i.mot_updated && i.id && i.id.number_plate);
+      const items = garageData.filter(i => !i.valuation_updated && !i.mot_updated && i.docId && i.id && i.id.number_plate);
       if (items.length === 0) return;
 
       let changed = false;
@@ -308,6 +430,158 @@
       if (changed) {
         renderCards();
         renderTable();
+      }
+    }
+
+    // ── Add vehicle by plate lookup ──
+    async function addByPlate() {
+      const input = document.getElementById('add-plate-input');
+      const btn = document.getElementById('add-plate-btn');
+      const status = document.getElementById('add-plate-status');
+      const plate = cleanPlate(input.value);
+
+      if (!plate || plate.length < 2 || plate.length > 8 || !/^[A-Z0-9]{2,8}$/.test(plate)) {
+        status.className = 'add-error';
+        status.textContent = 'Please enter a valid UK registration.';
+        return;
+      }
+
+      const user = auth.currentUser;
+      if (!user) { status.className = 'add-error'; status.textContent = 'Please sign in first.'; return; }
+
+      btn.disabled = true;
+      status.className = 'add-status';
+      status.innerHTML = '<span class="add-vehicle-spinner"></span> Looking up ' + plate + '...';
+
+      try {
+        // Check garage limit
+        const garageSnap = await db.collection('users').doc(user.uid).collection('garage').get();
+        const limit = GARAGE_LIMITS[userPlan] || 2;
+        if (garageSnap.size >= limit) {
+          status.className = 'add-error';
+          status.textContent = 'Garage full — upgrade your plan for more slots.';
+          btn.disabled = false;
+          return;
+        }
+
+        // Check if already in garage
+        const existing = await db.collection('users').doc(user.uid).collection('garage')
+          .where('identification.number_plate', '==', plate).limit(1).get();
+        if (!existing.empty) {
+          status.className = 'add-error';
+          status.textContent = plate + ' is already in your garage.';
+          btn.disabled = false;
+          return;
+        }
+
+        // Check shared vehicle cache first
+        const hash = await sha256(plate);
+        const cached = await db.collection('vehicles').doc(hash).get();
+        let vehicleData;
+
+        if (cached.exists && cached.data().valuation) {
+          // Use cached data (free)
+          vehicleData = cached.data();
+          // Bump scan count
+          db.collection('vehicles').doc(hash).update({
+            scan_count: firebase.firestore.FieldValue.increment(1),
+            last_scanned: firebase.firestore.FieldValue.serverTimestamp(),
+          }).catch(() => {});
+          status.innerHTML = '<span class="add-vehicle-spinner"></span> Found in database — saving...';
+        } else {
+          // Call VDGL API
+          status.innerHTML = '<span class="add-vehicle-spinner"></span> Fetching from DVLA...';
+          const params = new URLSearchParams({ vrm: plate, package: 'DataPackage2' });
+          const resp = await fetch('/api/vdgl?' + params.toString());
+          if (!resp.ok) throw new Error('Lookup failed (HTTP ' + resp.status + ')');
+          const json = await resp.json();
+          if (json.error) throw new Error(json.error);
+          const info = json.ResponseInformation || {};
+          if (!info.IsSuccessStatusCode) {
+            const msg = info.StatusMessage || 'Lookup failed';
+            if (msg.includes('InvalidSearchTerm')) {
+              throw new Error('Registration not recognised — check the plate and try again.');
+            }
+            throw new Error(msg);
+          }
+
+          const results = json.Results || {};
+          vehicleData = {};
+          if (results.ValuationDetails) vehicleData.valuation = results.ValuationDetails;
+          if (results.VehicleDetails) vehicleData.vehicle_details = results.VehicleDetails;
+          if (results.ModelDetails) vehicleData.model_details = results.ModelDetails;
+          if (results.MotHistoryDetails) vehicleData.mot_history = results.MotHistoryDetails;
+          if (results.TyreDetails) vehicleData.tyre_details = results.TyreDetails;
+
+          // Cache the result
+          const cacheDoc = Object.assign({}, vehicleData, {
+            valuation_updated: firebase.firestore.FieldValue.serverTimestamp(),
+            mot_updated: firebase.firestore.FieldValue.serverTimestamp(),
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
+            scan_count: 1,
+            last_scanned: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          db.collection('vehicles').doc(hash).set(cacheDoc, { merge: true }).catch(() => {});
+        }
+
+        // Extract data for garage doc
+        const val = vehicleData.valuation || {};
+        const figures = val.ValuationFigures || val;
+        const vd = vehicleData.vehicle_details || vehicleData.VehicleDetails || {};
+        const vdId = vd.VehicleIdentification || vd.vehicle_identification || vd;
+        const vdHist = vd.VehicleHistory || vd.vehicle_history || {};
+        const vdColour = vdHist.ColourDetails || vdHist.colour_details || {};
+        const md = vehicleData.model_details || vehicleData.ModelDetails || {};
+        const mdId = md.Identification || md.identification || md;
+        const mot = vehicleData.mot_history || null;
+
+        const identification = {
+          number_plate: plate,
+          make: vdId.DvlaMake || vdId.dvla_make || mdId.Make || mdId.make || '',
+          model: vdId.DvlaModel || vdId.dvla_model || mdId.Model || mdId.model || '',
+          colour: vdColour.CurrentColour || vdColour.current_colour || vdId.DvlaColour || vdId.dvla_colour || '',
+          year_min: vdId.YearOfManufacture || vdId.year_of_manufacture || null,
+          year_max: vdId.YearOfManufacture || vdId.year_of_manufacture || null,
+          fuel_type: vdId.DvlaFuelType || vdId.dvla_fuel_type || '',
+        };
+
+        const valuation = {};
+        const d = figures.DealerForecourt || figures.dealer_forecourt;
+        const p = figures.PrivateClean || figures.private_clean;
+        const t = figures.TradeRetail || figures.trade_retail;
+        const px = figures.PartExchange || figures.part_exchange;
+        const a = figures.Auction || figures.auction;
+        if (d) valuation.dealer_forecourt = d;
+        if (p) valuation.private_clean = p;
+        if (t) valuation.trade_retail = t;
+        if (px) valuation.part_exchange = px;
+        if (a) valuation.auction = a;
+
+        const garageDoc = {
+          identification,
+          valuation: Object.keys(valuation).length > 0 ? valuation : null,
+          mot,
+          valuation_updated: firebase.firestore.FieldValue.serverTimestamp(),
+          mot_updated: mot ? firebase.firestore.FieldValue.serverTimestamp() : null,
+          added_at: firebase.firestore.FieldValue.serverTimestamp(),
+          source: 'manual_lookup',
+        };
+
+        status.innerHTML = '<span class="add-vehicle-spinner"></span> Saving to garage...';
+        await db.collection('users').doc(user.uid).collection('garage').add(garageDoc);
+
+        // Success
+        const make = identification.make;
+        const model = identification.model;
+        const name = (make && model) ? make + ' ' + model : plate;
+        status.className = 'add-status';
+        status.textContent = name + ' added to your garage!';
+        input.value = '';
+      } catch (err) {
+        status.className = 'add-error';
+        status.textContent = err.message || 'Lookup failed. Please try again.';
+      } finally {
+        btn.disabled = false;
       }
     }
 
@@ -343,6 +617,9 @@
       const loading = document.getElementById('garage-loading');
       const toolbar = document.getElementById('garage-toolbar');
       loading.style.display = 'none';
+
+      // Always show the add-vehicle bar when signed in
+      document.getElementById('add-vehicle-bar').style.display = 'flex';
 
       const limit = GARAGE_LIMITS[userPlan] || 2;
       const count = snapshot.size;
@@ -437,6 +714,9 @@
         html += '</div>';
         if (addedDate) html += '<span class="card-date-badge">Added ' + addedDate + '</span>';
         html += '<div>' + freshnessHtml(item) + '</div>';
+        if (id.number_plate) {
+          html += '<div style="margin-top:4px;">' + vehicleAgeHtml(id.number_plate) + '</div>';
+        }
 
         if (id.number_plate) {
           html += '<div class="vehicle-plate">' + escapeHtml(id.number_plate) + '</div>';
@@ -474,6 +754,7 @@
         case 'mot': return mot.mot_due || '';
         case 'val_age': return item.valuation_updated ? (getTimestampMs(item.valuation_updated) || 0) : 0;
         case 'mot_age': return item.mot_updated ? (getTimestampMs(item.mot_updated) || 0) : 0;
+        case 'vehicle_age': { const pa = getVehicleAgeFromPlate(id.number_plate || ''); return pa.known ? pa.ageYears : 9999; }
         case 'added': return item.added_at ? (item.added_at.toDate ? item.added_at.toDate().getTime() : new Date(item.added_at).getTime()) : 0;
         default: return '';
       }
@@ -529,6 +810,8 @@
         row += '<td>' + (trade ? '&pound;' + Number(trade).toLocaleString() : '') + '</td>';
         row += '<td>' + escapeHtml(motDue) + '</td>';
         row += '<td>' + freshnessHtml(item) + '</td>';
+        const plateAge = getVehicleAgeFromPlate(id.number_plate || '');
+        row += '<td>' + (plateAge.known ? plateAge.label : '<span style="color:var(--text-secondary); font-style:italic; font-size:11px;">N/A</span>') + '</td>';
         row += '<td>' + formatDate(item.added_at) + '</td>';
         row += '<td class="td-actions"><button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button></td>';
         row += '</tr>';
@@ -564,7 +847,46 @@
       return item.added_at.toDate ? item.added_at.toDate() : new Date(item.added_at);
     }
 
+    function getItemMotDueDate(item) {
+      const mot = item.mot || {};
+      const dueStr = mot.MotDueDate || mot.mot_due_date || mot.mot_due || '';
+      if (!dueStr) return null;
+      const d = new Date(dueStr);
+      return isNaN(d) ? null : d;
+    }
+
+    function getItemVehicleAge(item) {
+      const plate = (item.id && item.id.number_plate) ? item.id.number_plate : '';
+      const age = getVehicleAgeFromPlate(plate);
+      return age.known ? age.ageYears : null;
+    }
+
+    function switchFilterType() {
+      const type = document.getElementById('filter-type').value;
+      document.getElementById('filter-fields-date').style.display = (type === 'added' || type === 'mot') ? 'flex' : 'none';
+      document.getElementById('filter-fields-age').style.display = type === 'age' ? 'flex' : 'none';
+      clearAllFilters();
+    }
+
     function getFilteredData() {
+      const type = document.getElementById('filter-type').value;
+
+      if (type === 'age') {
+        const minVal = document.getElementById('filter-age-min').value;
+        const maxVal = document.getElementById('filter-age-max').value;
+        if (!minVal && !maxVal) return garageData;
+        const min = minVal !== '' ? parseInt(minVal) : null;
+        const max = maxVal !== '' ? parseInt(maxVal) : null;
+        return garageData.filter(item => {
+          const age = getItemVehicleAge(item);
+          if (age === null) return false;
+          if (min !== null && age < min) return false;
+          if (max !== null && age > max) return false;
+          return true;
+        });
+      }
+
+      // Date-based filters (added or mot)
       const fromVal = document.getElementById('filter-from').value;
       const toVal = document.getElementById('filter-to').value;
       if (!fromVal && !toVal) return garageData;
@@ -573,7 +895,7 @@
       const to = toVal ? new Date(toVal + 'T23:59:59') : null;
 
       return garageData.filter(item => {
-        const d = getItemDate(item);
+        const d = type === 'mot' ? getItemMotDueDate(item) : getItemDate(item);
         if (!d) return false;
         if (from && d < from) return false;
         if (to && d > to) return false;
@@ -581,8 +903,7 @@
       });
     }
 
-    function applyDateFilter() {
-      // Auto-select all vehicles in the filtered range
+    function applyFilter() {
       const filtered = getFilteredData();
       selectedIds = new Set(filtered.map(i => i.docId));
       renderCards();
@@ -590,9 +911,11 @@
       updateSelectionUI();
     }
 
-    function clearDateFilter() {
+    function clearAllFilters() {
       document.getElementById('filter-from').value = '';
       document.getElementById('filter-to').value = '';
+      document.getElementById('filter-age-min').value = '';
+      document.getElementById('filter-age-max').value = '';
       selectedIds.clear();
       renderCards();
       renderTable();
@@ -968,11 +1291,20 @@
           limit === Infinity ? 'Track and manage your vehicles' : 'Save up to ' + limit + ' vehicles on your plan';
 
         loadGarage(user.uid);
+        // Inbox badge
+        document.getElementById('inbox-link').style.display = '';
+        db.collection('messages').where('to_uid','==',user.uid).where('read','==',false)
+          .onSnapshot(s => {
+            const b = document.getElementById('inbox-badge');
+            if (s.size > 0) { b.textContent = s.size; b.style.display = 'inline'; }
+            else { b.style.display = 'none'; }
+          });
       } else {
         document.getElementById('gate-auth').style.display = 'block';
         document.getElementById('garage-content').style.display = 'none';
         document.getElementById('user-plan-badge').style.display = 'none';
         document.getElementById('bulk-link').style.display = 'none';
+        document.getElementById('inbox-link').style.display = 'none';
         if (garageUnsubscribe) { garageUnsubscribe(); garageUnsubscribe = null; }
       }
     });

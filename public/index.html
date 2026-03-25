@@ -156,6 +156,7 @@
     <a href="/pricing.html">Pricing</a>
     <a href="/privacy-policy.html">Privacy</a>
     <a id="dashboard-link" href="/dashboard.html" style="display:none;">Dashboard</a>
+    <a id="inbox-link" href="/inbox.html" style="display:none;">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
     <span id="auth-area">
       <button id="sign-in-btn" class="btn btn-primary" style="padding:6px 16px; font-size:13px;" onclick="doSignIn()">Sign in</button>
       <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
@@ -258,27 +259,37 @@
       <div class="feature-card">
         <div class="feature-icon" style="background:#fff3e0;">&#127468;&#127463;</div>
         <h3>UK Number Plate Reading</h3>
-        <p>Number plates are read automatically from the photo. No need to type anything — just point and shoot.</p>
+        <p>Number plates are read automatically from the photo. Vehicle age is calculated from standard UK registrations.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon" style="background:#e8f5e9;">&#163;</div>
         <h3>Real-Time Valuations</h3>
-        <p>Get dealer, private, and trade prices instantly. Know what any vehicle is worth before you buy or sell.</p>
+        <p>Get dealer, private, trade, part-exchange, and auction prices instantly from DVLA-verified data.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon" style="background:#fce4ec;">&#128200;</div>
-        <h3>Confidence Scoring</h3>
-        <p>Every identification comes with a confidence score so you know how reliable the result is.</p>
+        <div class="feature-icon" style="background:#fce4ec;">&#128736;&#65039;</div>
+        <h3>Full MOT History</h3>
+        <p>View complete MOT history including pass/fail results, mileage, advisories, and days until the next MOT is due.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon" style="background:#f3e5f5;">&#128190;</div>
-        <h3>Save &amp; Review</h3>
-        <p>Save your scan history and review past identifications anytime — on the app or on the web.</p>
+        <div class="feature-icon" style="background:#e8eaf6;">&#128202;</div>
+        <h3>Bulk Upload</h3>
+        <p>Upload multiple car images at once for AI identification and valuation. Export results as CSV, Excel, or PDF reports.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon" style="background:#e0f2f1;">&#9878;&#65039;</div>
-        <h3>Edit &amp; Report</h3>
-        <p>Not quite right? Edit the AI result or report inaccuracies to help improve future identifications.</p>
+        <div class="feature-icon" style="background:#f3e5f5;">&#128663;</div>
+        <h3>My Garage</h3>
+        <p>Save vehicles to your personal garage. Add by photo or just type a number plate. Track valuations and MOT status at a glance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#e0f7fa;">&#128200;</div>
+        <h3>Smart Data Freshness</h3>
+        <p>Cached valuations and MOT data refresh automatically when stale. Fresh data is free — you only pay for new or outdated lookups.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#e0f2f1;">&#128187;</div>
+        <h3>Vehicle Details</h3>
+        <p>Engine size, BHP, fuel type, transmission, CO2 emissions, road tax, previous keepers, import and scrap status — all in one place.</p>
       </div>
     </div>
   </section>
@@ -295,7 +306,7 @@
         </div>
         <div class="feature-card" style="border-left: 4px solid #d4a017;">
           <h3>Used Car Dealers</h3>
-          <p>Value stock quickly at auctions, on the forecourt, or on the road. 100 valuation scans per month on the Trader plan.</p>
+          <p>Bulk upload forecourt photos, export valuations to spreadsheets, and manage your stock in My Garage. Built for the Trader plan.</p>
         </div>
         <div class="feature-card" style="border-left: 4px solid #2e7d32;">
           <h3>Private Buyers &amp; Sellers</h3>
@@ -411,6 +422,18 @@
       if (user) {
         document.getElementById('user-photo').src = user.photoURL || '';
         document.getElementById('user-name').textContent = user.displayName || user.email;
+        document.getElementById('inbox-link').style.display = '';
+        if (window._inboxBadgeUnsub) window._inboxBadgeUnsub();
+        window._inboxBadgeUnsub = db.collection('messages')
+          .where('to_uid', '==', user.uid).where('read', '==', false)
+          .onSnapshot(s => {
+            const b = document.getElementById('inbox-badge');
+            if (s.size > 0) { b.textContent = s.size; b.style.display = 'inline'; }
+            else { b.style.display = 'none'; }
+          });
+      } else {
+        document.getElementById('inbox-link').style.display = 'none';
+        if (window._inboxBadgeUnsub) { window._inboxBadgeUnsub(); window._inboxBadgeUnsub = null; }
       }
     });
   </script>

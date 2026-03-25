@@ -19,15 +19,6 @@
     .success-banner { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: none; }
     .error-banner { background: var(--danger-light); color: var(--danger); border: 1px solid #ef9a9a; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: none; }
     .sign-in-prompt { text-align: center; padding: 40px 20px; }
-    .msg-thread { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-    .msg-thread .subject { font-weight: 600; font-size: 15px; }
-    .msg-thread .meta { font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px; }
-    .msg-thread .body { font-size: 14px; color: var(--text-secondary); white-space: pre-wrap; }
-    .msg-thread .reply { margin-top: 10px; padding: 10px; background: var(--primary-light); border-radius: 6px; font-size: 14px; }
-    .msg-thread .reply-label { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
-    .priority-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
-    .priority-high { background: #fff3e0; color: #e65100; }
-    .priority-urgent { background: #fce4ec; color: #c62828; }
   </style>
 </head>
 <body>
@@ -38,6 +29,7 @@
   <nav>
     <a href="/">Home</a>
     <a href="/pricing.html">Pricing</a>
+    <a id="inbox-link" href="/inbox.html" style="display:none;">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
     <a href="/contact.html" class="active">Contact</a>
     <a href="/privacy-policy.html">Privacy</a>
     <a id="delete-link" href="/delete-account.html" style="display:none;">Delete Account</a>
@@ -78,9 +70,8 @@
       </div>
 
       <h2>Your Messages</h2>
-      <p id="msgs-loading" style="color:var(--text-secondary);">Loading your messages...</p>
-      <p id="msgs-empty" style="display:none; color:var(--text-secondary);">You haven't sent any messages yet.</p>
-      <div id="msgs-list"></div>
+      <p style="color:var(--text-secondary);margin-bottom:12px;">View and manage all your conversations in your inbox.</p>
+      <a href="/inbox.html" class="btn btn-primary" style="display:inline-block;padding:10px 24px;text-decoration:none;">Go to Inbox</a>
     </div>
   </div>
 
@@ -102,8 +93,6 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
-    let msgsUnsubscribe = null;
-
     async function doSignIn() {
       try {
         await auth.signInWithPopup(provider);
@@ -120,12 +109,6 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
-    }
-
-    function formatDate(ts) {
-      if (!ts) return '';
-      const d = ts.toDate ? ts.toDate() : new Date(ts);
-      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
 
     async function sendMessage(e) {
@@ -145,7 +128,18 @@
       document.getElementById('error-banner').style.display = 'none';
 
       try {
-        await db.collection('messages').add({
+        const docRef = await db.collection('messages').add({
+          // New threaded fields
+          from_uid: user.uid,
+          from_email: user.email || '',
+          from_name: user.displayName || '',
+          to_uid: 'admin',
+          to_email: '',
+          thread_id: null, // set below
+          read: false,
+          deleted_by: [],
+          is_admin_msg: false,
+          // Legacy compat fields
           user_id: user.uid,
           user_email: user.email || '',
           user_name: user.displayName || '',
@@ -153,10 +147,8 @@
           body: body,
           priority: priority,
           created_at: firebase.firestore.FieldValue.serverTimestamp(),
-          admin_reply: null,
-          replied_at: null,
-          replied_by: null,
         });
+        await docRef.update({ thread_id: docRef.id });
         document.getElementById('msg-form').reset();
         document.getElementById('success-banner').style.display = 'block';
       } catch (err) {
@@ -169,54 +161,6 @@
       }
     }
 
-    function renderMessages(snapshot) {
-      const list = document.getElementById('msgs-list');
-      const empty = document.getElementById('msgs-empty');
-      const loading = document.getElementById('msgs-loading');
-      loading.style.display = 'none';
-
-      if (snapshot.empty) {
-        empty.style.display = 'block';
-        list.innerHTML = '';
-        return;
-      }
-      empty.style.display = 'none';
-
-      list.innerHTML = snapshot.docs.map(doc => {
-        const d = doc.data();
-        const date = formatDate(d.created_at);
-        let priorityHtml = '';
-        if (d.priority === 'high') priorityHtml = '<span class="priority-badge priority-high">High</span>';
-        if (d.priority === 'urgent') priorityHtml = '<span class="priority-badge priority-urgent">Urgent</span>';
-
-        let html = '<div class="msg-thread">';
-        html += '<div class="subject">' + escapeHtml(d.subject || '') + priorityHtml + '</div>';
-        html += '<div class="meta">' + date + '</div>';
-        html += '<div class="body">' + escapeHtml(d.body || '') + '</div>';
-
-        if (d.admin_reply) {
-          const replyDate = d.replied_at ? formatDate(d.replied_at) : '';
-          html += '<div class="reply">';
-          html += '<div class="reply-label">Admin Reply' + (replyDate ? ' &middot; ' + replyDate : '') + '</div>';
-          html += escapeHtml(d.admin_reply);
-          html += '</div>';
-        }
-
-        html += '</div>';
-        return html;
-      }).join('');
-    }
-
-    function loadMessages(uid) {
-      if (msgsUnsubscribe) msgsUnsubscribe();
-      msgsUnsubscribe = db.collection('messages')
-        .where('user_id', '==', uid)
-        .orderBy('created_at', 'desc')
-        .onSnapshot(renderMessages, () => {
-          document.getElementById('msgs-loading').textContent = 'Unable to load messages.';
-        });
-    }
-
     auth.onAuthStateChanged(async (user) => {
       const prompt = document.getElementById('sign-in-prompt');
       const section = document.getElementById('contact-section');
@@ -224,7 +168,6 @@
       if (user) {
         prompt.style.display = 'none';
         section.style.display = 'block';
-        loadMessages(user.uid);
 
         // Check admin — hide contact for admins, show admin link
         try {
@@ -237,11 +180,22 @@
           }
         } catch (e) {}
         document.getElementById('delete-link').style.display = 'inline';
+        // Inbox link + unread badge
+        document.getElementById('inbox-link').style.display = '';
+        if (window._inboxBadgeUnsub) window._inboxBadgeUnsub();
+        window._inboxBadgeUnsub = db.collection('messages')
+          .where('to_uid', '==', user.uid).where('read', '==', false)
+          .onSnapshot(s => {
+            const b = document.getElementById('inbox-badge');
+            if (s.size > 0) { b.textContent = s.size; b.style.display = 'inline'; }
+            else { b.style.display = 'none'; }
+          });
       } else {
         prompt.style.display = 'block';
         section.style.display = 'none';
         document.getElementById('delete-link').style.display = 'none';
-        if (msgsUnsubscribe) { msgsUnsubscribe(); msgsUnsubscribe = null; }
+        document.getElementById('inbox-link').style.display = 'none';
+        if (window._inboxBadgeUnsub) { window._inboxBadgeUnsub(); window._inboxBadgeUnsub = null; }
       }
     });
   </script>

@@ -72,6 +72,7 @@
   <nav>
     <a href="/">Home</a>
     <a href="/pricing.html" class="active">Pricing</a>
+    <a id="inbox-link" href="/inbox.html" style="display:none;">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
     <a href="/contact.html">Contact</a>
     <a href="/privacy-policy.html">Privacy</a>
     <a id="delete-link" href="/delete-account.html" style="display:none;">Delete Account</a>
@@ -425,9 +426,21 @@
         await loadMembership(user);
         await loadCreditBalance(user);
         document.getElementById('delete-link').style.display = 'inline';
+        // Inbox link + unread badge
+        document.getElementById('inbox-link').style.display = '';
+        if (window._inboxBadgeUnsub) window._inboxBadgeUnsub();
+        window._inboxBadgeUnsub = db.collection('messages')
+          .where('to_uid', '==', user.uid).where('read', '==', false)
+          .onSnapshot(s => {
+            const b = document.getElementById('inbox-badge');
+            if (s.size > 0) { b.textContent = s.size; b.style.display = 'inline'; }
+            else { b.style.display = 'none'; }
+          });
       } else {
         document.getElementById('delete-link').style.display = 'none';
         document.getElementById('credit-balance').style.display = 'none';
+        document.getElementById('inbox-link').style.display = 'none';
+        if (window._inboxBadgeUnsub) { window._inboxBadgeUnsub(); window._inboxBadgeUnsub = null; }
       }
     });
   </script>

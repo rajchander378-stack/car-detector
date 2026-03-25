@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inbox — AutoSpotter</title>
+  <meta name="description" content="Your messages and conversations with AutoSpotter support.">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { background: var(--bg); }
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); }
+    nav a:hover { color: var(--primary); text-decoration: none; }
+    #auth-area { margin-left: auto; }
+
+    .inbox-header {
+      background: linear-gradient(135deg, #0d47a1 0%, #1565c0 40%, #1e88e5 100%);
+      color: white; padding: 28px 20px; text-align: center;
+    }
+    .inbox-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: white; }
+    .inbox-header p { font-size: 14px; color: #bbdefb; }
+
+    .inbox-container { max-width: 900px; margin: 0 auto; padding: 20px 20px 64px; }
+
+    /* Toolbar */
+    .inbox-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .inbox-tabs {
+      display: flex; gap: 0;
+      border-bottom: 2px solid var(--border);
+    }
+    .inbox-tab {
+      padding: 10px 22px; border: none; background: none; cursor: pointer;
+      font-size: 14px; font-weight: 500; color: var(--text-secondary);
+      border-bottom: 2px solid transparent; margin-bottom: -2px;
+      transition: all 0.15s; position: relative;
+    }
+    .inbox-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .inbox-tab:hover:not(.active) { color: var(--text); }
+    .inbox-tab .tab-count {
+      display: inline-block; background: var(--border); color: var(--text-secondary);
+      border-radius: 10px; padding: 1px 7px; font-size: 11px; margin-left: 4px; font-weight: 600;
+    }
+    .inbox-tab.active .tab-count { background: var(--primary-light); color: var(--primary); }
+    .inbox-tab .tab-count.unread { background: var(--danger); color: white; }
+
+    .btn-compose {
+      padding: 9px 20px; border-radius: 8px; border: none;
+      background: var(--primary); color: white; font-size: 14px;
+      font-weight: 600; cursor: pointer; transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-compose:hover { background: #0d47a1; }
+    .btn-compose svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* Message list */
+    .msg-list {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .msg-row {
+      display: flex; align-items: center; padding: 14px 16px;
+      border-bottom: 1px solid #f0f0f0; cursor: pointer;
+      transition: background 0.1s; gap: 12px;
+    }
+    .msg-row:last-child { border-bottom: none; }
+    .msg-row:hover { background: #fafafa; }
+    .msg-row.unread { background: #f8fbff; }
+    .msg-row.unread:hover { background: #f0f5ff; }
+
+    .msg-unread-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--primary);
+      flex-shrink: 0;
+    }
+    .msg-unread-dot.read { background: transparent; }
+
+    .msg-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary-light); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; flex-shrink: 0;
+    }
+    .msg-avatar.admin-avatar { background: #e8f5e9; color: var(--success); }
+
+    .msg-body-col { flex: 1; min-width: 0; }
+    .msg-from {
+      font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+    .msg-row.unread .msg-from { font-weight: 700; color: var(--text); }
+    .msg-subject {
+      font-size: 14px; color: var(--text); font-weight: 400;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .msg-row.unread .msg-subject { font-weight: 600; }
+    .msg-preview {
+      font-size: 12px; color: var(--text-secondary); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .msg-meta {
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 4px; flex-shrink: 0;
+    }
+    .msg-time { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+    .msg-row.unread .msg-time { color: var(--primary); font-weight: 600; }
+
+    .priority-dot {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+    }
+    .priority-dot.high { background: #fff3e0; color: #e65100; }
+    .priority-dot.urgent { background: #fce4ec; color: var(--danger); }
+
+    .msg-empty {
+      text-align: center; padding: 48px 20px; color: var(--text-secondary);
+    }
+    .msg-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+
+    /* Thread panel (right drawer) */
+    .thread-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35); z-index: 200;
+    }
+    .thread-panel {
+      position: fixed; top: 0; right: 0;
+      width: 520px; max-width: 100%; height: 100vh;
+      background: var(--card-bg); z-index: 201;
+      display: none; flex-direction: column;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+    }
+    .thread-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .thread-header h2 {
+      flex: 1; font-size: 16px; font-weight: 700; margin: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .thread-header button {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 12px; font-size: 12px; cursor: pointer; color: var(--text-secondary);
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .thread-header button:hover { border-color: var(--primary); color: var(--primary); }
+    .thread-header .close-btn {
+      border: none; font-size: 22px; padding: 0 4px; line-height: 1;
+    }
+
+    .thread-messages {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .bubble {
+      max-width: 80%; padding: 12px 16px; border-radius: 14px;
+      font-size: 14px; line-height: 1.5; position: relative;
+      animation: bubbleIn 0.2s ease-out;
+    }
+    @keyframes bubbleIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .bubble.sent {
+      align-self: flex-end; background: var(--primary); color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble.received {
+      align-self: flex-start; background: #f0f0f0; color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+    .bubble-sender {
+      font-size: 11px; font-weight: 700; margin-bottom: 4px;
+      opacity: 0.75;
+    }
+    .bubble-time {
+      font-size: 10px; opacity: 0.6; margin-top: 6px; text-align: right;
+    }
+    .bubble.received .bubble-time { text-align: left; }
+
+    .thread-reply {
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; background: #fafafa;
+    }
+    .thread-reply textarea {
+      flex: 1; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 10px; font-size: 14px; font-family: inherit;
+      resize: none; min-height: 44px; max-height: 120px;
+      transition: border-color 0.15s;
+    }
+    .thread-reply textarea:focus { outline: none; border-color: var(--primary); }
+    .thread-reply button {
+      padding: 10px 18px; border-radius: 10px; border: none;
+      background: var(--primary); color: white; font-size: 14px;
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+      align-self: flex-end;
+    }
+    .thread-reply button:hover { background: #0d47a1; }
+    .thread-reply button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Compose modal */
+    .compose-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 300;
+      justify-content: center; align-items: center;
+    }
+    .compose-overlay.open { display: flex; }
+    .compose-modal {
+      background: var(--card-bg); border-radius: 14px;
+      width: 520px; max-width: 92vw; max-height: 90vh;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+      display: flex; flex-direction: column;
+      animation: modalIn 0.2s ease-out;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .compose-header {
+      padding: 18px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .compose-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
+    .compose-header .close-btn {
+      background: none; border: none; font-size: 22px;
+      cursor: pointer; color: var(--text-secondary); padding: 0;
+    }
+    .compose-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .compose-body label {
+      font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      margin-bottom: 4px; display: block;
+    }
+    .compose-body input,
+    .compose-body select,
+    .compose-body textarea {
+      width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px; font-family: inherit;
+      transition: border-color 0.15s; box-sizing: border-box;
+    }
+    .compose-body input:focus,
+    .compose-body select:focus,
+    .compose-body textarea:focus { outline: none; border-color: var(--primary); }
+    .compose-body textarea { resize: vertical; min-height: 120px; }
+    .compose-footer {
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .compose-footer .btn-cancel {
+      padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border);
+      background: white; color: var(--text-secondary); font-size: 14px;
+      cursor: pointer; font-weight: 500;
+    }
+    .compose-footer .btn-send {
+      padding: 9px 22px; border-radius: 8px; border: none;
+      background: var(--primary); color: white; font-size: 14px;
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .compose-footer .btn-send:hover { background: #0d47a1; }
+    .compose-footer .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Loading state */
+    .inbox-loading { text-align: center; padding: 48px; color: var(--text-secondary); }
+
+    /* Legacy reply indicator */
+    .legacy-badge {
+      display: inline-block; padding: 2px 6px; border-radius: 4px;
+      font-size: 10px; background: #f5f5f5; color: var(--text-secondary);
+    }
+
+    @media (max-width: 600px) {
+      .thread-panel { width: 100%; }
+      .inbox-toolbar { flex-direction: column; align-items: stretch; }
+      .inbox-tabs { overflow-x: auto; }
+      .bubble { max-width: 90%; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/">Home</a>
+  <a href="/dashboard.html">Dashboard</a>
+  <a href="/garage.html">My Garage</a>
+  <a href="/inbox.html" class="active">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
+  <a href="/pricing.html">Pricing</a>
+  <a id="bulk-link" href="/bulk-upload.html" style="display:none; font-weight:600; color:#d4a017;">Bulk Upload</a>
+  <a id="admin-link" href="/admin/" style="display:none; font-weight:600; color:var(--primary);">Admin</a>
+  <span id="auth-area">
+    <button id="sign-in-btn" class="btn btn-primary" onclick="doSignIn()">Sign in</button>
+    <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
+      <img id="user-photo" src="" alt="" style="width:26px; height:26px; border-radius:50%;">
+      <span id="user-name"></span>
+      <button class="btn" onclick="doSignOut()">Sign out</button>
+    </span>
+  </span>
+</nav>
+
+<!-- Auth gate -->
+<div id="gate-auth" style="display:none;">
+  <div class="inbox-header">
+    <h1>Sign in to continue</h1>
+    <p>View your messages</p>
+  </div>
+  <div style="text-align:center; padding:48px;">
+    <button class="btn btn-primary" onclick="doSignIn()">Sign in with Google</button>
+  </div>
+</div>
+
+<!-- Main inbox -->
+<div id="inbox-content" style="display:none;">
+  <div class="inbox-header">
+    <h1>Inbox</h1>
+    <p>Your conversations with AutoSpotter support</p>
+  </div>
+
+  <div class="inbox-container">
+    <div class="inbox-toolbar">
+      <div class="inbox-tabs">
+        <button class="inbox-tab active" onclick="switchInboxTab('inbox',this)">Inbox <span id="tab-inbox-count" class="tab-count" style="display:none;"></span></button>
+        <button class="inbox-tab" onclick="switchInboxTab('sent',this)">Sent <span id="tab-sent-count" class="tab-count" style="display:none;"></span></button>
+        <button class="inbox-tab" onclick="switchInboxTab('bin',this)">Bin <span id="tab-bin-count" class="tab-count" style="display:none;"></span></button>
+      </div>
+      <button class="btn-compose" onclick="openCompose()">
+        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        New Message
+      </button>
+    </div>
+
+    <div id="inbox-loading" class="inbox-loading">Loading messages...</div>
+    <div id="msg-list-wrap" style="display:none;">
+      <div id="msg-list" class="msg-list"></div>
+      <div id="msg-empty" class="msg-empty" style="display:none;">
+        <div class="msg-empty-icon">&#9993;</div>
+        <p id="msg-empty-text">No messages</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Thread panel -->
+<div id="thread-overlay" class="thread-overlay" onclick="closeThread()"></div>
+<div id="thread-panel" class="thread-panel">
+  <div class="thread-header">
+    <h2 id="thread-subject">Subject</h2>
+    <button id="thread-bin-btn" onclick="toggleBinThread()">Move to Bin</button>
+    <button class="close-btn" onclick="closeThread()">&times;</button>
+  </div>
+  <div id="thread-messages" class="thread-messages"></div>
+  <div class="thread-reply">
+    <textarea id="thread-reply-input" placeholder="Type your reply..." rows="1" oninput="autoGrowTextarea(this)"></textarea>
+    <button id="thread-reply-btn" onclick="sendReply()">Send</button>
+  </div>
+</div>
+
+<!-- Compose modal -->
+<div id="compose-overlay" class="compose-overlay" onclick="closeComposeOverlay(event)">
+  <div class="compose-modal">
+    <div class="compose-header">
+      <h2>New Message</h2>
+      <button class="close-btn" onclick="closeCompose()">&times;</button>
+    </div>
+    <div class="compose-body">
+      <div>
+        <label for="compose-subject">Subject</label>
+        <input type="text" id="compose-subject" placeholder="What's this about?">
+      </div>
+      <div>
+        <label for="compose-priority">Priority</label>
+        <select id="compose-priority">
+          <option value="normal">Normal</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+      <div>
+        <label for="compose-body">Message</label>
+        <textarea id="compose-body" placeholder="Write your message..."></textarea>
+      </div>
+    </div>
+    <div class="compose-footer">
+      <button class="btn-cancel" onclick="closeCompose()">Cancel</button>
+      <button class="btn-send" id="compose-send-btn" onclick="sendCompose()">Send Message</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="/">Home</a> &middot;
+  <a href="/dashboard.html">Dashboard</a> &middot;
+  <a href="/pricing.html">Pricing</a> &middot;
+  <a href="/privacy-policy.html">Privacy Policy</a> &middot;
+  <a href="/disclaimer.html">Data Disclaimer</a>
+  <br>&copy; 2026 Axiom Forge Software. All rights reserved.
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+  firebase.initializeApp({
+    apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+    authDomain: 'car-detector-833e5.firebaseapp.com',
+    projectId: 'car-detector-833e5',
+    storageBucket: 'car-detector-833e5.firebasestorage.app',
+    messagingSenderId: '109977431110',
+    appId: '1:109977431110:web:abbe15375a88a443e66e47',
+  });
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  let currentUser = null;
+  let currentTab = 'inbox';
+  let inboxMessages = [];
+  let sentMessages = [];
+  let legacyMessages = [];
+  let allUserMessages = []; // merged view
+  let openThreadId = null;
+  let unsubInbox = null;
+  let unsubSent = null;
+  let unsubLegacy = null;
+  let unsubBadge = null;
+
+  // --- Auth ---
+
+  function doSignIn() { auth.signInWithPopup(provider).catch(e => { if (e.code !== 'auth/popup-closed-by-user') alert('Sign-in failed: ' + e.message); }); }
+  function doSignOut() { cleanup(); auth.signOut(); }
+
+  function cleanup() {
+    if (unsubInbox) unsubInbox();
+    if (unsubSent) unsubSent();
+    if (unsubLegacy) unsubLegacy();
+    if (unsubBadge) unsubBadge();
+  }
+
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('gate-auth').style.display = 'none';
+      document.getElementById('inbox-content').style.display = 'block';
+      document.getElementById('sign-in-btn').style.display = 'none';
+      document.getElementById('user-info').style.display = 'inline-flex';
+      document.getElementById('user-name').textContent = user.displayName || user.email;
+      if (user.photoURL) document.getElementById('user-photo').src = user.photoURL;
+
+      // Admin check
+      try {
+        const adminDoc = await db.collection('config').doc('admin').get();
+        if (adminDoc.exists) {
+          const emails = adminDoc.data().admin_emails || [];
+          if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
+            document.getElementById('admin-link').style.display = '';
+          }
+        }
+      } catch (e) {}
+
+      // Trader check
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().plan === 'trader') {
+          document.getElementById('bulk-link').style.display = '';
+        }
+      } catch (e) {}
+
+      startListening(user);
+    } else {
+      currentUser = null;
+      cleanup();
+      document.getElementById('gate-auth').style.display = 'block';
+      document.getElementById('inbox-content').style.display = 'none';
+      document.getElementById('sign-in-btn').style.display = '';
+      document.getElementById('user-info').style.display = 'none';
+    }
+  });
+
+  // --- Listeners ---
+
+  function startListening(user) {
+    const uid = user.uid;
+
+    // Inbox: messages sent TO this user
+    unsubInbox = db.collection('messages')
+      .where('to_uid', '==', uid)
+      .orderBy('created_at', 'desc')
+      .limit(200)
+      .onSnapshot(snap => {
+        inboxMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderCurrentTab();
+        updateTabCounts();
+      }, err => { console.error('Inbox listener:', err); });
+
+    // Sent: messages sent BY this user
+    unsubSent = db.collection('messages')
+      .where('from_uid', '==', uid)
+      .orderBy('created_at', 'desc')
+      .limit(200)
+      .onSnapshot(snap => {
+        sentMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderCurrentTab();
+        updateTabCounts();
+      }, err => { console.error('Sent listener:', err); });
+
+    // Legacy: old messages with user_id field (no from_uid/to_uid)
+    unsubLegacy = db.collection('messages')
+      .where('user_id', '==', uid)
+      .limit(100)
+      .onSnapshot(snap => {
+        legacyMessages = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(m => !m.from_uid && !m.to_uid); // Only truly legacy
+        renderCurrentTab();
+        updateTabCounts();
+      }, err => { console.error('Legacy listener:', err); });
+
+    // Badge: unread count
+    unsubBadge = db.collection('messages')
+      .where('to_uid', '==', uid)
+      .where('read', '==', false)
+      .onSnapshot(snap => {
+        const count = snap.size;
+        const badge = document.getElementById('inbox-badge');
+        if (count > 0) {
+          badge.textContent = count;
+          badge.style.display = 'inline';
+          document.title = '(' + count + ') Inbox — AutoSpotter';
+        } else {
+          badge.style.display = 'none';
+          document.title = 'Inbox — AutoSpotter';
+        }
+      });
+
+    document.getElementById('inbox-loading').style.display = 'none';
+    document.getElementById('msg-list-wrap').style.display = 'block';
+  }
+
+  // --- Tab switching ---
+
+  function switchInboxTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.inbox-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCurrentTab();
+  }
+
+  function updateTabCounts() {
+    const uid = currentUser ? currentUser.uid : '';
+
+    const allInbox = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const seenInbox = new Set();
+    const inboxFiltered = allInbox.filter(m => {
+      if (seenInbox.has(m.id)) return false;
+      seenInbox.add(m.id);
+      return !isDeletedBy(m, uid);
+    });
+    const inboxUnread = inboxMessages.filter(m => !isDeletedBy(m, uid) && m.read === false).length;
+    const sentFiltered = sentMessages.filter(m => !isDeletedBy(m, uid));
+    const binCount = [...inboxMessages, ...sentMessages, ...legacyMessages]
+      .filter(m => isDeletedBy(m, uid))
+      // Deduplicate by id
+      .filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i).length;
+
+    setTabCount('tab-inbox-count', inboxFiltered.length, inboxUnread);
+    setTabCount('tab-sent-count', sentFiltered.length, 0);
+    setTabCount('tab-bin-count', binCount, 0);
+  }
+
+  function setTabCount(elId, total, unread) {
+    const el = document.getElementById(elId);
+    if (total === 0) { el.style.display = 'none'; return; }
+    el.style.display = 'inline';
+    el.textContent = unread > 0 ? unread : total;
+    el.className = 'tab-count' + (unread > 0 ? ' unread' : '');
+  }
+
+  function isDeletedBy(msg, uid) {
+    return Array.isArray(msg.deleted_by) && msg.deleted_by.includes(uid);
+  }
+
+  // --- Rendering ---
+
+  function renderCurrentTab() {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+    let messages = [];
+    let emptyText = '';
+
+    if (currentTab === 'inbox') {
+      // Show ALL conversations the user is part of (sent + received + legacy)
+      const allInbox = [...inboxMessages, ...sentMessages, ...legacyMessages];
+      const seen = new Set();
+      messages = allInbox.filter(m => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return !isDeletedBy(m, uid);
+      }).sort((a, b) => toMs(b.created_at) - toMs(a.created_at));
+      emptyText = 'No messages in your inbox';
+    } else if (currentTab === 'sent') {
+      messages = sentMessages
+        .filter(m => !isDeletedBy(m, uid))
+        .sort((a, b) => toMs(b.created_at) - toMs(a.created_at));
+      emptyText = 'No sent messages';
+    } else if (currentTab === 'bin') {
+      // Collect all messages where this user has deleted
+      const all = [...inboxMessages, ...sentMessages, ...legacyMessages];
+      const seen = new Set();
+      messages = all.filter(m => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return isDeletedBy(m, uid);
+      }).sort((a, b) => toMs(b.created_at) - toMs(a.created_at));
+      emptyText = 'Bin is empty';
+    }
+
+    const listEl = document.getElementById('msg-list');
+    const emptyEl = document.getElementById('msg-empty');
+    const emptyTextEl = document.getElementById('msg-empty-text');
+
+    if (messages.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      emptyTextEl.textContent = emptyText;
+      return;
+    }
+    emptyEl.style.display = 'none';
+
+    // Group by thread — show latest message per thread
+    const threads = groupByThread(messages);
+
+    listEl.innerHTML = threads.map(thread => {
+      const latest = thread[0]; // newest
+      const isUnread = currentTab === 'inbox' && thread.some(m => m.to_uid === uid && m.read === false);
+      const fromName = getDisplayName(latest, uid);
+      const subject = esc(latest.subject || '(No subject)');
+      const preview = esc(truncate(latest.body || '', 80));
+      const time = formatTime(latest.created_at);
+      const priority = latest.priority || 'normal';
+      const threadId = latest.thread_id || latest.id;
+      const initial = fromName.charAt(0).toUpperCase();
+      const isAdmin = latest.is_admin_msg || (latest.admin_reply && !latest.from_uid);
+
+      let priorityHtml = '';
+      if (priority === 'high') priorityHtml = '<span class="priority-dot high">High</span>';
+      if (priority === 'urgent') priorityHtml = '<span class="priority-dot urgent">Urgent</span>';
+
+      return '<div class="msg-row' + (isUnread ? ' unread' : '') + '" onclick="openThread(\'' + threadId + '\')">'
+        + '<div class="msg-unread-dot' + (isUnread ? '' : ' read') + '"></div>'
+        + '<div class="msg-avatar' + (isAdmin ? ' admin-avatar' : '') + '">' + esc(initial) + '</div>'
+        + '<div class="msg-body-col">'
+        + '<div class="msg-from">' + esc(fromName) + '</div>'
+        + '<div class="msg-subject">' + subject + '</div>'
+        + '<div class="msg-preview">' + preview + '</div>'
+        + '</div>'
+        + '<div class="msg-meta">'
+        + '<div class="msg-time">' + time + '</div>'
+        + priorityHtml
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function groupByThread(messages) {
+    const map = new Map();
+    messages.forEach(m => {
+      const tid = m.thread_id || m.id;
+      if (!map.has(tid)) map.set(tid, []);
+      map.get(tid).push(m);
+    });
+    // Sort threads by newest message
+    const threads = [...map.values()];
+    threads.sort((a, b) => toMs(b[0].created_at) - toMs(a[0].created_at));
+    return threads;
+  }
+
+  function getDisplayName(msg, uid) {
+    if (currentTab === 'sent') {
+      return msg.to_uid === 'admin' ? 'AutoSpotter Support' : (msg.to_email || 'Recipient');
+    }
+    // For inbox tab, show who the conversation is WITH (not "You")
+    if (msg.is_admin_msg) return 'AutoSpotter Support';
+    if (msg.from_uid && msg.from_uid !== uid) return msg.from_name || msg.from_email || 'Support';
+    // User's own message — show the recipient instead
+    if (msg.from_uid === uid) {
+      return msg.to_uid === 'admin' ? 'AutoSpotter Support' : (msg.to_email || 'AutoSpotter Support');
+    }
+    // Legacy
+    if (msg.admin_reply) return 'AutoSpotter Support';
+    return 'AutoSpotter Support';
+  }
+
+  // --- Thread view ---
+
+  async function openThread(threadId) {
+    openThreadId = threadId;
+    const uid = currentUser.uid;
+
+    // Gather all messages in this thread from our local data
+    const allMsgs = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const seen = new Set();
+    let threadMsgs = allMsgs.filter(m => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return (m.thread_id || m.id) === threadId;
+    }).sort((a, b) => toMs(a.created_at) - toMs(b.created_at));
+
+    if (threadMsgs.length === 0) return;
+
+    const subject = threadMsgs[0].subject || '(No subject)';
+    document.getElementById('thread-subject').textContent = subject;
+
+    // Check if in bin
+    const anyInBin = threadMsgs.some(m => isDeletedBy(m, uid));
+    const binBtn = document.getElementById('thread-bin-btn');
+    binBtn.textContent = anyInBin ? 'Restore' : 'Move to Bin';
+    binBtn.dataset.threadId = threadId;
+
+    // Render messages
+    const container = document.getElementById('thread-messages');
+    let html = '';
+
+    threadMsgs.forEach(m => {
+      const isSent = m.from_uid === uid || (!m.from_uid && m.user_id === uid && !m.is_admin_msg);
+      const senderName = isSent ? 'You' : (m.from_name || m.from_email || 'AutoSpotter Support');
+      const time = formatTime(m.created_at);
+
+      html += '<div class="bubble ' + (isSent ? 'sent' : 'received') + '">'
+        + '<div class="bubble-sender">' + esc(senderName) + '</div>'
+        + esc(m.body || '')
+        + '<div class="bubble-time">' + time + '</div>'
+        + '</div>';
+
+      // Legacy: render admin_reply as a separate bubble
+      if (m.admin_reply && !m.from_uid) {
+        const replyTime = m.replied_at ? formatTime(m.replied_at) : '';
+        html += '<div class="bubble received">'
+          + '<div class="bubble-sender">AutoSpotter Support</div>'
+          + esc(m.admin_reply)
+          + '<div class="bubble-time">' + replyTime + '</div>'
+          + '</div>';
+      }
+    });
+
+    container.innerHTML = html;
+
+    // Show panel
+    document.getElementById('thread-overlay').style.display = 'block';
+    document.getElementById('thread-panel').style.display = 'flex';
+    document.getElementById('thread-reply-input').value = '';
+
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+
+    // Mark unread messages as read
+    const unreadIds = threadMsgs
+      .filter(m => m.to_uid === uid && m.read === false)
+      .map(m => m.id);
+
+    for (const id of unreadIds) {
+      try {
+        await db.collection('messages').doc(id).update({ read: true });
+      } catch (e) { console.error('Mark read failed:', e); }
+    }
+  }
+
+  function closeThread() {
+    openThreadId = null;
+    document.getElementById('thread-overlay').style.display = 'none';
+    document.getElementById('thread-panel').style.display = 'none';
+  }
+
+  async function toggleBinThread() {
+    const btn = document.getElementById('thread-bin-btn');
+    const threadId = btn.dataset.threadId;
+    const uid = currentUser.uid;
+    const allMsgs = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const seen = new Set();
+    const threadMsgs = allMsgs.filter(m => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return (m.thread_id || m.id) === threadId;
+    });
+
+    const isInBin = threadMsgs.some(m => isDeletedBy(m, uid));
+
+    for (const m of threadMsgs) {
+      try {
+        if (isInBin) {
+          await db.collection('messages').doc(m.id).update({
+            deleted_by: firebase.firestore.FieldValue.arrayRemove(uid)
+          });
+        } else {
+          await db.collection('messages').doc(m.id).update({
+            deleted_by: firebase.firestore.FieldValue.arrayUnion(uid)
+          });
+        }
+      } catch (e) { console.error('Bin toggle failed:', e); }
+    }
+
+    closeThread();
+  }
+
+  async function sendReply() {
+    const input = document.getElementById('thread-reply-input');
+    const body = input.value.trim();
+    if (!body || !openThreadId || !currentUser) return;
+
+    const btn = document.getElementById('thread-reply-btn');
+    btn.disabled = true;
+
+    // Find original thread to get subject and recipient
+    const allMsgs = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const threadMsgs = allMsgs.filter(m => (m.thread_id || m.id) === openThreadId);
+    const original = threadMsgs[0];
+    if (!original) { btn.disabled = false; return; }
+
+    const subject = original.subject || '(No subject)';
+
+    // Determine recipient: if I'm the original sender, reply goes to the receiver; otherwise to sender
+    let toUid = 'admin';
+    let toEmail = '';
+    if (original.to_uid === currentUser.uid && original.from_uid) {
+      toUid = original.from_uid;
+      toEmail = original.from_email || '';
+    } else if (original.from_uid === currentUser.uid && original.to_uid) {
+      toUid = original.to_uid;
+      toEmail = original.to_email || '';
+    }
+
+    try {
+      await db.collection('messages').add({
+        thread_id: openThreadId,
+        from_uid: currentUser.uid,
+        from_email: currentUser.email,
+        from_name: currentUser.displayName || currentUser.email,
+        to_uid: toUid,
+        to_email: toEmail,
+        subject: subject,
+        body: body,
+        priority: original.priority || 'normal',
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        read: false,
+        deleted_by: [],
+        is_admin_msg: false,
+      });
+      input.value = '';
+      // Re-open thread to show new message
+      setTimeout(() => openThread(openThreadId), 500);
+    } catch (e) {
+      alert('Failed to send reply: ' + e.message);
+    }
+    btn.disabled = false;
+  }
+
+  // --- Compose ---
+
+  function openCompose() {
+    document.getElementById('compose-subject').value = '';
+    document.getElementById('compose-priority').value = 'normal';
+    document.getElementById('compose-body').value = '';
+    document.getElementById('compose-overlay').classList.add('open');
+  }
+
+  function closeCompose() {
+    document.getElementById('compose-overlay').classList.remove('open');
+  }
+
+  function closeComposeOverlay(e) {
+    if (e.target === document.getElementById('compose-overlay')) closeCompose();
+  }
+
+  async function sendCompose() {
+    const subject = document.getElementById('compose-subject').value.trim();
+    const priority = document.getElementById('compose-priority').value;
+    const body = document.getElementById('compose-body').value.trim();
+
+    if (!subject || !body) {
+      alert('Please fill in the subject and message.');
+      return;
+    }
+
+    const btn = document.getElementById('compose-send-btn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+      const docRef = await db.collection('messages').add({
+        thread_id: null, // Will set to own ID
+        from_uid: currentUser.uid,
+        from_email: currentUser.email,
+        from_name: currentUser.displayName || currentUser.email,
+        to_uid: 'admin',
+        to_email: '',
+        subject: subject,
+        body: body,
+        priority: priority,
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        read: false,
+        deleted_by: [],
+        is_admin_msg: false,
+      });
+      // Set thread_id to the doc's own ID
+      await docRef.update({ thread_id: docRef.id });
+
+      closeCompose();
+    } catch (e) {
+      alert('Failed to send message: ' + e.message);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send Message';
+  }
+
+  // --- Helpers ---
+
+  function toMs(ts) {
+    if (!ts) return 0;
+    if (ts.toDate) return ts.toDate().getTime();
+    if (ts.seconds) return ts.seconds * 1000;
+    return 0;
+  }
+
+  function formatTime(ts) {
+    if (!ts) return '';
+    const date = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
+    const now = new Date();
+    const diff = now - date;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+    return date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear();
+  }
+
+  function truncate(str, len) {
+    return str.length > len ? str.substring(0, len) + '...' : str;
+  }
+
+  function esc(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function autoGrowTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+</script>
+</body>
+</html>
