@@ -10,6 +10,7 @@ import '../models/vehicle_report.dart';
 import '../models/vehicle_valuation.dart';
 import '../services/saved_scan_service.dart';
 import '../services/plan_service.dart';
+import '../services/gemini_pricing_service.dart';
 import '../services/valuation_service.dart';
 import '../services/vehicle_cache_service.dart';
 
@@ -33,6 +34,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   VehicleReport? _report;
   String? _error;
   String? _retryStatus;
+  bool _isApproximate = false;
   bool _reportSubmitted = false;
   bool _saved = false;
   bool _saving = false;
@@ -111,6 +113,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
     setState(() => _saving = true);
 
     try {
+      final scanSource = _isApproximate ? 'gemini_estimate' : 'vdgl';
       if (action == 'overwrite' && existing != null) {
         await service.updateScan(
           uid: user.uid,
@@ -118,6 +121,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
           identification: identification,
           valuation: _valuation,
           report: _report,
+          source: scanSource,
         );
       } else {
         await service.saveScan(
@@ -125,6 +129,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
           identification: identification,
           valuation: _valuation,
           report: _report,
+          source: scanSource,
         );
       }
       if (mounted) {
@@ -293,22 +298,61 @@ class _ResultsScreenState extends State<ResultsScreen> {
         _valuation = report.valuation;
         _loading = false;
         _retryStatus = null;
+        _isApproximate = false;
       });
       // Refresh allowance for button hint
       _loadAllowance();
     } on ValuationException catch (e) {
-      if (!mounted) return;
+      // Invalid plate errors — show directly, no fallback
+      if (e.message.contains('InvalidSearchTerm') ||
+          e.message.contains('not found') ||
+          e.message.contains('No vehicle') ||
+          e.message.contains('authentication')) {
+        if (!mounted) return;
+        setState(() {
+          _error = e.message.contains('InvalidSearchTerm')
+              ? 'Registration not recognised \u2014 check the plate and try again.'
+              : e.message;
+          _loading = false;
+          _retryStatus = null;
+        });
+        return;
+      }
+      // Generic API failure — try Gemini fallback
+      await _tryGeminiFallback();
+    } catch (e) {
+      await _tryGeminiFallback();
+    }
+  }
+
+  Future<void> _tryGeminiFallback() async {
+    if (!mounted) return;
+    setState(() {
+      _retryStatus = 'Retrieving approximate values...';
+    });
+
+    final fallback =
+        await GeminiPricingService().getApproximatePricing(identification);
+
+    if (!mounted) return;
+
+    if (fallback != null && fallback.hasData) {
       setState(() {
-        _error = e.message;
+        _valuation = fallback;
+        _isApproximate = true;
         _loading = false;
+        _error = null;
         _retryStatus = null;
       });
-    } catch (e) {
-      if (!mounted) return;
+    } else {
+      // Both VDGL and Gemini failed
       setState(() {
-        _error = 'Unable to fetch valuation. Please check your connection and try again.';
+        _error = 'Unable to retrieve pricing at this time. '
+            'Please try again later or check similar vehicles on '
+            'AutoTrader or Motors.co.uk for current market values.';
         _loading = false;
         _retryStatus = null;
+        _isApproximate = false;
       });
     }
   }
@@ -537,7 +581,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         if (_loading) _buildValuationShimmer(),
 
         // Valuation results
-        if (_valuation != null) _buildValuation(_valuation!),
+        if (_valuation != null) _buildValuation(_valuation!, approximate: _isApproximate),
 
         // Vehicle Details section
         if (_report?.vehicleDetails != null)
@@ -869,6 +913,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         _valuation = null;
         _error = null;
         _saved = false;
+        _isApproximate = false;
       });
     }
   }
@@ -1252,7 +1297,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  Widget _buildValuation(VehicleValuation valuation) {
+  Widget _buildValuation(VehicleValuation valuation, {bool approximate = false}) {
+    final baseColor = approximate ? Colors.orange : Colors.green;
+
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(16),
@@ -1261,11 +1308,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.green[50]!, Colors.green[100]!],
+          colors: approximate
+              ? [Colors.orange[50]!, Colors.amber[50]!]
+              : [Colors.green[50]!, Colors.green[100]!],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withValues(alpha: 0.15),
+            color: baseColor.withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1274,19 +1323,69 @@ class _ResultsScreenState extends State<ResultsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Approximate values warning banner
+          if (approximate) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[300]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 18, color: Colors.orange[800]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Approximate Values',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Unable to retrieve accurate results from our pricing database. '
+                          'Values shown are AI-generated estimates.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.orange[800],
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // Hero price range
           _AnimatedPrice(
-            text: valuation.displayPrice,
-            style: const TextStyle(
+            text: approximate
+                ? '~${valuation.displayPrice}'
+                : valuation.displayPrice,
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.green,
+              color: baseColor,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Estimated UK valuation',
-            style: TextStyle(fontSize: 12, color: Colors.green[700]),
+            approximate
+                ? 'Approximate UK valuation'
+                : 'Estimated UK valuation',
+            style: TextStyle(fontSize: 12, color: baseColor[700]),
           ),
           const SizedBox(height: 14),
 
@@ -1296,17 +1395,20 @@ class _ResultsScreenState extends State<ResultsScreen> {
               if (valuation.dealerForecourt != null)
                 Expanded(child: _priceTier(
                   'Dealer',
-                  VehicleValuation.formatGbp(valuation.dealerForecourt!),
+                  '${approximate ? "~" : ""}${VehicleValuation.formatGbp(valuation.dealerForecourt!)}',
+                  color: baseColor,
                 )),
-              if (valuation.privateAverage != null)
+              if ((approximate ? valuation.privateClean : valuation.privateAverage) != null)
                 Expanded(child: _priceTier(
                   'Private',
-                  VehicleValuation.formatGbp(valuation.privateAverage!),
+                  '${approximate ? "~" : ""}${VehicleValuation.formatGbp((approximate ? valuation.privateClean : valuation.privateAverage)!)}',
+                  color: baseColor,
                 )),
               if (valuation.tradeRetail != null)
                 Expanded(child: _priceTier(
                   'Trade',
-                  VehicleValuation.formatGbp(valuation.tradeRetail!),
+                  '${approximate ? "~" : ""}${VehicleValuation.formatGbp(valuation.tradeRetail!)}',
+                  color: baseColor,
                 )),
             ],
           ),
@@ -1315,19 +1417,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.speed, size: 16, color: Colors.green[700]),
+                Icon(Icons.speed, size: 16, color: baseColor[700]),
                 const SizedBox(width: 6),
                 Text(
                   '${valuation.valuationMileage} miles',
-                  style: TextStyle(fontSize: 13, color: Colors.green[800]),
+                  style: TextStyle(fontSize: 13, color: baseColor[800]),
                 ),
               ],
             ),
           ],
           const SizedBox(height: 10),
           Text(
-            'Estimate generated from market data \u2014 not guaranteed.',
-            style: TextStyle(fontSize: 11, color: Colors.green[400]),
+            approximate
+                ? 'AI-generated estimate \u2014 may not reflect actual market prices.'
+                : 'Estimate generated from market data \u2014 not guaranteed.',
+            style: TextStyle(fontSize: 11, color: baseColor[400]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1335,7 +1439,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  Widget _priceTier(String label, String price) {
+  Widget _priceTier(String label, String price, {MaterialColor? color}) {
+    final c = color ?? Colors.green;
     return Column(
       children: [
         Text(
@@ -1343,13 +1448,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.green[800],
+            color: c[800],
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.green[600]),
+          style: TextStyle(fontSize: 12, color: c[600]),
         ),
       ],
     );

@@ -394,6 +394,40 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
     });
 
+    // ── Gemini Pricing Fallback Model ──
+    const PRICING_SYSTEM_PROMPT = `You are a UK used car pricing estimation system. Given a vehicle's make, model, year, body style, and any other details, provide realistic approximate UK market valuations in GBP.
+
+Base your estimates on typical UK used car market values. Consider:
+- The vehicle's age, make, model, and body style
+- Typical depreciation curves for the brand/segment
+- UK market conditions
+
+Return estimated values for all five pricing categories. Values should be realistic whole numbers in GBP.
+If you cannot provide a reasonable estimate, return 0 for that category.`;
+
+    const PRICING_RESPONSE_SCHEMA = {
+      type: 'object',
+      properties: {
+        dealer_forecourt: { type: 'integer', description: 'Estimated dealer forecourt price in GBP' },
+        private_clean: { type: 'integer', description: 'Estimated private sale price in GBP' },
+        trade_retail: { type: 'integer', description: 'Estimated trade/retail price in GBP' },
+        part_exchange: { type: 'integer', description: 'Estimated part exchange value in GBP' },
+        auction: { type: 'integer', description: 'Estimated auction value in GBP' },
+        confidence_note: { type: 'string', description: 'Brief note about estimate confidence', nullable: true },
+      },
+      required: ['dealer_forecourt', 'private_clean', 'trade_retail', 'part_exchange', 'auction'],
+    };
+
+    const pricingModel = getGenerativeModel(vertexAI, {
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        responseSchema: PRICING_RESPONSE_SCHEMA,
+      },
+      systemInstruction: { parts: [{ text: PRICING_SYSTEM_PROMPT }] },
+    });
+
     // ── Constants ──
     const VDGL_API_KEY = 'D5D22850-71A0-4523-8DBA-7CE4B5361B3D';
     const VDGL_BASE_URL = 'https://uk.api.vehicledataglobal.com';
@@ -726,8 +760,25 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
             r._motInfo = extractMotInfo(data.fullData);
             updatePricingDisplay(r, idx);
           } catch (err) {
-            r._pricingError = err.message;
-            updatePricingStatus(r, 'error', err.message, idx);
+            const msg = err.message || '';
+            const isInvalidPlate = msg.includes('InvalidSearchTerm') || msg.includes('not found') || msg.includes('No vehicle');
+            if (isInvalidPlate) {
+              r._pricingError = msg;
+              updatePricingStatus(r, 'error', msg, idx);
+            } else {
+              // VDGL failed — try Gemini fallback
+              let area = r._cardEl && r._cardEl.querySelector('.pricing-area');
+              if (area) area.innerHTML = '<span class="pricing-loading">Retrieving approximate values...</span>';
+              const fallbackPrices = await getGeminiFallbackPricing(r);
+              if (fallbackPrices) {
+                r._pricing = fallbackPrices;
+                r._pricingSource = 'gemini';
+                updateApproximatePricingDisplay(r, idx, fallbackPrices);
+              } else {
+                r._pricingError = 'Both pricing services unavailable';
+                updateFailedPricingDisplay(r, idx);
+              }
+            }
           }
         }
 
@@ -1129,8 +1180,27 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
           r._motInfo = extractMotInfo(data.fullData);
           updatePricingDisplay(r, idx);
         } catch (err) {
-          r._pricingError = err.message;
-          updatePricingStatus(r, 'error', err.message, idx);
+          // Check if it's an invalid plate error — show specific message
+          const msg = err.message || '';
+          const isInvalidPlate = msg.includes('InvalidSearchTerm') || msg.includes('not found') || msg.includes('No vehicle');
+          if (isInvalidPlate) {
+            r._pricingError = msg;
+            updatePricingStatus(r, 'error', msg, idx);
+          } else {
+            // VDGL failed — try Gemini fallback
+            const fbArea = r._cardEl && r._cardEl.querySelector('.pricing-area');
+            if (fbArea) fbArea.innerHTML = '<span class="pricing-loading">Retrieving approximate values...</span>';
+            const fallbackPrices = await getGeminiFallbackPricing(r);
+            if (fallbackPrices) {
+              r._pricing = fallbackPrices;
+              r._pricingSource = 'gemini';
+              updateApproximatePricingDisplay(r, idx, fallbackPrices);
+            } else {
+              // Both VDGL and Gemini failed
+              r._pricingError = 'Both pricing services unavailable';
+              updateFailedPricingDisplay(r, idx);
+            }
+          }
         }
         done++;
         btn.textContent = 'Fetching... (' + done + '/' + toPrice.length + ')';
@@ -1325,15 +1395,19 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
     }
 
     function showPricingSummary() {
-      const priced = results.filter(r => r._pricing).length;
+      const exactPriced = results.filter(r => r._pricing && r._pricingSource !== 'gemini').length;
+      const approxPriced = results.filter(r => r._pricing && r._pricingSource === 'gemini').length;
       const priceFailed = results.filter(r => r._pricingError).length;
 
-      if (priced === 0 && priceFailed === 0) return;
+      if (exactPriced === 0 && approxPriced === 0 && priceFailed === 0) return;
 
       const summaryEl = document.getElementById('summary-banner');
       let html = summaryEl.innerHTML;
-      if (priced > 0) {
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:green;font-size:18px;">&#163;</span> <span><strong>' + priced + '</strong> vehicle' + (priced === 1 ? '' : 's') + ' priced successfully</span></div>';
+      if (exactPriced > 0) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:green;font-size:18px;">&#163;</span> <span><strong>' + exactPriced + '</strong> vehicle' + (exactPriced === 1 ? '' : 's') + ' priced successfully</span></div>';
+      }
+      if (approxPriced > 0) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#f57f17;font-size:18px;">~</span> <span><strong>' + approxPriced + '</strong> vehicle' + (approxPriced === 1 ? '' : 's') + ' with approximate values (pricing database unavailable)</span></div>';
       }
       if (priceFailed > 0) {
         html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:red;font-size:18px;">&#10007;</span> <span><strong>' + priceFailed + '</strong> pricing lookup' + (priceFailed === 1 ? '' : 's') + ' failed</span></div>';
@@ -1467,6 +1541,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
       const priced = results.filter(r => r._pricing);
       if (priced.length === 0) return null;
       const sum = (key) => priced.reduce((s, r) => s + (parseFloat(r._pricing[key]) || 0), 0);
+      const hasApproximate = priced.some(r => r._pricingSource === 'gemini');
       return {
         count: priced.length,
         dealer: sum('dealer'),
@@ -1474,6 +1549,7 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         trade: sum('trade'),
         partExchange: sum('partExchange'),
         auction: sum('auction'),
+        hasApproximate,
       };
     }
 
@@ -1491,13 +1567,17 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
         { label: 'Auction', value: totals.auction },
       ].filter(i => i.value > 0);
 
-      grid.innerHTML = items.map(i =>
+      let gridHtml = items.map(i =>
         '<div class="total-item">'
         + '<div class="total-label">' + i.label + '</div>'
         + '<div class="total-value">&pound;' + formatPrice(i.value) + '</div>'
         + '<div class="total-count">' + totals.count + ' vehicle' + (totals.count === 1 ? '' : 's') + '</div>'
         + '</div>'
       ).join('');
+      if (totals.hasApproximate) {
+        gridHtml += '<div style="grid-column:1/-1; font-size:11px; color:#f57f17; margin-top:4px;">⚠ Totals include approximate AI-estimated values</div>';
+      }
+      grid.innerHTML = gridHtml;
     }
 
     // ── Export data helper ──
@@ -1699,6 +1779,120 @@ If ANY of these rules are violated, set "identified" to false and provide a clea
           throw secondErr; // second failure — let caller handle
         }
       }
+    }
+
+    // ── Gemini Pricing Fallback ──
+    async function getGeminiFallbackPricing(r) {
+      const make = r.make || 'Unknown';
+      const modelName = r.model || 'Unknown';
+      const yearMin = r.year_min || '';
+      const yearMax = r.year_max || '';
+      const yearStr = yearMin && yearMax ? (yearMin === yearMax ? String(yearMin) : yearMin + '–' + yearMax) : (yearMin || yearMax || 'Unknown');
+      const body = r.body_style || '';
+      const trim = r.trim || '';
+      const colour = r.colour || '';
+      const plate = getEffectivePlate(r);
+      const plateAge = getVehicleAgeFromPlate(plate);
+
+      let prompt = 'Estimate UK used car prices for: ' + make + ' ' + modelName;
+      prompt += ', Year: ' + yearStr;
+      if (body) prompt += ', Body: ' + body;
+      if (trim) prompt += ', Trim: ' + trim;
+      if (colour) prompt += ', Colour: ' + colour;
+      if (plateAge.known) prompt += ', Vehicle age: ' + plateAge.label;
+
+      try {
+        const result = await pricingModel.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        });
+        const text = result.response.text();
+        const parsed = JSON.parse(text);
+        return {
+          dealer: parsed.dealer_forecourt || 0,
+          private: parsed.private_clean || 0,
+          trade: parsed.trade_retail || 0,
+          partExchange: parsed.part_exchange || 0,
+          auction: parsed.auction || 0,
+          confidenceNote: parsed.confidence_note || '',
+        };
+      } catch (err) {
+        console.warn('Gemini pricing fallback failed:', err);
+        return null;
+      }
+    }
+
+    // Hardcoded friendly fallback when both VDGL and Gemini fail
+    function getHardcodedFallbackMessage(r) {
+      const make = r.make || '';
+      const modelName = r.model || '';
+      const vehicle = (make + ' ' + modelName).trim() || 'this vehicle';
+      return {
+        heading: 'Unable to retrieve pricing',
+        message: 'We could not retrieve accurate pricing for ' + vehicle + ' at this time. This may be due to a temporary service issue. Please try again later or check similar vehicles on AutoTrader or Motors.co.uk for current market values.',
+      };
+    }
+
+    function updateApproximatePricingDisplay(r, idx, prices) {
+      const card = r._cardEl;
+      if (!card) return;
+      let area = card.querySelector('.pricing-area');
+      if (!area) {
+        area = document.createElement('div');
+        area.className = 'pricing-area';
+        card.querySelector('.result-card-bulk-info').appendChild(area);
+      }
+
+      let html = '';
+
+      // Approximate values banner
+      html += '<div style="background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:8px 12px; margin-bottom:8px;">';
+      html += '<div style="font-size:13px; font-weight:700; color:#f57f17;">⚠ Approximate Values</div>';
+      html += '<div style="font-size:11px; color:#e65100; margin-top:2px; line-height:1.4;">Unable to retrieve accurate results from our pricing database. The values shown below are AI-generated estimates and may not reflect actual market prices.</div>';
+      html += '</div>';
+
+      // Render price chips in the same style
+      html += '<div class="pricing-row">';
+      if (prices.dealer) html += '<span class="pricing-chip dealer" style="opacity:0.8;">Dealer: ~&pound;' + formatPrice(prices.dealer) + '</span>';
+      if (prices.private) html += '<span class="pricing-chip private" style="opacity:0.8;">Private: ~&pound;' + formatPrice(prices.private) + '</span>';
+      if (prices.trade) html += '<span class="pricing-chip trade" style="opacity:0.8;">Trade: ~&pound;' + formatPrice(prices.trade) + '</span>';
+      if (prices.partExchange) html += '<span class="pricing-chip trade" style="opacity:0.8;">P/X: ~&pound;' + formatPrice(prices.partExchange) + '</span>';
+      if (prices.auction) html += '<span class="pricing-chip trade" style="opacity:0.8;">Auction: ~&pound;' + formatPrice(prices.auction) + '</span>';
+      html += '</div>';
+
+      if (prices.confidenceNote) {
+        html += '<div style="margin-top:6px; font-size:11px; color:var(--text-secondary); font-style:italic;">' + escapeHtml(prices.confidenceNote) + '</div>';
+      }
+
+      // Vehicle age from plate
+      const plate = getEffectivePlate(r);
+      const plateAge = getVehicleAgeFromPlate(plate);
+      if (plateAge.known) {
+        html += '<div style="margin-top:8px; font-size:12px; line-height:1.5;">';
+        html += '<span style="font-weight:600; color:var(--text);">Vehicle age: </span>';
+        html += '<span style="color:var(--text-secondary);">' + plateAge.label + '</span>';
+        html += ' <span style="font-size:11px; color:var(--text-secondary);">(registered ' + plateAge.regLabel + ')</span>';
+        html += '</div>';
+      }
+
+      area.innerHTML = html;
+    }
+
+    function updateFailedPricingDisplay(r, idx) {
+      const card = r._cardEl;
+      if (!card) return;
+      let area = card.querySelector('.pricing-area');
+      if (!area) {
+        area = document.createElement('div');
+        area.className = 'pricing-area';
+        card.querySelector('.result-card-bulk-info').appendChild(area);
+      }
+
+      const fb = getHardcodedFallbackMessage(r);
+      let html = '<div style="background:#ffebee; border:1px solid #ef9a9a; border-radius:8px; padding:10px 14px; margin-top:6px;">';
+      html += '<div style="font-size:13px; font-weight:600; color:#c62828;">' + escapeHtml(fb.heading) + '</div>';
+      html += '<div style="font-size:12px; color:#b71c1c; margin-top:4px; line-height:1.5;">' + escapeHtml(fb.message) + '</div>';
+      html += '</div>';
+      area.innerHTML = html;
     }
 
     // ── Save to / Remove from Garage (Bulk Upload) ─────────────────────────

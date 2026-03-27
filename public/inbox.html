@@ -285,7 +285,6 @@
   <a href="/inbox.html" class="active">Inbox <span id="inbox-badge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span></a>
   <a href="/pricing.html">Pricing</a>
   <a id="bulk-link" href="/bulk-upload.html" style="display:none; font-weight:600; color:#d4a017;">Bulk Upload</a>
-  <a id="admin-link" href="/admin/" style="display:none; font-weight:600; color:var(--primary);">Admin</a>
   <span id="auth-area">
     <button id="sign-in-btn" class="btn btn-primary" onclick="doSignIn()">Sign in</button>
     <span id="user-info" style="display:none; font-size:13px; align-items:center; gap:8px;">
@@ -413,13 +412,16 @@
   const provider = new firebase.auth.GoogleAuthProvider();
 
   let currentUser = null;
+  let isAdmin = false;
   let currentTab = 'inbox';
   let inboxMessages = [];
+  let inboxAdminMessages = []; // messages sent to 'admin'
   let sentMessages = [];
   let legacyMessages = [];
   let allUserMessages = []; // merged view
   let openThreadId = null;
   let unsubInbox = null;
+  let unsubInboxAdmin = null;
   let unsubSent = null;
   let unsubLegacy = null;
   let unsubBadge = null;
@@ -431,6 +433,7 @@
 
   function cleanup() {
     if (unsubInbox) unsubInbox();
+    if (unsubInboxAdmin) unsubInboxAdmin();
     if (unsubSent) unsubSent();
     if (unsubLegacy) unsubLegacy();
     if (unsubBadge) unsubBadge();
@@ -447,13 +450,12 @@
       if (user.photoURL) document.getElementById('user-photo').src = user.photoURL;
 
       // Admin check
+      isAdmin = false;
       try {
         const adminDoc = await db.collection('config').doc('admin').get();
         if (adminDoc.exists) {
           const emails = adminDoc.data().admin_emails || [];
-          if (emails.some(e => e.toLowerCase() === user.email.toLowerCase())) {
-            document.getElementById('admin-link').style.display = '';
-          }
+          isAdmin = emails.some(e => e.toLowerCase() === user.email.toLowerCase());
         }
       } catch (e) {}
 
@@ -492,6 +494,19 @@
         updateTabCounts();
       }, err => { console.error('Inbox listener:', err); });
 
+    // Admin: also listen for messages sent to 'admin'
+    if (isAdmin) {
+      unsubInboxAdmin = db.collection('messages')
+        .where('to_uid', '==', 'admin')
+        .orderBy('created_at', 'desc')
+        .limit(200)
+        .onSnapshot(snap => {
+          inboxAdminMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderCurrentTab();
+          updateTabCounts();
+        }, err => { console.error('Admin inbox listener:', err); });
+    }
+
     // Sent: messages sent BY this user
     unsubSent = db.collection('messages')
       .where('from_uid', '==', uid)
@@ -517,7 +532,7 @@
 
     // Badge: unread count
     unsubBadge = db.collection('messages')
-      .where('to_uid', '==', uid)
+      .where('to_uid', '==', isAdmin ? 'admin' : uid)
       .where('read', '==', false)
       .onSnapshot(snap => {
         const count = snap.size;
@@ -548,16 +563,16 @@
   function updateTabCounts() {
     const uid = currentUser ? currentUser.uid : '';
 
-    const allInbox = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const allInbox = [...inboxMessages, ...inboxAdminMessages, ...legacyMessages];
     const seenInbox = new Set();
     const inboxFiltered = allInbox.filter(m => {
       if (seenInbox.has(m.id)) return false;
       seenInbox.add(m.id);
       return !isDeletedBy(m, uid);
     });
-    const inboxUnread = inboxMessages.filter(m => !isDeletedBy(m, uid) && m.read === false).length;
-    const sentFiltered = sentMessages.filter(m => !isDeletedBy(m, uid));
-    const binCount = [...inboxMessages, ...sentMessages, ...legacyMessages]
+    const inboxUnread = [...inboxMessages, ...inboxAdminMessages].filter(m => !isDeletedBy(m, uid) && m.read === false).length;
+    const sentFiltered = sentMessages.filter(m => !isDeletedBy(m, uid) && (isAdmin || !m.is_admin_msg));
+    const binCount = [...inboxMessages, ...inboxAdminMessages, ...sentMessages, ...legacyMessages]
       .filter(m => isDeletedBy(m, uid))
       // Deduplicate by id
       .filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i).length;
@@ -588,8 +603,8 @@
     let emptyText = '';
 
     if (currentTab === 'inbox') {
-      // Show ALL conversations the user is part of (sent + received + legacy)
-      const allInbox = [...inboxMessages, ...sentMessages, ...legacyMessages];
+      // Show messages received by the user (+ admin messages if admin) + legacy
+      const allInbox = [...inboxMessages, ...inboxAdminMessages, ...legacyMessages];
       const seen = new Set();
       messages = allInbox.filter(m => {
         if (seen.has(m.id)) return false;
@@ -599,12 +614,12 @@
       emptyText = 'No messages in your inbox';
     } else if (currentTab === 'sent') {
       messages = sentMessages
-        .filter(m => !isDeletedBy(m, uid))
+        .filter(m => !isDeletedBy(m, uid) && (isAdmin || !m.is_admin_msg))
         .sort((a, b) => toMs(b.created_at) - toMs(a.created_at));
       emptyText = 'No sent messages';
     } else if (currentTab === 'bin') {
       // Collect all messages where this user has deleted
-      const all = [...inboxMessages, ...sentMessages, ...legacyMessages];
+      const all = [...inboxMessages, ...inboxAdminMessages, ...sentMessages, ...legacyMessages];
       const seen = new Set();
       messages = all.filter(m => {
         if (seen.has(m.id)) return false;
@@ -649,7 +664,7 @@
         + '<div class="msg-unread-dot' + (isUnread ? '' : ' read') + '"></div>'
         + '<div class="msg-avatar' + (isAdmin ? ' admin-avatar' : '') + '">' + esc(initial) + '</div>'
         + '<div class="msg-body-col">'
-        + '<div class="msg-from">' + esc(fromName) + '</div>'
+        + (fromName ? '<div class="msg-from">' + esc(fromName) + '</div>' : '')
         + '<div class="msg-subject">' + subject + '</div>'
         + '<div class="msg-preview">' + preview + '</div>'
         + '</div>'
@@ -676,18 +691,21 @@
 
   function getDisplayName(msg, uid) {
     if (currentTab === 'sent') {
-      return msg.to_uid === 'admin' ? 'AutoSpotter Support' : (msg.to_email || 'Recipient');
+      // Admin sees recipient name, regular users don't need it
+      if (isAdmin) return msg.to_email || msg.to_uid || '';
+      return '';
     }
-    // For inbox tab, show who the conversation is WITH (not "You")
+    if (isAdmin) {
+      // Admin sees who sent the message
+      if (msg.from_uid && msg.from_uid !== uid) return msg.from_name || msg.from_email || 'User';
+      if (msg.from_uid === uid) return '';
+      return msg.user_name || msg.user_email || 'User';
+    }
     if (msg.is_admin_msg) return 'AutoSpotter Support';
     if (msg.from_uid && msg.from_uid !== uid) return msg.from_name || msg.from_email || 'Support';
-    // User's own message — show the recipient instead
-    if (msg.from_uid === uid) {
-      return msg.to_uid === 'admin' ? 'AutoSpotter Support' : (msg.to_email || 'AutoSpotter Support');
-    }
-    // Legacy
+    if (msg.from_uid === uid) return '';
     if (msg.admin_reply) return 'AutoSpotter Support';
-    return 'AutoSpotter Support';
+    return '';
   }
 
   // --- Thread view ---
@@ -697,7 +715,7 @@
     const uid = currentUser.uid;
 
     // Gather all messages in this thread from our local data
-    const allMsgs = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const allMsgs = [...inboxMessages, ...inboxAdminMessages, ...sentMessages, ...legacyMessages];
     const seen = new Set();
     let threadMsgs = allMsgs.filter(m => {
       if (seen.has(m.id)) return false;
@@ -774,7 +792,7 @@
     const btn = document.getElementById('thread-bin-btn');
     const threadId = btn.dataset.threadId;
     const uid = currentUser.uid;
-    const allMsgs = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const allMsgs = [...inboxMessages, ...inboxAdminMessages, ...sentMessages, ...legacyMessages];
     const seen = new Set();
     const threadMsgs = allMsgs.filter(m => {
       if (seen.has(m.id)) return false;
@@ -810,7 +828,7 @@
     btn.disabled = true;
 
     // Find original thread to get subject and recipient
-    const allMsgs = [...inboxMessages, ...sentMessages, ...legacyMessages];
+    const allMsgs = [...inboxMessages, ...inboxAdminMessages, ...sentMessages, ...legacyMessages];
     const threadMsgs = allMsgs.filter(m => (m.thread_id || m.id) === openThreadId);
     const original = threadMsgs[0];
     if (!original) { btn.disabled = false; return; }

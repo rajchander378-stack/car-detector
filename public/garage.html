@@ -249,6 +249,60 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- Gemini pricing fallback (modular SDK) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getVertexAI, getGenerativeModel } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-vertexai-preview.js';
+
+    const modApp = initializeApp({
+      apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
+      authDomain: 'car-detector-833e5.firebaseapp.com',
+      projectId: 'car-detector-833e5',
+    }, 'gemini-pricing');
+
+    const vertexAI = getVertexAI(modApp);
+    const pricingModel = getGenerativeModel(vertexAI, {
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'object',
+          properties: {
+            dealer_forecourt: { type: 'integer' },
+            private_clean: { type: 'integer' },
+            trade_retail: { type: 'integer' },
+            part_exchange: { type: 'integer' },
+            auction: { type: 'integer' },
+            confidence_note: { type: 'string', nullable: true },
+          },
+          required: ['dealer_forecourt', 'private_clean', 'trade_retail', 'part_exchange', 'auction'],
+        },
+      },
+      systemInstruction: { parts: [{ text: 'You are a UK used car pricing estimation system. Given a vehicle description, provide realistic approximate UK market valuations in GBP. Return estimated values for all five pricing categories as whole numbers.' }] },
+    });
+
+    window._geminiFallbackPricing = async function(plateOrMake, model, yearStr, bodyStyle) {
+      let prompt;
+      if (model) {
+        prompt = 'Estimate UK used car prices for: ' + plateOrMake + ' ' + model;
+        if (yearStr) prompt += ', Year: ' + yearStr;
+        if (bodyStyle) prompt += ', Body: ' + bodyStyle;
+      } else {
+        prompt = 'Estimate UK used car prices for a vehicle with UK registration plate: ' + plateOrMake + '. Use the plate age identifier to determine the approximate year and provide a general estimate for a typical vehicle of that age.';
+      }
+      try {
+        const result = await pricingModel.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        });
+        return JSON.parse(result.response.text());
+      } catch (err) {
+        console.warn('Gemini pricing fallback failed:', err);
+        return null;
+      }
+    };
+  </script>
   <script>
     firebase.initializeApp({
       apiKey: 'AIzaSyB4i-fjVPdjwg5wrhrT94aC_G6kNKsFN28',
@@ -491,37 +545,73 @@
         } else {
           // Call VDGL API
           status.innerHTML = '<span class="add-vehicle-spinner"></span> Fetching from DVLA...';
-          const params = new URLSearchParams({ vrm: plate, package: 'DataPackage2' });
-          const resp = await fetch('/api/vdgl?' + params.toString());
-          if (!resp.ok) throw new Error('Lookup failed (HTTP ' + resp.status + ')');
-          const json = await resp.json();
-          if (json.error) throw new Error(json.error);
-          const info = json.ResponseInformation || {};
-          if (!info.IsSuccessStatusCode) {
-            const msg = info.StatusMessage || 'Lookup failed';
-            if (msg.includes('InvalidSearchTerm')) {
-              throw new Error('Registration not recognised — check the plate and try again.');
+          let vdglFailed = false;
+          try {
+            const params = new URLSearchParams({ vrm: plate, package: 'DataPackage2' });
+            const resp = await fetch('/api/vdgl?' + params.toString());
+            if (!resp.ok) throw new Error('Lookup failed (HTTP ' + resp.status + ')');
+            const json = await resp.json();
+            if (json.error) throw new Error(json.error);
+            const info = json.ResponseInformation || {};
+            if (!info.IsSuccessStatusCode) {
+              const msg = info.StatusMessage || 'Lookup failed';
+              if (msg.includes('InvalidSearchTerm')) {
+                throw { invalidPlate: true, message: 'Registration not recognised — check the plate and try again.' };
+              }
+              throw new Error(msg);
             }
-            throw new Error(msg);
+
+            const results = json.Results || {};
+            vehicleData = {};
+            if (results.ValuationDetails) vehicleData.valuation = results.ValuationDetails;
+            if (results.VehicleDetails) vehicleData.vehicle_details = results.VehicleDetails;
+            if (results.ModelDetails) vehicleData.model_details = results.ModelDetails;
+            if (results.MotHistoryDetails) vehicleData.mot_history = results.MotHistoryDetails;
+            if (results.TyreDetails) vehicleData.tyre_details = results.TyreDetails;
+
+            // Cache the result
+            const cacheDoc = Object.assign({}, vehicleData, {
+              valuation_updated: firebase.firestore.FieldValue.serverTimestamp(),
+              mot_updated: firebase.firestore.FieldValue.serverTimestamp(),
+              created_at: firebase.firestore.FieldValue.serverTimestamp(),
+              scan_count: 1,
+              last_scanned: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+            db.collection('vehicles').doc(hash).set(cacheDoc, { merge: true }).catch(() => {});
+          } catch (vdglErr) {
+            // Invalid plate — re-throw immediately
+            if (vdglErr.invalidPlate) throw new Error(vdglErr.message);
+            // Generic VDGL failure — try Gemini fallback
+            vdglFailed = true;
+            vehicleData = {};
           }
 
-          const results = json.Results || {};
-          vehicleData = {};
-          if (results.ValuationDetails) vehicleData.valuation = results.ValuationDetails;
-          if (results.VehicleDetails) vehicleData.vehicle_details = results.VehicleDetails;
-          if (results.ModelDetails) vehicleData.model_details = results.ModelDetails;
-          if (results.MotHistoryDetails) vehicleData.mot_history = results.MotHistoryDetails;
-          if (results.TyreDetails) vehicleData.tyre_details = results.TyreDetails;
-
-          // Cache the result
-          const cacheDoc = Object.assign({}, vehicleData, {
-            valuation_updated: firebase.firestore.FieldValue.serverTimestamp(),
-            mot_updated: firebase.firestore.FieldValue.serverTimestamp(),
-            created_at: firebase.firestore.FieldValue.serverTimestamp(),
-            scan_count: 1,
-            last_scanned: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-          db.collection('vehicles').doc(hash).set(cacheDoc, { merge: true }).catch(() => {});
+          // If VDGL failed, try Gemini for approximate pricing
+          if (vdglFailed) {
+            status.innerHTML = '<span class="add-vehicle-spinner"></span> Retrieving approximate values...';
+            let geminiPrices = null;
+            if (typeof window._geminiFallbackPricing === 'function') {
+              geminiPrices = await window._geminiFallbackPricing(plate, '', '', '');
+            }
+            if (geminiPrices) {
+              vehicleData.valuation = {
+                ValuationFigures: {
+                  DealerForecourt: geminiPrices.dealer_forecourt,
+                  PrivateClean: geminiPrices.private_clean,
+                  TradeRetail: geminiPrices.trade_retail,
+                  PartExchange: geminiPrices.part_exchange,
+                  Auction: geminiPrices.auction,
+                }
+              };
+              vehicleData._approximate = true;
+            } else {
+              // Both failed — show friendly message, do not save
+              status.className = 'add-error';
+              status.innerHTML = '<div style="line-height:1.5;">Unable to retrieve pricing for <strong>' + plate + '</strong> at this time. This may be due to a temporary service issue. Please try again later or check similar vehicles on AutoTrader or Motors.co.uk for current market values.</div>';
+              btn.disabled = false;
+              return;
+            }
+          }
         }
 
         // Extract data for garage doc
@@ -564,7 +654,7 @@
           valuation_updated: firebase.firestore.FieldValue.serverTimestamp(),
           mot_updated: mot ? firebase.firestore.FieldValue.serverTimestamp() : null,
           added_at: firebase.firestore.FieldValue.serverTimestamp(),
-          source: 'manual_lookup',
+          source: vehicleData._approximate ? 'gemini_estimate' : 'manual_lookup',
         };
 
         status.innerHTML = '<span class="add-vehicle-spinner"></span> Saving to garage...';
@@ -575,7 +665,11 @@
         const model = identification.model;
         const name = (make && model) ? make + ' ' + model : plate;
         status.className = 'add-status';
-        status.textContent = name + ' added to your garage!';
+        if (vehicleData._approximate) {
+          status.innerHTML = '<span style="color:#f57f17;">⚠</span> ' + (name || plate) + ' added with approximate values — pricing database was unavailable.';
+        } else {
+          status.textContent = name + ' added to your garage!';
+        }
         input.value = '';
       } catch (err) {
         status.className = 'add-error';
@@ -672,7 +766,8 @@
           mot: mot,
           valuation_updated: data.valuation_updated || null,
           mot_updated: data.mot_updated || null,
-          added_at: data.added_at || null
+          added_at: data.added_at || null,
+          source: data.source || null
         };
       });
 
@@ -723,10 +818,15 @@
         }
 
         if (val) {
-          html += '<div class="vehicle-valuation">';
-          if (val.dealer_forecourt || val.dealer_price) html += 'Dealer: &pound;' + Number(val.dealer_forecourt || val.dealer_price).toLocaleString();
-          if (val.private_clean || val.private_price) html += ' &middot; Private: &pound;' + Number(val.private_clean || val.private_price).toLocaleString();
-          if (val.trade_retail || val.trade_price) html += ' &middot; Trade: &pound;' + Number(val.trade_retail || val.trade_price).toLocaleString();
+          const isApprox = item.source === 'gemini_estimate';
+          if (isApprox) {
+            html += '<div style="font-size:11px; color:#f57f17; font-weight:600; margin-top:6px;">⚠ Approximate Values</div>';
+          }
+          html += '<div class="vehicle-valuation"' + (isApprox ? ' style="opacity:0.8;"' : '') + '>';
+          const prefix = isApprox ? '~' : '';
+          if (val.dealer_forecourt || val.dealer_price) html += 'Dealer: &pound;' + prefix + Number(val.dealer_forecourt || val.dealer_price).toLocaleString();
+          if (val.private_clean || val.private_price) html += ' &middot; Private: &pound;' + prefix + Number(val.private_clean || val.private_price).toLocaleString();
+          if (val.trade_retail || val.trade_price) html += ' &middot; Trade: &pound;' + prefix + Number(val.trade_retail || val.trade_price).toLocaleString();
           html += '</div>';
         }
 
@@ -795,6 +895,9 @@
         const priv = val.private_clean || val.private_price;
         const trade = val.trade_retail || val.trade_price;
         const motDue = mot.mot_due || '';
+        const isApprox = item.source === 'gemini_estimate';
+        const approxPrefix = isApprox ? '~' : '';
+        const approxStyle = isApprox ? ' style="opacity:0.8;"' : '';
 
         const checked = selectedIds.has(item.docId) ? 'checked' : '';
         const rowClass = selectedIds.has(item.docId) ? ' class="selected"' : '';
@@ -805,9 +908,9 @@
         row += '<td>' + escapeHtml(id.model || '') + '</td>';
         row += '<td>' + escapeHtml(yearStr) + '</td>';
         row += '<td>' + escapeHtml(id.colour || '') + '</td>';
-        row += '<td>' + (dealer ? '&pound;' + Number(dealer).toLocaleString() : '') + '</td>';
-        row += '<td>' + (priv ? '&pound;' + Number(priv).toLocaleString() : '') + '</td>';
-        row += '<td>' + (trade ? '&pound;' + Number(trade).toLocaleString() : '') + '</td>';
+        row += '<td' + approxStyle + '>' + (dealer ? '&pound;' + approxPrefix + Number(dealer).toLocaleString() : '') + (isApprox && dealer ? ' <span title="Approximate value" style="color:#f57f17; font-size:10px;">⚠</span>' : '') + '</td>';
+        row += '<td' + approxStyle + '>' + (priv ? '&pound;' + approxPrefix + Number(priv).toLocaleString() : '') + (isApprox && priv ? ' <span title="Approximate value" style="color:#f57f17; font-size:10px;">⚠</span>' : '') + '</td>';
+        row += '<td' + approxStyle + '>' + (trade ? '&pound;' + approxPrefix + Number(trade).toLocaleString() : '') + (isApprox && trade ? ' <span title="Approximate value" style="color:#f57f17; font-size:10px;">⚠</span>' : '') + '</td>';
         row += '<td>' + escapeHtml(motDue) + '</td>';
         row += '<td>' + freshnessHtml(item) + '</td>';
         const plateAge = getVehicleAgeFromPlate(id.number_plate || '');

@@ -17,6 +17,7 @@ class SavedScan {
   final DateTime savedAt;
   final bool isFavourite;
   final int reportVersion;
+  final String? source; // 'vdgl', 'gemini_estimate', or null (legacy)
 
   /// Scans with valuation data expire after this many days.
   /// After expiry the valuation prices should be considered stale.
@@ -34,6 +35,7 @@ class SavedScan {
     required this.savedAt,
     this.isFavourite = false,
     this.reportVersion = 1,
+    this.source,
   });
 
   bool get isExpired =>
@@ -76,6 +78,7 @@ class SavedScan {
       savedAt: (data['saved_at'] as Timestamp).toDate(),
       isFavourite: data['is_favourite'] as bool? ?? false,
       reportVersion: data['report_version'] as int? ?? 1,
+      source: data['source'] as String?,
     );
   }
 
@@ -90,6 +93,7 @@ class SavedScan {
       'saved_at': Timestamp.fromDate(savedAt),
       'is_favourite': isFavourite,
       'report_version': reportVersion,
+      if (source != null) 'source': source,
     };
   }
 }

@@ -20,6 +20,7 @@ class SavedScanService {
     required CarIdentification identification,
     VehicleValuation? valuation,
     VehicleReport? report,
+    String? source,
   }) async {
     final scan = SavedScan(
       id: '',
@@ -31,6 +32,7 @@ class SavedScanService {
       tyreDetails: report?.tyreDetails,
       savedAt: DateTime.now(),
       reportVersion: report != null ? 2 : 1,
+      source: source,
     );
     final docRef = await _scansCollection(uid).add(scan.toFirestore());
     return docRef.id;
@@ -99,6 +101,7 @@ class SavedScanService {
     required CarIdentification identification,
     VehicleValuation? valuation,
     VehicleReport? report,
+    String? source,
   }) async {
     final scan = SavedScan(
       id: scanId,
@@ -110,6 +113,7 @@ class SavedScanService {
       tyreDetails: report?.tyreDetails,
       savedAt: DateTime.now(),
       reportVersion: report != null ? 2 : 1,
+      source: source,
     );
     await _scansCollection(uid).doc(scanId).set(scan.toFirestore());
   }

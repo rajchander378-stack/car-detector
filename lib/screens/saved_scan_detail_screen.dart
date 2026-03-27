@@ -192,7 +192,31 @@ class _SavedScanDetailScreenState extends State<SavedScanDetailScreen> {
             // Valuation card
             if (valuation != null) ...[
               const SizedBox(height: 18),
-              _buildValuation(valuation),
+              if (widget.scan.source == 'gemini_estimate')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.auto_awesome, size: 16, color: Colors.orange[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Approximate values — estimated by AI when live pricing was unavailable.',
+                            style: TextStyle(fontSize: 12, color: Colors.orange[800]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              _buildValuation(valuation, approximate: widget.scan.source == 'gemini_estimate'),
               if (widget.scan.isExpired)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -253,7 +277,8 @@ class _SavedScanDetailScreenState extends State<SavedScanDetailScreen> {
     );
   }
 
-  Widget _buildValuation(VehicleValuation valuation) {
+  Widget _buildValuation(VehicleValuation valuation, {bool approximate = false}) {
+    final baseColor = approximate ? Colors.orange : Colors.green;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -261,11 +286,11 @@ class _SavedScanDetailScreenState extends State<SavedScanDetailScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.green[50]!, Colors.green[100]!],
+          colors: [baseColor[50]!, baseColor[100]!],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withValues(alpha: 0.15),
+            color: baseColor.withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -275,17 +300,17 @@ class _SavedScanDetailScreenState extends State<SavedScanDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            valuation.displayPrice,
-            style: const TextStyle(
+            approximate ? '~${valuation.displayPrice}' : valuation.displayPrice,
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.green,
+              color: baseColor,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Estimated UK valuation',
-            style: TextStyle(fontSize: 12, color: Colors.green[700]),
+            approximate ? 'Approximate UK valuation' : 'Estimated UK valuation',
+            style: TextStyle(fontSize: 12, color: baseColor[700]),
           ),
           const SizedBox(height: 14),
           Row(
@@ -314,11 +339,11 @@ class _SavedScanDetailScreenState extends State<SavedScanDetailScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.speed, size: 16, color: Colors.green[700]),
+                Icon(Icons.speed, size: 16, color: baseColor[700]),
                 const SizedBox(width: 6),
                 Text(
                   '${valuation.valuationMileage} miles',
-                  style: TextStyle(fontSize: 13, color: Colors.green[800]),
+                  style: TextStyle(fontSize: 13, color: baseColor[800]),
                 ),
               ],
             ),

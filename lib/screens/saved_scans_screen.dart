@@ -276,10 +276,14 @@ class _ScanCard extends StatelessWidget {
                         ],
                         if (valuation != null)
                           Text(
-                            valuation.displayPrice,
+                            scan.source == 'gemini_estimate'
+                                ? '~${valuation.displayPrice}'
+                                : valuation.displayPrice,
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.green[700],
+                              color: scan.source == 'gemini_estimate'
+                                  ? Colors.orange[700]
+                                  : Colors.green[700],
                               fontWeight: FontWeight.w500,
                             ),
                           ),
