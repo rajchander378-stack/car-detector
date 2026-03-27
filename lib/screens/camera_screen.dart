@@ -14,6 +14,7 @@ import '../services/lockout_service.dart';
 import '../services/plan_service.dart';
 import 'bulk_gallery_screen.dart';
 import 'messages_screen.dart';
+import 'pricing_screen.dart';
 import 'results_screen.dart';
 import 'sample_images_screen.dart';
 import 'saved_scans_screen.dart';
@@ -808,6 +809,19 @@ class _CameraScreenState extends State<CameraScreen>
                 context,
                 MaterialPageRoute(
                   builder: (_) => const MessagesScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.sell_outlined),
+            title: const Text('Plans & Pricing'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PricingScreen(),
                 ),
               );
             },
