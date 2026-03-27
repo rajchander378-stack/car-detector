@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/bulk_scan_item.dart';
+import '../services/freshness_analysis_service.dart';
 import '../services/gemini_service.dart';
 import '../services/image_processor.dart';
 import '../services/plan_service.dart';
 import '../services/saved_scan_service.dart';
+import '../services/vehicle_cache_service.dart';
 import 'results_screen.dart';
 
 class BulkGalleryScreen extends StatefulWidget {
@@ -26,6 +28,10 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
   bool _savingAll = false;
   int _completedCount = 0;
   final List<File> _tempFiles = [];
+  FreshnessAnalysisResult? _freshnessResult;
+  bool _analyzingFreshness = false;
+  bool _fetchingAll = false;
+  int _fetchedCount = 0;
 
   @override
   void initState() {
@@ -164,6 +170,7 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
     if (mounted) {
       setState(() => _processing = false);
       _showProcessingSummary();
+      _runFreshnessAnalysis();
     }
   }
 
@@ -261,6 +268,76 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$savedCount vehicle(s) saved')),
       );
+    }
+  }
+
+  Future<void> _runFreshnessAnalysis() async {
+    final vehiclesWithPlates = _items
+        .where((i) => i.hasPlate && i.isIdentified)
+        .map((i) {
+          final plate = i.effectivePlate!;
+          return (plate: plate, identification: i.identification!);
+        })
+        .toList();
+
+    if (vehiclesWithPlates.isEmpty) return;
+
+    setState(() => _analyzingFreshness = true);
+
+    try {
+      final result =
+          await FreshnessAnalysisService().analyze(vehiclesWithPlates);
+      if (mounted) {
+        setState(() {
+          _freshnessResult = result;
+          _analyzingFreshness = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _analyzingFreshness = false);
+    }
+  }
+
+  Future<void> _fetchAllData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || _freshnessResult == null) return;
+
+    final toFetch = _freshnessResult!.vehicles
+        .where((v) =>
+            v.category == FreshnessCategory.newLookup ||
+            v.category == FreshnessCategory.stale)
+        .toList();
+
+    if (toFetch.isEmpty) return;
+
+    setState(() {
+      _fetchingAll = true;
+      _fetchedCount = 0;
+    });
+
+    for (final vehicle in toFetch) {
+      try {
+        final cacheResult =
+            await VehicleCacheService().getReport(vehicle.plate);
+        if (!cacheResult.wasCacheHit) {
+          await PlanService().recordValuationScan(user.uid);
+        }
+      } catch (_) {
+        // Continue with other vehicles
+      }
+      if (mounted) setState(() => _fetchedCount++);
+    }
+
+    if (mounted) {
+      setState(() => _fetchingAll = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Fetched data for $_fetchedCount of ${toFetch.length} vehicles.'),
+        ),
+      );
+      // Re-run analysis to update counts
+      _runFreshnessAnalysis();
     }
   }
 
@@ -492,11 +569,36 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
           ),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: _items.length,
-        itemBuilder: (context, index) =>
-            _buildItemCard(_items[index], index),
+      body: Column(
+        children: [
+          // Freshness analysis card
+          if (!_processing && _freshnessResult != null)
+            _buildFreshnessCard(_freshnessResult!),
+          if (_analyzingFreshness)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 8),
+                  Text('Analyzing data freshness...',
+                      style: TextStyle(fontSize: 13)),
+                ],
+              ),
+            ),
+          // Vehicle list
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _items.length,
+              itemBuilder: (context, index) =>
+                  _buildItemCard(_items[index], index),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: _buildBottomBar(unsavedCount),
     );
@@ -706,6 +808,97 @@ class _BulkGalleryScreenState extends State<BulkGalleryScreen> {
       case BulkScanStatus.failed:
         return 'Failed';
     }
+  }
+
+  Widget _buildFreshnessCard(FreshnessAnalysisResult result) {
+    final needsFetch = result.staleCount + result.newCount;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [Colors.blue[50]!, Colors.blue[100]!],
+        ),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.analytics_outlined, size: 18, color: Colors.blue[800]),
+              const SizedBox(width: 6),
+              Text('Data Freshness Analysis',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.blue[900])),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _freshnessChip(
+                  Icons.check_circle, Colors.green, '${result.freshCount} Fresh'),
+              const SizedBox(width: 8),
+              _freshnessChip(Icons.access_time, Colors.amber[700]!,
+                  '${result.staleCount} Stale'),
+              const SizedBox(width: 8),
+              _freshnessChip(
+                  Icons.fiber_new, Colors.blue, '${result.newCount} New'),
+            ],
+          ),
+          if (needsFetch > 0) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Estimated cost to refresh: \u00A3${result.totalEstimatedCost.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 13, color: Colors.blue[900]),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _fetchingAll ? null : _fetchAllData,
+                icon: _fetchingAll
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.blue[100]),
+                      )
+                    : const Icon(Icons.refresh, size: 18),
+                label: Text(_fetchingAll
+                    ? 'Fetching ($_fetchedCount/$needsFetch)...'
+                    : 'Fetch All Data ($needsFetch vehicles)'),
+              ),
+            ),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'All vehicle data is up to date.',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.green[700],
+                    fontWeight: FontWeight.w500),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _freshnessChip(IconData icon, Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 3),
+        Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+      ],
+    );
   }
 
   Widget _buildBottomBar(int unsavedCount) {

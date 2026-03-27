@@ -50,6 +50,8 @@ dependencies:
   csv: ^6.0.0
   share_plus: ^10.0.0
   crypto: ^3.0.0
+  syncfusion_flutter_xlsio: ^33.1.45
+  pdf: ^3.12.0
 
 dev_dependencies:
   flutter_test:

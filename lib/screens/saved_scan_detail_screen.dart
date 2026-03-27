@@ -189,6 +189,23 @@ class _SavedScanDetailScreenState extends State<SavedScanDetailScreen> {
               ),
             ],
 
+            // Freshness badges
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _freshnessBadge(
+                  'Valuation',
+                  widget.scan.savedAt,
+                  const Duration(days: 30),
+                  const Duration(days: 60),
+                ),
+                if (widget.scan.motHistory?.motDueDate != null)
+                  _motFreshnessBadge(widget.scan.motHistory!.motDueDate!),
+              ],
+            ),
+
             // Valuation card
             if (valuation != null) ...[
               const SizedBox(height: 18),
@@ -274,6 +291,108 @@ class _SavedScanDetailScreenState extends State<SavedScanDetailScreen> {
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       padding: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+
+  Widget _freshnessBadge(
+    String label,
+    DateTime dataDate,
+    Duration warnThreshold,
+    Duration staleThreshold,
+  ) {
+    final age = DateTime.now().difference(dataDate);
+    Color bgColor;
+    Color textColor;
+    Color borderColor;
+    IconData icon;
+    String text;
+
+    if (age <= warnThreshold) {
+      bgColor = Colors.green[50]!;
+      textColor = Colors.green[700]!;
+      borderColor = Colors.green[200]!;
+      icon = Icons.check_circle_outline;
+      text = '$label: fresh';
+    } else if (age <= staleThreshold) {
+      bgColor = Colors.amber[50]!;
+      textColor = Colors.amber[800]!;
+      borderColor = Colors.amber[200]!;
+      icon = Icons.access_time;
+      text = '$label: ${age.inDays} days old';
+    } else {
+      bgColor = Colors.red[50]!;
+      textColor = Colors.red[700]!;
+      borderColor = Colors.red[200]!;
+      icon = Icons.warning_amber_rounded;
+      text = '$label: stale';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: textColor),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _motFreshnessBadge(String motDueDateStr) {
+    final due = DateTime.tryParse(motDueDateStr);
+    if (due == null) return const SizedBox.shrink();
+
+    final now = DateTime.now();
+    final daysUntilDue = due.difference(now).inDays;
+
+    Color bgColor;
+    Color textColor;
+    Color borderColor;
+    IconData icon;
+    String text;
+
+    if (daysUntilDue < 0) {
+      bgColor = Colors.red[50]!;
+      textColor = Colors.red[700]!;
+      borderColor = Colors.red[200]!;
+      icon = Icons.warning_amber_rounded;
+      text = 'MOT: overdue';
+    } else if (daysUntilDue <= 30) {
+      bgColor = Colors.amber[50]!;
+      textColor = Colors.amber[800]!;
+      borderColor = Colors.amber[200]!;
+      icon = Icons.access_time;
+      text = 'MOT: ${daysUntilDue}d left';
+    } else {
+      bgColor = Colors.green[50]!;
+      textColor = Colors.green[700]!;
+      borderColor = Colors.green[200]!;
+      icon = Icons.check_circle_outline;
+      text = 'MOT: ok';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: textColor),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
+        ],
+      ),
     );
   }
 
