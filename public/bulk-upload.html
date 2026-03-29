@@ -1972,6 +1972,12 @@ If you cannot provide a reasonable estimate, return 0 for that category.`;
           added_at: serverTimestamp(),
           source: 'bulk_upload',
         };
+        // Persist full VDGL data sections for sharing/reports
+        if (r._fullVehicleData) {
+          if (r._fullVehicleData.vehicle_details) garageDoc.vehicle_details = r._fullVehicleData.vehicle_details;
+          if (r._fullVehicleData.model_details) garageDoc.model_details = r._fullVehicleData.model_details;
+          if (r._fullVehicleData.tyre_details) garageDoc.tyre_details = r._fullVehicleData.tyre_details;
+        }
 
         const newRef = await addDoc(garageCol, garageDoc);
         bulkGarageIndex[idx] = newRef.id;

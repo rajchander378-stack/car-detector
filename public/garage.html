@@ -19,7 +19,7 @@
     .garage-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: white; }
     .garage-header p { font-size: 14px; color: #ffffff; opacity: 1; }
 
-    .garage-container { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
+    .garage-container { max-width: 1400px; margin: 0 auto; padding: 24px 20px 64px; }
 
     /* View toggle buttons */
     .view-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-right: 12px; }
@@ -69,6 +69,64 @@
     .freshness-badge.fresh { background: #e8f5e9; color: #2e7d32; }
     .freshness-badge.amber { background: #fff3e0; color: #e65100; }
     .freshness-badge.stale { background: #ffebee; color: #c62828; }
+
+    /* Update data button */
+    .btn-update-data {
+      padding: 6px 14px; font-size: 13px; font-weight: 600; border: 1px solid #1565c0;
+      border-radius: 6px; background: var(--card-bg); color: #1565c0; cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .btn-update-data:hover { background: #1565c0; color: #fff; }
+    .btn-update-data:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Update confirmation modal */
+    .update-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center;
+    }
+    .update-overlay.show { display: flex; }
+    .update-modal {
+      background: #fff; border-radius: 14px; padding: 28px 24px; max-width: 480px; width: 90%;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2); animation: fadeIn 0.2s;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .update-modal h3 { font-size: 18px; font-weight: 700; margin: 0 0 12px; color: var(--text); }
+    .update-modal .cost-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; font-size: 14px; margin: 16px 0; padding: 14px 16px; background: #f8f9fa; border-radius: 10px; }
+    .update-modal .cost-label { color: var(--text-secondary); }
+    .update-modal .cost-value { text-align: right; font-weight: 600; color: var(--text); }
+    .update-modal .cost-total { font-weight: 700; color: #1565c0; font-size: 16px; border-top: 2px solid var(--border); padding-top: 8px; margin-top: 4px; }
+    .update-modal .cost-total-label { font-weight: 700; color: var(--text); border-top: 2px solid var(--border); padding-top: 8px; margin-top: 4px; }
+    .update-modal .modal-note { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
+    .update-modal .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+    .update-modal .modal-btns button { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .update-modal .btn-cancel { background: #f5f5f5; color: var(--text-secondary); }
+    .update-modal .btn-cancel:hover { background: #e0e0e0; }
+    .update-modal .btn-confirm { background: #1565c0; color: #fff; }
+    .update-modal .btn-confirm:hover { background: #0d47a1; }
+    .update-modal .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+    .update-progress { font-size: 13px; color: var(--text-secondary); margin-top: 12px; display: none; }
+
+    /* Column selector */
+    .col-selector-wrap { position: relative; display: inline-block; }
+    .btn-col-selector {
+      padding: 6px 14px; font-size: 13px; font-weight: 600; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--card-bg); color: var(--text); cursor: pointer; transition: background 0.15s;
+    }
+    .btn-col-selector:hover { background: var(--border); }
+    .col-dropdown {
+      display: none; position: absolute; top: 100%; right: 0; z-index: 50;
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12); padding: 12px 0; min-width: 220px; margin-top: 4px;
+    }
+    .col-dropdown.show { display: block; }
+    .col-dropdown-title { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 16px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+    .col-dropdown label {
+      display: flex; align-items: center; gap: 8px; padding: 6px 16px; font-size: 13px;
+      color: var(--text); cursor: pointer; transition: background 0.1s;
+    }
+    .col-dropdown label:hover { background: #f5f7fa; }
+    .col-dropdown label.disabled { opacity: 0.4; cursor: not-allowed; }
+    .col-dropdown input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
+    .col-limit-msg { font-size: 11px; color: var(--text-secondary); padding: 6px 16px 0; border-top: 1px solid var(--border); margin-top: 4px; }
 
     /* Table checkbox */
     .garage-table .cb-col { width: 32px; cursor: default; }
@@ -161,6 +219,11 @@
         <button class="btn-export" id="btn-csv" style="display:none;" disabled onclick="downloadCSV()">&#x2B73; CSV</button>
         <button class="btn-export btn-export-excel" id="btn-xlsx" style="display:none;" disabled onclick="downloadExcel()">&#x2B73; Excel</button>
         <button class="btn-export btn-export-pdf" id="btn-pdf" style="display:none;" disabled onclick="downloadPDF()">&#x2B73; PDF Report</button>
+        <button class="btn-update-data" id="btn-update-data" onclick="showUpdateConfirmation()">&#x21BB; Update Data</button>
+        <div class="col-selector-wrap">
+          <button class="btn-col-selector" onclick="toggleColDropdown()">&#9776; Columns</button>
+          <div class="col-dropdown" id="col-dropdown"></div>
+        </div>
         <span class="selection-info" id="selection-info" style="display:none;">0 selected</span>
       </div>
 
@@ -208,26 +271,24 @@
       <!-- Table view -->
       <div id="garage-table-wrap" class="table-wrap" style="display:none;">
         <table class="garage-table" id="garage-table">
-          <thead>
-            <tr>
-              <th class="cb-col"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)" title="Select all"></th>
-              <th data-col="reg" onclick="sortTable('reg')">Reg <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="make" onclick="sortTable('make')">Make <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="model" onclick="sortTable('model')">Model <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="year" onclick="sortTable('year')">Year <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="colour" onclick="sortTable('colour')">Colour <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="dealer" onclick="sortTable('dealer')">Dealer Price <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="private" onclick="sortTable('private')">Private Price <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="trade" onclick="sortTable('trade')">Trade Price <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="mot" onclick="sortTable('mot')">MOT Due <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="val_age" onclick="sortTable('val_age')">Data Age <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="vehicle_age" onclick="sortTable('vehicle_age')">Vehicle Age <span class="sort-arrow">&#x25B2;</span></th>
-              <th data-col="added" onclick="sortTable('added')">Date Added <span class="sort-arrow">&#x25B2;</span></th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead id="garage-table-head"></thead>
           <tbody id="garage-table-body"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update data confirmation modal -->
+  <div class="update-overlay" id="update-overlay" onclick="if(event.target===this)closeUpdateModal()">
+    <div class="update-modal">
+      <h3>Update Vehicle Data</h3>
+      <p id="update-desc" style="font-size:14px; color:var(--text-secondary); margin-bottom:4px;">Refresh valuations and MOT data for your selected vehicles.</p>
+      <div class="cost-grid" id="update-cost-grid"></div>
+      <p class="modal-note">Fresh data (less than 24h old for valuations, 7 days for MOT) is free. You are only charged for stale or missing data.</p>
+      <div class="update-progress" id="update-progress"></div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeUpdateModal()">Cancel</button>
+        <button class="btn-confirm" id="btn-confirm-update" onclick="executeUpdate()">Confirm &amp; Update</button>
       </div>
     </div>
   </div>
@@ -324,6 +385,99 @@
     let sortedFilteredCache = []; // cached sorted+filtered list for shift-click indexing
 
     const GARAGE_LIMITS = { free: 2, basic: 20, trader: Infinity };
+
+    // ── Column configuration ──
+    const MAX_COLUMNS = 10;
+    const ALL_COLUMNS = [
+      { key: 'reg',         label: 'Reg',           default: true },
+      { key: 'make',        label: 'Make',          default: true },
+      { key: 'model',       label: 'Model',         default: true },
+      { key: 'year',        label: 'Year',          default: true },
+      { key: 'colour',      label: 'Colour',        default: true },
+      { key: 'fuel_type',   label: 'Fuel Type',     default: false },
+      { key: 'dealer',      label: 'Dealer',        default: true },
+      { key: 'private',     label: 'Private',       default: true },
+      { key: 'trade',       label: 'Trade',         default: true },
+      { key: 'px',          label: 'Part Exchange', default: false },
+      { key: 'auction',     label: 'Auction',       default: false },
+      { key: 'mot',         label: 'MOT Due',       default: true },
+      { key: 'val_age',     label: 'Data Age',      default: false },
+      { key: 'vehicle_age', label: 'Vehicle Age',   default: false },
+      { key: 'added',       label: 'Date Added',    default: true },
+      { key: 'source',      label: 'Source',        default: false },
+    ];
+    const DEFAULT_COLS = ALL_COLUMNS.filter(c => c.default).map(c => c.key);
+
+    function loadVisibleColumns() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('garageColumns'));
+        if (Array.isArray(saved) && saved.length > 0 && saved.length <= MAX_COLUMNS) return saved;
+      } catch (e) {}
+      return DEFAULT_COLS;
+    }
+    let visibleColumns = loadVisibleColumns();
+
+    function saveVisibleColumns() {
+      localStorage.setItem('garageColumns', JSON.stringify(visibleColumns));
+    }
+
+    function toggleColDropdown() {
+      const dd = document.getElementById('col-dropdown');
+      const isOpen = dd.classList.contains('show');
+      if (isOpen) { dd.classList.remove('show'); return; }
+      renderColDropdown();
+      dd.classList.add('show');
+      // Close on outside click
+      setTimeout(() => {
+        function close(e) { if (!dd.contains(e.target) && !e.target.classList.contains('btn-col-selector')) { dd.classList.remove('show'); document.removeEventListener('click', close); } }
+        document.addEventListener('click', close);
+      }, 0);
+    }
+
+    function renderColDropdown() {
+      const dd = document.getElementById('col-dropdown');
+      const count = visibleColumns.length;
+      const atLimit = count >= MAX_COLUMNS;
+      let html = '<div class="col-dropdown-title">Show / Hide Columns</div>';
+      for (const col of ALL_COLUMNS) {
+        const checked = visibleColumns.includes(col.key);
+        const disabled = !checked && atLimit;
+        html += '<label class="' + (disabled ? 'disabled' : '') + '">'
+          + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' ' + (disabled ? 'disabled' : '')
+          + ' onchange="toggleColumn(\'' + col.key + '\', this.checked)">'
+          + col.label + '</label>';
+      }
+      html += '<div class="col-limit-msg">' + count + ' of ' + MAX_COLUMNS + ' columns selected</div>';
+      dd.innerHTML = html;
+    }
+
+    function toggleColumn(key, on) {
+      if (on) {
+        if (visibleColumns.length >= MAX_COLUMNS) return;
+        if (!visibleColumns.includes(key)) visibleColumns.push(key);
+      } else {
+        visibleColumns = visibleColumns.filter(k => k !== key);
+      }
+      saveVisibleColumns();
+      renderColDropdown();
+      renderTableHead();
+      renderTable();
+    }
+
+    function renderTableHead() {
+      const thead = document.getElementById('garage-table-head');
+      let html = '<tr><th class="cb-col"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)" title="Select all"></th>';
+      for (const key of visibleColumns) {
+        const col = ALL_COLUMNS.find(c => c.key === key);
+        if (!col) continue;
+        const sorted = key === sortCol;
+        const arrow = sorted ? (sortAsc ? '&#x25B2;' : '&#x25BC;') : '&#x25B2;';
+        html += '<th data-col="' + key + '" onclick="sortTable(\'' + key + '\')"' + (sorted ? ' class="sorted"' : '') + '>'
+          + col.label + ' <span class="sort-arrow">' + arrow + '</span></th>';
+      }
+      html += '<th></th></tr>';
+      thead.innerHTML = html;
+    }
 
     // ── Freshness constants ──
     const VALUATION_MAX_AGE_MS = 24 * 60 * 60 * 1000;  // 24 hours
@@ -656,6 +810,10 @@
           added_at: firebase.firestore.FieldValue.serverTimestamp(),
           source: vehicleData._approximate ? 'gemini_estimate' : 'manual_lookup',
         };
+        // Persist full VDGL data sections for sharing/reports
+        if (vehicleData.vehicle_details) garageDoc.vehicle_details = vehicleData.vehicle_details;
+        if (vehicleData.model_details) garageDoc.model_details = vehicleData.model_details;
+        if (vehicleData.tyre_details) garageDoc.tyre_details = vehicleData.tyre_details;
 
         status.innerHTML = '<span class="add-vehicle-spinner"></span> Saving to garage...';
         await db.collection('users').doc(user.uid).collection('garage').add(garageDoc);
@@ -767,11 +925,15 @@
           valuation_updated: data.valuation_updated || null,
           mot_updated: data.mot_updated || null,
           added_at: data.added_at || null,
-          source: data.source || null
+          source: data.source || null,
+          vehicle_details: data.vehicle_details || null,
+          model_details: data.model_details || null,
+          tyre_details: data.tyre_details || null,
         };
       });
 
       renderCards();
+      renderTableHead();
       renderTable();
 
       // Apply persisted view
@@ -830,7 +992,8 @@
           html += '</div>';
         }
 
-        html += '<div class="garage-actions">';
+        html += '<div class="garage-actions" style="display:flex; gap:6px; margin-top:8px;">';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--primary-light); color:var(--primary);" onclick="shareFromGarage(\'' + item.docId + '\', this)">Share</button>';
         html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button>';
         html += '</div>';
         html += '</div>';
@@ -848,14 +1011,17 @@
         case 'model': return (id.model || '').toLowerCase();
         case 'year': return Number(id.year_min || id.year_max || 0);
         case 'colour': return (id.colour || '').toLowerCase();
+        case 'fuel_type': return (id.fuel_type || '').toLowerCase();
         case 'dealer': return Number(val.dealer_forecourt || val.dealer_price || 0);
         case 'private': return Number(val.private_clean || val.private_price || 0);
         case 'trade': return Number(val.trade_retail || val.trade_price || 0);
-        case 'mot': return mot.mot_due || '';
+        case 'px': return Number(val.part_exchange || 0);
+        case 'auction': return Number(val.auction || 0);
+        case 'mot': return mot.MotDueDate || mot.mot_due_date || mot.mot_due || '';
         case 'val_age': return item.valuation_updated ? (getTimestampMs(item.valuation_updated) || 0) : 0;
-        case 'mot_age': return item.mot_updated ? (getTimestampMs(item.mot_updated) || 0) : 0;
         case 'vehicle_age': { const pa = getVehicleAgeFromPlate(id.number_plate || ''); return pa.known ? pa.ageYears : 9999; }
         case 'added': return item.added_at ? (item.added_at.toDate ? item.added_at.toDate().getTime() : new Date(item.added_at).getTime()) : 0;
+        case 'source': return (item.source || '').toLowerCase();
         default: return '';
       }
     }
@@ -888,13 +1054,6 @@
         const id = item.id || {};
         const val = item.val || {};
         const mot = item.mot || {};
-        const yearStr = id.year_min && id.year_max && id.year_min !== id.year_max
-          ? id.year_min + '–' + id.year_max
-          : (id.year_min || id.year_max || '');
-        const dealer = val.dealer_forecourt || val.dealer_price;
-        const priv = val.private_clean || val.private_price;
-        const trade = val.trade_retail || val.trade_price;
-        const motDue = mot.mot_due || '';
         const isApprox = item.source === 'gemini_estimate';
         const approxPrefix = isApprox ? '~' : '';
         const approxStyle = isApprox ? ' style="opacity:0.8;"' : '';
@@ -903,23 +1062,54 @@
         const rowClass = selectedIds.has(item.docId) ? ' class="selected"' : '';
         let row = '<tr' + rowClass + ' data-idx="' + idx + '" data-docid="' + item.docId + '">';
         row += '<td class="cb-col"><input type="checkbox" ' + checked + ' data-idx="' + idx + '" data-docid="' + item.docId + '" onclick="handleRowCheckbox(event, ' + idx + ', \'' + item.docId + '\')"></td>';
-        row += '<td>' + escapeHtml(id.number_plate || '') + '</td>';
-        row += '<td>' + escapeHtml(id.make || '') + '</td>';
-        row += '<td>' + escapeHtml(id.model || '') + '</td>';
-        row += '<td>' + escapeHtml(yearStr) + '</td>';
-        row += '<td>' + escapeHtml(id.colour || '') + '</td>';
-        row += '<td' + approxStyle + '>' + (dealer ? '&pound;' + approxPrefix + Number(dealer).toLocaleString() : '') + (isApprox && dealer ? ' <span title="Approximate value" style="color:#f57f17; font-size:10px;">⚠</span>' : '') + '</td>';
-        row += '<td' + approxStyle + '>' + (priv ? '&pound;' + approxPrefix + Number(priv).toLocaleString() : '') + (isApprox && priv ? ' <span title="Approximate value" style="color:#f57f17; font-size:10px;">⚠</span>' : '') + '</td>';
-        row += '<td' + approxStyle + '>' + (trade ? '&pound;' + approxPrefix + Number(trade).toLocaleString() : '') + (isApprox && trade ? ' <span title="Approximate value" style="color:#f57f17; font-size:10px;">⚠</span>' : '') + '</td>';
-        row += '<td>' + escapeHtml(motDue) + '</td>';
-        row += '<td>' + freshnessHtml(item) + '</td>';
-        const plateAge = getVehicleAgeFromPlate(id.number_plate || '');
-        row += '<td>' + (plateAge.known ? plateAge.label : '<span style="color:var(--text-secondary); font-style:italic; font-size:11px;">N/A</span>') + '</td>';
-        row += '<td>' + formatDate(item.added_at) + '</td>';
-        row += '<td class="td-actions"><button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button></td>';
+
+        for (const key of visibleColumns) {
+          row += renderCell(key, item, id, val, mot, isApprox, approxPrefix, approxStyle);
+        }
+
+        row += '<td class="td-actions">'
+          + '<button class="btn" style="padding:2px 8px; font-size:11px; background:var(--primary-light); color:var(--primary); margin-right:4px;" onclick="shareFromGarage(\'' + item.docId + '\', this)">Share</button>'
+          + '<button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button>'
+          + '</td>';
         row += '</tr>';
         return row;
       }).join('');
+    }
+
+    function renderCell(key, item, id, val, mot, isApprox, approxPrefix, approxStyle) {
+      const priceCell = (v) => '<td' + approxStyle + '>' + (v ? '&pound;' + approxPrefix + Number(v).toLocaleString() : '') + (isApprox && v ? ' <span title="Approximate value" style="color:#f57f17; font-size:10px;">⚠</span>' : '') + '</td>';
+      switch (key) {
+        case 'reg': return '<td>' + escapeHtml(id.number_plate || '') + '</td>';
+        case 'make': return '<td>' + escapeHtml(id.make || '') + '</td>';
+        case 'model': return '<td>' + escapeHtml(id.model || '') + '</td>';
+        case 'year': {
+          const yearStr = id.year_min && id.year_max && id.year_min !== id.year_max
+            ? id.year_min + '–' + id.year_max : (id.year_min || id.year_max || '');
+          return '<td>' + escapeHtml(yearStr) + '</td>';
+        }
+        case 'colour': return '<td>' + escapeHtml(id.colour || '') + '</td>';
+        case 'fuel_type': return '<td>' + escapeHtml(id.fuel_type || '') + '</td>';
+        case 'dealer': return priceCell(val.dealer_forecourt || val.dealer_price);
+        case 'private': return priceCell(val.private_clean || val.private_price);
+        case 'trade': return priceCell(val.trade_retail || val.trade_price);
+        case 'px': return priceCell(val.part_exchange);
+        case 'auction': return priceCell(val.auction);
+        case 'mot': {
+          const motDueRaw = mot.MotDueDate || mot.mot_due_date || mot.mot_due || '';
+          return '<td>' + escapeHtml(motDueRaw ? formatDate(motDueRaw) : '') + '</td>';
+        }
+        case 'val_age': return '<td>' + freshnessHtml(item) + '</td>';
+        case 'vehicle_age': {
+          const plateAge = getVehicleAgeFromPlate(id.number_plate || '');
+          return '<td>' + (plateAge.known ? plateAge.label : '<span style="color:var(--text-secondary); font-style:italic; font-size:11px;">N/A</span>') + '</td>';
+        }
+        case 'added': return '<td>' + formatDate(item.added_at) + '</td>';
+        case 'source': {
+          const labels = { manual_lookup: 'Plate Lookup', bulk_upload: 'Bulk Upload', gemini_estimate: 'AI Estimate', camera: 'Camera' };
+          return '<td style="font-size:11px;">' + escapeHtml(labels[item.source] || item.source || '') + '</td>';
+        }
+        default: return '<td></td>';
+      }
     }
 
     function setView(view) {
@@ -1186,7 +1376,7 @@
           'Trade Price': val.trade_retail || val.trade_price || '',
           'Part Exchange': val.part_exchange || '',
           'Auction': val.auction || '',
-          'MOT Due': mot.mot_due || '',
+          'MOT Due': formatDate(mot.MotDueDate || mot.mot_due_date || mot.mot_due || ''),
           'Date Added': formatDate(item.added_at)
         };
       });
@@ -1264,7 +1454,7 @@
           fmtPrice(val.trade_retail || val.trade_price),
           fmtPrice(val.part_exchange),
           fmtPrice(val.auction),
-          mot.mot_due || '',
+          formatDate(mot.MotDueDate || mot.mot_due_date || mot.mot_due || ''),
           formatDate(item.added_at)
         ];
       });
@@ -1340,6 +1530,398 @@
 
       const todayFile = new Date().toISOString().slice(0, 10);
       doc.save('autospotter_garage_report_' + todayFile + '.pdf');
+    }
+
+    // ── Update Data: freshness analysis & confirmation ──
+    const VDGL_SECTION_PRICES = {
+      valuation: 0.35,
+      mot: 0.11,
+      vehicle_details: 0.26,
+      tyre_details: 0.16,
+      full: 0.88,
+    };
+    const UPDATE_FRESHNESS_MS = {
+      valuation: 24 * 60 * 60 * 1000,   // 24 hours
+      mot: 7 * 24 * 60 * 60 * 1000,     // 7 days
+    };
+
+    let updateAnalysis = null;
+
+    async function analyseGarageFreshness() {
+      const now = Date.now();
+      const items = garageData.filter(i => i.id && i.id.number_plate && selectedIds.has(i.docId));
+      let fresh = 0, staleItems = [], totalCost = 0;
+
+      for (const item of items) {
+        const valTs = getTimestampMs(item.valuation_updated);
+        const motTs = getTimestampMs(item.mot_updated);
+        const valStale = !valTs || (now - valTs) > UPDATE_FRESHNESS_MS.valuation;
+        const motStale = !motTs || (now - motTs) > UPDATE_FRESHNESS_MS.mot;
+
+        if (!valStale && !motStale) {
+          fresh++;
+          continue;
+        }
+
+        const sections = [];
+        let cost = 0;
+        if (valStale) { sections.push('valuation'); cost += VDGL_SECTION_PRICES.valuation; }
+        if (motStale) { sections.push('mot'); cost += VDGL_SECTION_PRICES.mot; }
+
+        staleItems.push({ item, sections, cost: Math.min(cost, VDGL_SECTION_PRICES.full) });
+        totalCost += Math.min(cost, VDGL_SECTION_PRICES.full);
+      }
+
+      return { fresh, staleItems, totalCost, total: items.length };
+    }
+
+    async function showUpdateConfirmation() {
+      if (selectedIds.size === 0) { alert('Please select the vehicles you want to update using the checkboxes.'); return; }
+      const btn = document.getElementById('btn-update-data');
+      btn.disabled = true;
+      btn.textContent = 'Analysing...';
+
+      try {
+        updateAnalysis = await analyseGarageFreshness();
+        const grid = document.getElementById('update-cost-grid');
+
+        let html = '';
+        html += '<span class="cost-label">Total vehicles</span><span class="cost-value">' + updateAnalysis.total + '</span>';
+        html += '<span class="cost-label">Already up to date</span><span class="cost-value" style="color:#2e7d32;">' + updateAnalysis.fresh + ' (free)</span>';
+        html += '<span class="cost-label">Need updating</span><span class="cost-value">' + updateAnalysis.staleItems.length + '</span>';
+
+        if (updateAnalysis.staleItems.length > 0) {
+          // Show breakdown per vehicle
+          for (const s of updateAnalysis.staleItems) {
+            const plate = s.item.id.number_plate || '???';
+            const sectionLabels = s.sections.map(sec => sec === 'valuation' ? 'Val' : 'MOT').join(' + ');
+            html += '<span class="cost-label" style="font-size:12px; padding-left:12px;">' + escapeHtml(plate) + ' <span style="color:var(--text-secondary);">(' + sectionLabels + ')</span></span>';
+            html += '<span class="cost-value" style="font-size:12px;">&pound;' + s.cost.toFixed(2) + '</span>';
+          }
+        }
+
+        html += '<span class="cost-total-label">Estimated total cost</span><span class="cost-value cost-total">&pound;' + updateAnalysis.totalCost.toFixed(2) + '</span>';
+        grid.innerHTML = html;
+
+        document.getElementById('update-progress').style.display = 'none';
+        document.getElementById('update-progress').textContent = '';
+        document.getElementById('btn-confirm-update').disabled = updateAnalysis.staleItems.length === 0;
+        document.getElementById('btn-confirm-update').textContent = updateAnalysis.staleItems.length === 0 ? 'All up to date' : 'Confirm & Update';
+        document.getElementById('update-overlay').classList.add('show');
+      } catch (err) {
+        alert('Failed to analyse data freshness: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '&#x21BB; Update Data';
+      }
+    }
+
+    function closeUpdateModal() {
+      document.getElementById('update-overlay').classList.remove('show');
+      updateAnalysis = null;
+    }
+
+    // ── VDGL API call (shared) ──
+    async function callVdglApi(plate, packageName) {
+      const params = new URLSearchParams({ vrm: plate, package: packageName });
+      const resp = await fetch('/api/vdgl?' + params.toString());
+      if (!resp.ok) throw new Error('VDGL proxy returned HTTP ' + resp.status);
+      const json = await resp.json();
+      if (json.error) throw new Error(json.error);
+      const info = json.ResponseInformation || {};
+      if (!info.IsSuccessStatusCode) {
+        throw new Error(info.StatusMessage || 'VDGL lookup failed');
+      }
+      return json;
+    }
+
+    // ── Retry wrapper: up to 3 attempts with 2s delay between retries ──
+    async function callVdglWithRetry(plate, packageName, progressEl) {
+      const MAX_ATTEMPTS = 3;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          return await callVdglApi(plate, packageName);
+        } catch (err) {
+          if (attempt < MAX_ATTEMPTS) {
+            progressEl.textContent = plate + ' — attempt ' + attempt + ' failed, retrying in 2s... (' + err.message + ')';
+            await new Promise(res => setTimeout(res, 2000));
+          } else {
+            throw err; // all attempts exhausted
+          }
+        }
+      }
+    }
+
+    // ── Build safe update object — only include fields the API actually returned ──
+    function buildSafeUpdates(apiResults) {
+      const updates = {};
+      const results = apiResults.Results || {};
+
+      if (results.ValuationDetails) {
+        const fig = results.ValuationDetails.ValuationFigures || results.ValuationDetails;
+        const valuation = {};
+        if (fig.DealerForecourt) valuation.dealer_forecourt = fig.DealerForecourt;
+        if (fig.PrivateClean) valuation.private_clean = fig.PrivateClean;
+        if (fig.TradeRetail) valuation.trade_retail = fig.TradeRetail;
+        if (fig.PartExchange) valuation.part_exchange = fig.PartExchange;
+        if (fig.Auction) valuation.auction = fig.Auction;
+        // Only write valuation if we got at least one price back
+        if (Object.keys(valuation).length > 0) {
+          updates.valuation = valuation;
+          updates.valuation_updated = firebase.firestore.FieldValue.serverTimestamp();
+        }
+      }
+
+      if (results.MotHistoryDetails) {
+        updates.mot = results.MotHistoryDetails;
+        updates.mot_updated = firebase.firestore.FieldValue.serverTimestamp();
+      }
+      // Persist full data sections for sharing/reports
+      if (results.VehicleDetails) updates.vehicle_details = results.VehicleDetails;
+      if (results.ModelDetails) updates.model_details = results.ModelDetails;
+      if (results.TyreDetails) updates.tyre_details = results.TyreDetails;
+
+      return updates;
+    }
+
+    async function executeUpdate() {
+      if (!updateAnalysis || updateAnalysis.staleItems.length === 0) return;
+      const user = auth.currentUser;
+      if (!user) { alert('Please sign in first.'); return; }
+
+      const confirmBtn = document.getElementById('btn-confirm-update');
+      const progress = document.getElementById('update-progress');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Updating...';
+      progress.style.display = 'block';
+
+      let done = 0, succeeded = 0, failed = 0;
+      const total = updateAnalysis.staleItems.length;
+      const failures = [];
+
+      for (const s of updateAnalysis.staleItems) {
+        const plate = cleanPlate(s.item.id.number_plate);
+        done++;
+        progress.textContent = 'Updating ' + plate + ' (' + done + '/' + total + ')...';
+
+        let updates = null;
+        let source = 'api';
+
+        // 1. Try VDGL with 3 retries
+        try {
+          const json = await callVdglWithRetry(plate, 'DataPackage2', progress);
+          updates = buildSafeUpdates(json);
+          if (Object.keys(updates).length === 0) updates = null; // API returned but no usable data
+        } catch (vdglErr) {
+          console.warn('VDGL failed for ' + plate + ' after 3 attempts:', vdglErr.message);
+          updates = null;
+        }
+
+        // 2. If VDGL failed or returned nothing, try Gemini fallback
+        if (!updates && typeof window._geminiFallbackPricing === 'function') {
+          progress.textContent = plate + ' — VDGL unavailable, trying AI estimate (' + done + '/' + total + ')...';
+          const id = s.item.id || {};
+          try {
+            const geminiPrices = await window._geminiFallbackPricing(
+              id.make || plate,
+              id.model || '',
+              (id.year_min || id.year_max || '').toString(),
+              ''
+            );
+            if (geminiPrices && (geminiPrices.dealer_forecourt || geminiPrices.private_clean || geminiPrices.trade_retail)) {
+              updates = {
+                valuation: {
+                  dealer_forecourt: geminiPrices.dealer_forecourt,
+                  private_clean: geminiPrices.private_clean,
+                  trade_retail: geminiPrices.trade_retail,
+                  part_exchange: geminiPrices.part_exchange,
+                  auction: geminiPrices.auction,
+                },
+                valuation_updated: firebase.firestore.FieldValue.serverTimestamp(),
+                source: 'gemini_estimate',
+              };
+              source = 'gemini';
+            }
+          } catch (geminiErr) {
+            console.warn('Gemini fallback also failed for ' + plate + ':', geminiErr.message);
+          }
+        }
+
+        // 3. Write updates if we got anything — otherwise preserve existing data
+        if (updates && Object.keys(updates).length > 0) {
+          try {
+            await db.collection('users').doc(user.uid).collection('garage').doc(s.item.docId).update(updates);
+            // Also update shared vehicle cache
+            const hash = await sha256(plate);
+            const cacheUpdates = Object.assign({}, updates, {
+              last_scanned: firebase.firestore.FieldValue.serverTimestamp(),
+              scan_count: firebase.firestore.FieldValue.increment(1),
+            });
+            db.collection('vehicles').doc(hash).set(cacheUpdates, { merge: true }).catch(() => {});
+            if (source === 'gemini') {
+              succeeded++;
+              failures.push(plate + ' (approx. values from AI)');
+            } else {
+              succeeded++;
+            }
+          } catch (writeErr) {
+            console.error('Failed to save update for ' + plate + ':', writeErr);
+            failures.push(plate + ' (save failed)');
+            failed++;
+          }
+        } else {
+          // Both VDGL and Gemini failed — existing data preserved
+          failures.push(plate + ' (all sources unavailable — data preserved)');
+          failed++;
+        }
+      }
+
+      // Show summary
+      let summary = succeeded + ' of ' + total + ' vehicle' + (total === 1 ? '' : 's') + ' updated.';
+      if (failed > 0) {
+        summary += ' ' + failed + ' failed: ' + failures.join(', ') + '.';
+        progress.style.color = '#e65100';
+      } else {
+        progress.style.color = '#2e7d32';
+      }
+      progress.textContent = summary;
+      confirmBtn.textContent = 'Done';
+      confirmBtn.disabled = false;
+      confirmBtn.onclick = closeUpdateModal;
+    }
+
+    // ── Share from Garage ──
+    async function shareFromGarage(docId, btn) {
+      const user = auth.currentUser;
+      if (!user) { alert('Please sign in first.'); return; }
+
+      const item = garageData.find(i => i.docId === docId);
+      if (!item) { alert('Vehicle not found.'); return; }
+
+      const originalText = btn.textContent;
+      btn.textContent = 'Sharing...';
+      btn.disabled = true;
+
+      try {
+        // Check if already shared from this garage doc
+        const existing = await db.collection('shared_reports')
+          .where('source_garage_id', '==', docId)
+          .where('owner_uid', '==', user.uid)
+          .limit(1).get();
+
+        let reportId;
+        if (!existing.empty) {
+          reportId = existing.docs[0].id;
+        } else {
+          // If we don't have full data stored, try to fetch from shared vehicle cache
+          let vehicleDetails = item.vehicle_details || null;
+          let modelDetails = item.model_details || null;
+          let tyreDetails = item.tyre_details || null;
+
+          if (!vehicleDetails && item.id && item.id.number_plate) {
+            try {
+              const plate = cleanPlate(item.id.number_plate);
+              const hash = await sha256(plate);
+              const cached = await db.collection('vehicles').doc(hash).get();
+              if (cached.exists) {
+                const cd = cached.data();
+                if (!vehicleDetails && cd.vehicle_details) vehicleDetails = cd.vehicle_details;
+                if (!modelDetails && cd.model_details) modelDetails = cd.model_details;
+                if (!tyreDetails && cd.tyre_details) tyreDetails = cd.tyre_details;
+              }
+            } catch (e) { /* best effort */ }
+          }
+
+          // GDPR: shared reports expire after 30 days
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30);
+
+          const reportDoc = {
+            owner_uid: user.uid,
+            source_garage_id: docId,
+            identification: item.id || {},
+            valuation: item.val || null,
+            vehicle_details: vehicleDetails,
+            mot_history: item.mot || null,
+            model_details: modelDetails,
+            tyre_details: tyreDetails,
+            shared_at: firebase.firestore.FieldValue.serverTimestamp(),
+            expires_at: firebase.firestore.Timestamp.fromDate(expiresAt),
+          };
+
+          const reportRef = await db.collection('shared_reports').add(reportDoc);
+          reportId = reportRef.id;
+        }
+
+        const url = window.location.origin + '/report.html?id=' + reportId;
+        const vehicleName = ((item.id.make || '') + ' ' + (item.id.model || '')).trim();
+        showSharePopup(url, vehicleName);
+
+        btn.textContent = 'Shared!';
+        btn.style.background = '#e8f5e9';
+        btn.style.color = '#2e7d32';
+      } catch (err) {
+        console.error('Share failed:', err);
+        alert('Failed to share report. Please try again.');
+        btn.textContent = originalText;
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+          btn.textContent = 'Share';
+          btn.style.background = 'var(--primary-light)';
+          btn.style.color = 'var(--primary)';
+        }, 3000);
+      }
+    }
+
+    function showSharePopup(url, vehicleName) {
+      const old = document.getElementById('share-popup-overlay');
+      if (old) old.remove();
+
+      const title = vehicleName ? vehicleName + ' — AutoSpotter Vehicle Report' : 'AutoSpotter Vehicle Report';
+      const text = vehicleName
+        ? 'Check out this ' + vehicleName + ' vehicle report on AutoSpotter!'
+        : 'Check out this vehicle report on AutoSpotter!';
+
+      const encodedUrl = encodeURIComponent(url);
+      const encodedText = encodeURIComponent(text);
+      const encodedTitle = encodeURIComponent(title);
+
+      const overlay = document.createElement('div');
+      overlay.id = 'share-popup-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;';
+      overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+      const popup = document.createElement('div');
+      popup.style.cssText = 'background:#fff;border-radius:16px;padding:28px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+
+      popup.innerHTML = ''
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        + '  <h3 style="margin:0;font-size:18px;">Share Report</h3>'
+        + '  <button onclick="this.closest(\'#share-popup-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-secondary);">&times;</button>'
+        + '</div>'
+        + '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">' + escapeHtml(vehicleName || 'Vehicle Report') + '</p>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">'
+        + '  <a href="https://wa.me/?text=' + encodedText + '%20' + encodedUrl + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#25D366;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">'
+        + '    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'
+        + '    WhatsApp</a>'
+        + '  <a href="https://www.facebook.com/sharer/sharer.php?u=' + encodedUrl + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#1877F2;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">'
+        + '    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>'
+        + '    Facebook</a>'
+        + '  <a href="https://twitter.com/intent/tweet?text=' + encodedText + '&url=' + encodedUrl + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#000;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">'
+        + '    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'
+        + '    X / Twitter</a>'
+        + '  <a href="mailto:?subject=' + encodedTitle + '&body=' + encodedText + '%0A%0A' + encodedUrl + '" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#666;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">'
+        + '    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'
+        + '    Email</a>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;">'
+        + '  <input type="text" value="' + url.replace(/"/g, '&quot;') + '" readonly style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:#f8f9fa;" id="share-url-input">'
+        + '  <button onclick="navigator.clipboard.writeText(document.getElementById(\'share-url-input\').value).then(()=>{this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy\',2000)})" style="padding:8px 16px;border:1px solid var(--primary);border-radius:8px;background:var(--primary);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Copy</button>'
+        + '</div>';
+
+      overlay.appendChild(popup);
+      document.body.appendChild(overlay);
     }
 
     async function removeFromGarage(vehicleId) {
