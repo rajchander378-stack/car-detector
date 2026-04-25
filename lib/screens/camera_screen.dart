@@ -17,6 +17,7 @@ import 'messages_screen.dart';
 import 'pricing_screen.dart';
 import 'results_screen.dart';
 import 'sample_images_screen.dart';
+import 'garage_screen.dart';
 import 'saved_scans_screen.dart';
 import 'settings_screen.dart';
 
@@ -275,6 +276,7 @@ class _CameraScreenState extends State<CameraScreen>
               pageBuilder: (_, _, _) => ResultsScreen(
                 imagePath: xFile.path,
                 identification: identification,
+                trackSuccessfulIdentification: true,
               ),
               transitionsBuilder: (_, animation, _, child) {
                 return FadeTransition(opacity: animation, child: child);
@@ -408,6 +410,7 @@ class _CameraScreenState extends State<CameraScreen>
               pageBuilder: (_, _, _) => ResultsScreen(
                 imagePath: picked.path,
                 identification: identification,
+                trackSuccessfulIdentification: true,
               ),
               transitionsBuilder: (_, animation, _, child) =>
                   FadeTransition(opacity: animation, child: child),
@@ -795,6 +798,19 @@ class _CameraScreenState extends State<CameraScreen>
                 MaterialPageRoute(
                   builder: (_) =>
                       const SavedScansScreen(showFavouritesTab: true),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.garage_outlined),
+            title: const Text('My Garage'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const GarageScreen(),
                 ),
               );
             },

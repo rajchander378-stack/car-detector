@@ -106,7 +106,6 @@ class CarIdentification {
   }
 
   String get displayName {
-    if (!identified) return 'Unknown Vehicle';
     final parts = <String>[];
     if (yearMin != null && yearMax != null) {
       if (yearMin == yearMax) {
@@ -115,10 +114,11 @@ class CarIdentification {
         parts.add('$yearMin-$yearMax');
       }
     }
-    if (make != null) parts.add(make!);
-    if (model != null) parts.add(model!);
-    if (trim != null) parts.add(trim!);
-    return parts.join(' ');
+    if (make != null && make!.isNotEmpty) parts.add(make!);
+    if (model != null && model!.isNotEmpty) parts.add(model!);
+    if (trim != null && trim!.isNotEmpty) parts.add(trim!);
+    if (parts.isNotEmpty) return parts.join(' ');
+    return 'Unknown Vehicle';
   }
 
   String get pricingQuery {

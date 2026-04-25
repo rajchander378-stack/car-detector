@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Garage — AutoSpotter</title>
   <meta name="description" content="Your saved vehicles — track valuations over time.">
+  <link rel="icon" href="/icon.png" type="image/png">
   <link rel="stylesheet" href="/style.css">
   <style>
     body { background: var(--bg); }
@@ -60,6 +61,33 @@
     .filter-bar .btn-sm:hover { background: var(--border); }
     .filter-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .selection-info { font-size: 13px; font-weight: 600; color: var(--primary, #1565c0); margin-left: auto; }
+
+    /* Preview modal */
+    .preview-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+      display: flex; align-items: flex-start; justify-content: center;
+      overflow-y: auto; padding: 40px 16px;
+    }
+    .preview-modal {
+      background: #fff; border-radius: 16px; padding: 28px;
+      max-width: 700px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .preview-modal h3 { margin: 0 0 16px; font-size: 18px; }
+    .preview-vehicle { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+    .preview-vehicle h4 { margin: 0 0 8px; font-size: 15px; }
+    .preview-section { margin-top: 8px; }
+    .preview-section summary { font-size: 13px; font-weight: 600; cursor: pointer; color: var(--primary); }
+    .preview-field { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+    .preview-field .pf-label { color: var(--text-secondary); }
+    .preview-field .pf-value { font-weight: 600; text-align: right; }
+
+    /* Bulk share/view buttons in toolbar */
+    .btn-bulk-action { padding: 6px 14px; font-size: 13px; font-weight: 600; border: 1px solid var(--primary); border-radius: 6px; cursor: pointer; }
+    .btn-bulk-action:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-bulk-view { background: #e3f2fd; color: var(--primary); }
+    .btn-bulk-view:hover:not(:disabled) { background: #bbdefb; }
+    .btn-bulk-share { background: var(--primary); color: #fff; }
+    .btn-bulk-share:hover:not(:disabled) { background: #0d47a1; }
 
     /* Card checkbox overlay */
     .garage-card { position: relative; }
@@ -151,6 +179,43 @@
     .garage-table tr:hover { background: rgba(0,0,0,0.045); }
     .garage-table .td-actions button { padding: 2px 8px; font-size: 11px; }
 
+    /* MOT detail expandable row */
+    .mot-detail-row td { padding: 0 !important; border-bottom: 2px solid var(--primary-light); background: #f8fbff; }
+    .mot-detail-row:hover { background: #f8fbff !important; }
+    .mot-detail-inner { padding: 16px 20px; }
+    .mot-detail-inner h4 { font-size: 14px; font-weight: 700; color: var(--primary); margin: 0 0 4px; }
+    .mot-detail-inner .mot-due-banner {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+      border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+    }
+    .mot-due-banner.ok { background: #e8f5e9; color: #2e7d32; }
+    .mot-due-banner.warn { background: #fff3e0; color: #e65100; }
+    .mot-due-banner.overdue { background: #ffebee; color: #c62828; }
+    .mot-detail-inner .mot-summary { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+    .mot-test-card {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px; margin-bottom: 6px; border-radius: 8px;
+      border: 1px solid var(--border); background: #fff; font-size: 13px;
+    }
+    .mot-test-card.pass { border-left: 4px solid #2e7d32; }
+    .mot-test-card.fail { border-left: 4px solid #c62828; }
+    .mot-test-result { font-weight: 700; min-width: 36px; }
+    .mot-test-result.pass { color: #2e7d32; }
+    .mot-test-result.fail { color: #c62828; }
+    .mot-test-meta { color: var(--text-secondary); font-size: 12px; }
+    .mot-test-meta span { margin-right: 10px; }
+    .mot-defect { font-size: 12px; padding: 2px 0 2px 8px; border-left: 2px solid transparent; margin-top: 2px; }
+    .mot-defect.advisory { color: #e65100; border-left-color: #ffb74d; }
+    .mot-defect.failure { color: #c62828; border-left-color: #ef5350; }
+    .mot-defect.dangerous { color: #c62828; font-weight: 700; border-left-color: #c62828; }
+    .mot-no-data { font-size: 13px; color: var(--text-secondary); font-style: italic; padding: 8px 0; }
+    .btn-mot-toggle {
+      padding: 2px 8px; font-size: 11px; font-weight: 600; border: 1px solid #00897b;
+      border-radius: 4px; background: #e0f2f1; color: #00897b; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-mot-toggle:hover { background: #00897b; color: #fff; }
+    .btn-mot-toggle.active { background: #00897b; color: #fff; }
+
     @media (max-width: 600px) {
       #auth-area { margin-left: 0 !important; width: 100%; text-align: center; margin-top: 8px; }
       .garage-toolbar { justify-content: center; }
@@ -219,6 +284,8 @@
         <button class="btn-export" id="btn-csv" style="display:none;" disabled onclick="downloadCSV()">&#x2B73; CSV</button>
         <button class="btn-export btn-export-excel" id="btn-xlsx" style="display:none;" disabled onclick="downloadExcel()">&#x2B73; Excel</button>
         <button class="btn-export btn-export-pdf" id="btn-pdf" style="display:none;" disabled onclick="downloadPDF()">&#x2B73; PDF Report</button>
+        <button class="btn-bulk-action btn-bulk-view" id="btn-bulk-view" style="display:none;" disabled onclick="bulkViewSelected()">View Selected</button>
+        <button class="btn-bulk-action btn-bulk-share" id="btn-bulk-share" style="display:none;" disabled onclick="bulkShareSelected()">Share Selected</button>
         <button class="btn-update-data" id="btn-update-data" onclick="showUpdateConfirmation()">&#x21BB; Update Data</button>
         <div class="col-selector-wrap">
           <button class="btn-col-selector" onclick="toggleColDropdown()">&#9776; Columns</button>
@@ -374,6 +441,7 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     let garageUnsubscribe = null;
     let userPlan = 'free';
     let garageData = [];       // Array of { docId, id, val, added_at, mot } objects
@@ -903,6 +971,8 @@
       document.getElementById('btn-csv').style.display = exportDisplay;
       document.getElementById('btn-xlsx').style.display = exportDisplay;
       document.getElementById('btn-pdf').style.display = exportDisplay;
+      document.getElementById('btn-bulk-view').style.display = isTrader ? 'inline-block' : 'none';
+      document.getElementById('btn-bulk-share').style.display = isTrader ? 'inline-block' : 'none';
       document.getElementById('filter-bar').style.display = isTrader ? 'flex' : 'none';
       document.getElementById('selection-info').style.display = isTrader ? 'inline' : 'none';
 
@@ -993,9 +1063,12 @@
         }
 
         html += '<div class="garage-actions" style="display:flex; gap:6px; margin-top:8px;">';
+        html += '<button class="btn btn-mot-toggle" onclick="toggleCardMotDetail(\'' + item.docId + '\', this)">MOT</button>';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:#e3f2fd; color:var(--primary);" onclick="viewGarageItem(\'' + item.docId + '\')">View</button>';
         html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--primary-light); color:var(--primary);" onclick="shareFromGarage(\'' + item.docId + '\', this)">Share</button>';
         html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button>';
         html += '</div>';
+        html += '<div id="card-mot-' + item.docId + '" style="display:none; margin-top:10px; border-top:1px solid var(--border); padding-top:10px;"></div>';
         html += '</div>';
         return html;
       }).join('');
@@ -1068,12 +1141,37 @@
         }
 
         row += '<td class="td-actions">'
+          + '<button class="btn btn-mot-toggle" onclick="toggleMotDetail(\'' + item.docId + '\', this)">MOT</button> '
+          + '<button class="btn" style="padding:2px 8px; font-size:11px; background:#e3f2fd; color:var(--primary); margin-right:4px;" onclick="viewGarageItem(\'' + item.docId + '\')">View</button>'
           + '<button class="btn" style="padding:2px 8px; font-size:11px; background:var(--primary-light); color:var(--primary); margin-right:4px;" onclick="shareFromGarage(\'' + item.docId + '\', this)">Share</button>'
           + '<button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-light); color:var(--danger);" onclick="removeFromGarage(\'' + item.docId + '\')">Remove</button>'
           + '</td>';
         row += '</tr>';
         return row;
       }).join('');
+
+      // Re-open any previously expanded MOT detail rows
+      for (const docId of Array.from(openMotRows)) {
+        const parentRow = document.querySelector('tr[data-docid="' + docId + '"]');
+        const btn = parentRow ? parentRow.querySelector('.btn-mot-toggle') : null;
+        if (parentRow && btn) {
+          const item = garageData.find(g => g.docId === docId);
+          if (item) {
+            const totalCols = 1 + visibleColumns.length + 1;
+            const detailRow = document.createElement('tr');
+            detailRow.id = 'mot-detail-' + docId;
+            detailRow.className = 'mot-detail-row';
+            const td = document.createElement('td');
+            td.colSpan = totalCols;
+            td.innerHTML = '<div class="mot-detail-inner">' + buildMotDetailHtml(item) + '</div>';
+            detailRow.appendChild(td);
+            parentRow.after(detailRow);
+            btn.classList.add('active');
+          }
+        } else {
+          openMotRows.delete(docId);
+        }
+      }
     }
 
     function renderCell(key, item, id, val, mot, isApprox, approxPrefix, approxStyle) {
@@ -1309,9 +1407,9 @@
         info.textContent = count + ' selected';
         info.style.color = count > 0 ? 'var(--primary, #1565c0)' : 'var(--text-secondary)';
       }
-      // Enable/disable export buttons
+      // Enable/disable export and bulk action buttons
       const hasSelection = count > 0;
-      ['btn-csv', 'btn-xlsx', 'btn-pdf'].forEach(id => {
+      ['btn-csv', 'btn-xlsx', 'btn-pdf', 'btn-bulk-view', 'btn-bulk-share'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) btn.disabled = !hasSelection;
       });
@@ -1790,6 +1888,398 @@
       confirmBtn.onclick = closeUpdateModal;
     }
 
+    // ── MOT Detail Toggle ──
+    const openMotRows = new Set();
+
+    function toggleMotDetail(docId, btn) {
+      const existingRow = document.getElementById('mot-detail-' + docId);
+      if (existingRow) {
+        existingRow.remove();
+        openMotRows.delete(docId);
+        if (btn) btn.classList.remove('active');
+        return;
+      }
+
+      // Find the item data
+      const item = garageData.find(g => g.docId === docId);
+      if (!item) return;
+
+      // Find the parent row
+      const parentRow = document.querySelector('tr[data-docid="' + docId + '"]');
+      if (!parentRow) return;
+
+      // Calculate total columns (checkbox + visible columns + actions)
+      const totalCols = 1 + visibleColumns.length + 1;
+
+      const detailRow = document.createElement('tr');
+      detailRow.id = 'mot-detail-' + docId;
+      detailRow.className = 'mot-detail-row';
+      const td = document.createElement('td');
+      td.colSpan = totalCols;
+      td.innerHTML = '<div class="mot-detail-inner">' + buildMotDetailHtml(item) + '</div>';
+      detailRow.appendChild(td);
+
+      parentRow.after(detailRow);
+      openMotRows.add(docId);
+      if (btn) btn.classList.add('active');
+    }
+
+    function buildMotDetailHtml(item) {
+      const mot = item.mot || {};
+      const tests = mot.MotTestDetailsList || mot.mot_test_details_list || mot.tests || [];
+
+      // MOT due date
+      const motDueRaw = mot.MotDueDate || mot.mot_due_date || mot.mot_due || '';
+
+      if (!motDueRaw && tests.length === 0) {
+        return '<div class="mot-no-data">No MOT history data available for this vehicle.</div>';
+      }
+
+      let html = '<h4>MOT History</h4>';
+
+      // Due date banner
+      if (motDueRaw) {
+        const dueDate = new Date(motDueRaw);
+        const now = new Date();
+        const daysLeft = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+        let bannerClass = 'ok';
+        let bannerIcon = '&#x2705;';
+        let bannerText = 'MOT due: ' + formatDateNice(motDueRaw);
+        if (daysLeft < 0) {
+          bannerClass = 'overdue';
+          bannerIcon = '&#x26A0;&#xFE0F;';
+          bannerText = 'MOT OVERDUE — was due ' + formatDateNice(motDueRaw);
+        } else if (daysLeft <= 30) {
+          bannerClass = 'warn';
+          bannerIcon = '&#x23F3;';
+          bannerText = 'MOT due in ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : '') + ' — ' + formatDateNice(motDueRaw);
+        }
+        html += '<div class="mot-due-banner ' + bannerClass + '">' + bannerIcon + ' ' + bannerText + '</div>';
+      }
+
+      if (tests.length === 0) {
+        html += '<div class="mot-no-data">No individual MOT test records available.</div>';
+        return html;
+      }
+
+      // Summary line
+      const totalPasses = tests.filter(t => getTestPassed(t) === true).length;
+      const totalFailures = tests.filter(t => getTestPassed(t) === false).length;
+      html += '<div class="mot-summary">' + tests.length + ' test' + (tests.length !== 1 ? 's' : '') + ' on record &mdash; '
+            + totalPasses + ' pass' + (totalPasses !== 1 ? 'es' : '') + ', '
+            + totalFailures + ' failure' + (totalFailures !== 1 ? 's' : '') + '</div>';
+
+      // Individual test cards
+      for (const test of tests) {
+        const passed = getTestPassed(test);
+        const testDate = test.TestDate || test.test_date || '';
+        const expiry = test.ExpiryDate || test.expiry_date || '';
+        const mileage = test.OdometerReading || test.odometer_reading || '';
+        const mileageUnit = test.OdometerUnit || test.odometer_unit || 'mi';
+        const testNumber = test.TestNumber || test.test_number || '';
+        const isRetest = test.IsRetest || test.is_retest || false;
+        const defects = test.AnnotationList || test.annotation_list || test.defects || [];
+
+        const passClass = passed === true ? 'pass' : 'fail';
+        const resultLabel = passed === true ? 'PASS' : 'FAIL';
+
+        html += '<div class="mot-test-card ' + passClass + '">';
+        html += '<div class="mot-test-result ' + passClass + '">' + resultLabel + '</div>';
+        html += '<div style="flex:1;">';
+
+        // Meta line
+        html += '<div class="mot-test-meta">';
+        if (testDate) html += '<span>' + formatDateNice(testDate) + '</span>';
+        if (mileage) html += '<span>' + Number(mileage).toLocaleString() + ' ' + escapeHtml(mileageUnit) + '</span>';
+        if (expiry) html += '<span>Expires: ' + formatDateNice(expiry) + '</span>';
+        if (isRetest) html += '<span style="color:#1565c0; font-weight:600;">Retest</span>';
+        if (testNumber) html += '<span style="opacity:0.5;">Test #' + escapeHtml(testNumber) + '</span>';
+        html += '</div>';
+
+        // Defects
+        if (defects.length > 0) {
+          for (const d of defects) {
+            const type = (d.Type || d.type || '').toLowerCase();
+            const text = d.Text || d.text || '';
+            const isDangerous = d.IsDangerous || d.is_dangerous || false;
+            let defClass = 'advisory';
+            let defLabel = 'Advisory';
+            if (isDangerous) {
+              defClass = 'dangerous';
+              defLabel = 'Dangerous';
+            } else if (type === 'major' || type === 'fail' || type === 'dangerous') {
+              defClass = 'failure';
+              defLabel = type.charAt(0).toUpperCase() + type.slice(1);
+            } else if (type === 'advisory') {
+              defClass = 'advisory';
+              defLabel = 'Advisory';
+            } else if (type) {
+              defLabel = type.charAt(0).toUpperCase() + type.slice(1);
+            }
+            html += '<div class="mot-defect ' + defClass + '"><strong>' + escapeHtml(defLabel) + ':</strong> ' + escapeHtml(text) + '</div>';
+          }
+        }
+
+        html += '</div></div>';
+      }
+
+      return html;
+    }
+
+    function getTestPassed(test) {
+      if (test.TestPassed != null) return test.TestPassed;
+      if (test.test_passed != null) return test.test_passed;
+      if (test.passed != null) return test.passed;
+      // Fallback: check TestResult string
+      const result = test.TestResult || test.test_result || '';
+      if (result.toLowerCase() === 'pass') return true;
+      if (result.toLowerCase() === 'fail') return false;
+      return null;
+    }
+
+    function formatDateNice(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d)) return escapeHtml(dateStr);
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch { return escapeHtml(dateStr); }
+    }
+
+    function toggleCardMotDetail(docId, btn) {
+      const container = document.getElementById('card-mot-' + docId);
+      if (!container) return;
+      if (container.style.display !== 'none') {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        if (btn) btn.classList.remove('active');
+        return;
+      }
+      const item = garageData.find(g => g.docId === docId);
+      if (!item) return;
+      container.innerHTML = buildMotDetailHtml(item);
+      container.style.display = 'block';
+      if (btn) btn.classList.add('active');
+    }
+
+    // ── Preview / View ──
+    function renderPreviewFields(title, fields) {
+      const valid = fields.filter(function(f) { return f[1] != null && f[1] !== ''; });
+      if (valid.length === 0) return '';
+      let h = '<details class="preview-section" open><summary>' + escapeHtml(title) + '</summary>';
+      valid.forEach(function(f) {
+        h += '<div class="preview-field"><span class="pf-label">' + escapeHtml(String(f[0])) + '</span><span class="pf-value">' + escapeHtml(String(f[1])) + '</span></div>';
+      });
+      h += '</details>';
+      return h;
+    }
+
+    function buildGaragePreviewHtml(item) {
+      const id = item.id || {};
+      const val = item.val || {};
+      const mot = item.mot || null;
+      const vd = item.vehicle_details || null;
+      const specs = item.model_details || null;
+      const tyres = item.tyre_details || null;
+      const name = ((id.make || '') + ' ' + (id.model || '')).trim() || 'Unknown Vehicle';
+
+      let h = '<div class="preview-vehicle">';
+      h += '<h4>' + escapeHtml(name) + '</h4>';
+
+      // Identification
+      var idFields = [
+        ['Make', id.make], ['Model', id.model],
+        ['Year', id.year_min && id.year_max && id.year_min !== id.year_max ? id.year_min + '–' + id.year_max : (id.year_min || id.year_max || '')],
+        ['Generation', id.generation], ['Trim', id.trim || id.trim_level],
+        ['Colour', id.colour], ['Body Style', id.body_style],
+        ['Number Plate', id.number_plate],
+        ['Confidence', id.confidence ? id.confidence + '%' : null],
+      ];
+      h += renderPreviewFields('Identification', idFields);
+
+      // Valuation
+      var valFields = [
+        ['Dealer Forecourt', val.dealer_forecourt || val.dealer_price ? '\u00A3' + Number(val.dealer_forecourt || val.dealer_price).toLocaleString() : null],
+        ['Private', val.private_clean || val.private_price ? '\u00A3' + Number(val.private_clean || val.private_price).toLocaleString() : null],
+        ['Trade', val.trade_retail || val.trade_price ? '\u00A3' + Number(val.trade_retail || val.trade_price).toLocaleString() : null],
+        ['Part Exchange', val.part_exchange ? '\u00A3' + Number(val.part_exchange).toLocaleString() : null],
+        ['Auction', val.auction ? '\u00A3' + Number(val.auction).toLocaleString() : null],
+      ];
+      h += renderPreviewFields('Valuation', valFields);
+
+      // Vehicle details
+      if (vd) {
+        var vdFields = Object.entries(vd).map(function(e) { return [e[0].replace(/_/g, ' '), e[1]]; });
+        h += renderPreviewFields('Vehicle Details', vdFields);
+      }
+
+      // MOT history
+      if (mot && mot.tests && mot.tests.length > 0) {
+        var tests = mot.tests;
+        var motHtml = '<details class="preview-section"><summary>MOT History (' + tests.length + ' records)</summary>';
+        tests.slice(0, 5).forEach(function(t, i) {
+          motHtml += '<div style="margin-top:6px;padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">';
+          motHtml += '<strong>' + (t.test_date || t.completedDate || 'Test ' + (i + 1)) + '</strong>';
+          var result = t.test_result || t.testResult || 'N/A';
+          motHtml += ' — <span style="color:' + (result === 'PASSED' ? '#2e7d32' : '#c62828') + ';font-weight:600;">' + result + '</span>';
+          if (t.odometer_value || t.odometerValue) motHtml += ' &middot; ' + (t.odometer_value || t.odometerValue) + ' mi';
+          motHtml += '</div>';
+        });
+        if (tests.length > 5) motHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">+ ' + (tests.length - 5) + ' more records</div>';
+        motHtml += '</details>';
+        h += motHtml;
+      } else if (mot && mot.latest_result) {
+        h += renderPreviewFields('MOT', [['Latest Result', mot.latest_result], ['Expiry', mot.expiry_date], ['Mileage', mot.latest_mileage]]);
+      }
+
+      // Specs
+      if (specs) {
+        var specFields = Object.entries(specs).map(function(e) { return [e[0].replace(/_/g, ' '), e[1]]; });
+        h += renderPreviewFields('Specifications', specFields);
+      }
+
+      // Tyres
+      if (tyres) {
+        var tyreFields = Object.entries(tyres).map(function(e) { return [e[0].replace(/_/g, ' '), e[1]]; });
+        h += renderPreviewFields('Tyres & Wheels', tyreFields);
+      }
+
+      h += '</div>';
+      return h;
+    }
+
+    function showPreviewModal(contentHtml, titleText) {
+      var old = document.getElementById('preview-overlay');
+      if (old) old.remove();
+
+      var overlay = document.createElement('div');
+      overlay.id = 'preview-overlay';
+      overlay.className = 'preview-overlay';
+      overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+      var modal = document.createElement('div');
+      modal.className = 'preview-modal';
+      modal.innerHTML = ''
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        + '  <h3 style="margin:0;">' + escapeHtml(titleText) + '</h3>'
+        + '  <button onclick="document.getElementById(\'preview-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-secondary);">&times;</button>'
+        + '</div>'
+        + '<div style="max-height:70vh;overflow-y:auto;">' + contentHtml + '</div>';
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    }
+
+    function viewGarageItem(docId) {
+      var item = garageData.find(function(i) { return i.docId === docId; });
+      if (!item) { alert('Vehicle not found.'); return; }
+      var name = ((item.id.make || '') + ' ' + (item.id.model || '')).trim() || 'Vehicle';
+      showPreviewModal(buildGaragePreviewHtml(item), name + ' — Preview');
+    }
+
+    function bulkViewSelected() {
+      var items = garageData.filter(function(i) { return selectedIds.has(i.docId); });
+      if (items.length === 0) { alert('Please select vehicles to view.'); return; }
+      var html = '';
+      items.forEach(function(item) { html += buildGaragePreviewHtml(item); });
+      showPreviewModal(html, 'Preview — ' + items.length + ' vehicle' + (items.length > 1 ? 's' : ''));
+    }
+
+    async function bulkShareSelected() {
+      var user = auth.currentUser;
+      if (!user) { alert('Please sign in first.'); return; }
+      var items = garageData.filter(function(i) { return selectedIds.has(i.docId); });
+      if (items.length === 0) { alert('Please select vehicles to share.'); return; }
+
+      var btnShare = document.getElementById('btn-bulk-share');
+      var origText = btnShare.textContent;
+      btnShare.textContent = 'Sharing ' + items.length + '...';
+      btnShare.disabled = true;
+
+      try {
+        var urls = [];
+        for (var idx = 0; idx < items.length; idx++) {
+          var item = items[idx];
+          var docId = item.docId;
+
+          // Check if already shared
+          var existing = await db.collection('shared_reports')
+            .where('source_garage_id', '==', docId)
+            .where('owner_uid', '==', user.uid)
+            .limit(1).get();
+
+          var reportId;
+          if (!existing.empty) {
+            reportId = existing.docs[0].id;
+          } else {
+            // Try to enrich from vehicle cache
+            var vehicleDetails = item.vehicle_details || null;
+            var modelDetails = item.model_details || null;
+            var tyreDetails = item.tyre_details || null;
+
+            if (!vehicleDetails && item.id && item.id.number_plate) {
+              try {
+                var plate = cleanPlate(item.id.number_plate);
+                var hash = await sha256(plate);
+                var cached = await db.collection('vehicles').doc(hash).get();
+                if (cached.exists) {
+                  var cd = cached.data();
+                  if (!vehicleDetails && cd.vehicle_details) vehicleDetails = cd.vehicle_details;
+                  if (!modelDetails && cd.model_details) modelDetails = cd.model_details;
+                  if (!tyreDetails && cd.tyre_details) tyreDetails = cd.tyre_details;
+                }
+              } catch (e) { /* best effort */ }
+            }
+
+            var expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 30);
+
+            var reportDoc = {
+              owner_uid: user.uid,
+              source_garage_id: docId,
+              identification: item.id || {},
+              valuation: item.val || null,
+              vehicle_details: vehicleDetails,
+              mot_history: item.mot || null,
+              model_details: modelDetails,
+              tyre_details: tyreDetails,
+              shared_at: firebase.firestore.FieldValue.serverTimestamp(),
+              expires_at: firebase.firestore.Timestamp.fromDate(expiresAt),
+            };
+
+            var ref = await db.collection('shared_reports').add(reportDoc);
+            reportId = ref.id;
+          }
+
+          var vName = ((item.id.make || '') + ' ' + (item.id.model || '')).trim() || 'Vehicle';
+          urls.push({ url: window.location.origin + '/report.html?id=' + reportId, name: vName });
+        }
+
+        // Show results modal with all URLs
+        showBulkShareResults(urls);
+        btnShare.textContent = items.length + ' shared!';
+        setTimeout(function() { btnShare.textContent = origText; }, 3000);
+      } catch (err) {
+        console.error('Bulk share failed:', err);
+        alert('Bulk share failed: ' + err.message);
+        btnShare.textContent = origText;
+      } finally {
+        btnShare.disabled = false;
+      }
+    }
+
+    function showBulkShareResults(urls) {
+      var html = '';
+      urls.forEach(function(item) {
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0;">'
+          + '<span style="flex:1;font-size:13px;font-weight:600;">' + escapeHtml(item.name) + '</span>'
+          + '<input type="text" value="' + item.url.replace(/"/g, '&quot;') + '" readonly style="flex:2;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:#f8f9fa;">'
+          + '<button onclick="navigator.clipboard.writeText(\'' + item.url.replace(/'/g, "\\'") + '\').then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},1500)}.bind(this))" style="padding:4px 10px;border:1px solid var(--primary);border-radius:6px;background:var(--primary);color:#fff;font-size:11px;cursor:pointer;">Copy</button>'
+          + '</div>';
+      });
+      showPreviewModal(html, 'Shared ' + urls.length + ' Report' + (urls.length > 1 ? 's' : ''));
+    }
+
     // ── Share from Garage ──
     async function shareFromGarage(docId, btn) {
       const user = auth.currentUser;
@@ -1855,7 +2345,7 @@
 
         const url = window.location.origin + '/report.html?id=' + reportId;
         const vehicleName = ((item.id.make || '') + ' ' + (item.id.model || '')).trim();
-        showSharePopup(url, vehicleName);
+        showSharePopup(url, vehicleName, docId);
 
         btn.textContent = 'Shared!';
         btn.style.background = '#e8f5e9';
@@ -1874,7 +2364,7 @@
       }
     }
 
-    function showSharePopup(url, vehicleName) {
+    function showSharePopup(url, vehicleName, docId) {
       const old = document.getElementById('share-popup-overlay');
       if (old) old.remove();
 
@@ -1895,12 +2385,18 @@
       const popup = document.createElement('div');
       popup.style.cssText = 'background:#fff;border-radius:16px;padding:28px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
 
+      // View contents button
+      const viewBtn = docId
+        ? '<button onclick="document.getElementById(\'share-popup-overlay\').remove(); viewGarageItem(\'' + docId + '\')" style="width:100%;padding:10px;border:1px solid var(--primary);border-radius:8px;background:#e3f2fd;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">View Contents Before Sharing</button>'
+        : '';
+
       popup.innerHTML = ''
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
         + '  <h3 style="margin:0;font-size:18px;">Share Report</h3>'
         + '  <button onclick="this.closest(\'#share-popup-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-secondary);">&times;</button>'
         + '</div>'
         + '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">' + escapeHtml(vehicleName || 'Vehicle Report') + '</p>'
+        + viewBtn
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">'
         + '  <a href="https://wa.me/?text=' + encodedText + '%20' + encodedUrl + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#25D366;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">'
         + '    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'

@@ -60,7 +60,13 @@
       "Bash(node:*)",
       "Bash(PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json npx playwright test --reporter=json)",
       "Bash(echo \"exit: $?\")",
-      "Bash(npx firebase-tools:*)"
+      "Bash(npx firebase-tools:*)",
+      "Bash(flutter devices:*)",
+      "Bash(python3 *)",
+      "Bash(magick identify *)",
+      "Bash(powershell *)",
+      "Bash(identify /c/car_detector/web/favicon.png)",
+      "Bash(identify /c/car_detector/web/icons/Icon-192.png)"
     ]
   }
 }

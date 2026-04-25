@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/usage_record.dart';
@@ -18,6 +19,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  static const String _appShareUrl = 'https://car-detector-833e5.web.app/';
+  static const String _androidPackageName =
+      'com.axiomforgesoftware.autospotter';
+  static const String _playStoreWebUrl =
+      'https://play.google.com/store/apps/details?id=$_androidPackageName';
   String _version = '';
   String _plan = 'basic';
   UsageRecord? _usage;
@@ -175,6 +181,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => _showAbout(context),
           ),
 
+          ListTile(
+            leading: const Icon(Icons.share_outlined),
+            title: const Text('Tell a friend'),
+            subtitle: const Text('Share AutoSpotter with someone else'),
+            onTap: _shareApp,
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.star_outline),
+            title: const Text('Rate AutoSpotter'),
+            subtitle: const Text('Leave a review on Google Play'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: _openStoreListing,
+          ),
+
           // Privacy policy
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
@@ -283,6 +304,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  Future<void> _shareApp() async {
+    try {
+      await Share.share(
+        'I just identified a car with AutoSpotter. Try it here: $_appShareUrl',
+        subject: 'Try AutoSpotter',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the share sheet. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _openStoreListing() async {
+    final storeUri = Uri.parse('market://details?id=$_androidPackageName');
+    final webUri = Uri.parse(_playStoreWebUrl);
+
+    try {
+      if (await canLaunchUrl(storeUri)) {
+        await launchUrl(storeUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+
+      if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {
+      // Fall through to user-facing error below.
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not open the Google Play listing right now.'),
+      ),
+    );
   }
 
   void _showAbout(BuildContext context) {

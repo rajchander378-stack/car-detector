@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contact Us — AutoSpotter</title>
   <meta name="description" content="Send a message to the AutoSpotter team.">
+  <link rel="icon" href="/icon.png" type="image/png">
   <link rel="stylesheet" href="/style.css">
   <style>
     .msg-form label { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
@@ -93,6 +94,7 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     async function doSignIn() {
       try {
         await auth.signInWithPopup(provider);

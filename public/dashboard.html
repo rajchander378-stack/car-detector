@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard — AutoSpotter</title>
   <meta name="description" content="Your AutoSpotter dashboard — view scans, usage, and plan details.">
+  <link rel="icon" href="/icon.png" type="image/png">
   <link rel="stylesheet" href="/style.css">
   <style>
     body { background: var(--bg); }
@@ -98,6 +99,48 @@
     .dash-action-card .action-icon { font-size: 28px; margin-bottom: 8px; }
     .dash-action-card h4 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
     .dash-action-card p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+
+    /* Bulk selection toolbar */
+    .bulk-toolbar {
+      position: sticky; top: 56px; z-index: 9;
+      background: var(--primary); color: #fff;
+      padding: 10px 16px; border-radius: 10px;
+      display: none; align-items: center; gap: 12px;
+      margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .bulk-toolbar.visible { display: flex; }
+    .bulk-toolbar span { font-size: 14px; font-weight: 600; }
+    .bulk-toolbar button {
+      padding: 6px 14px; border-radius: 6px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .bulk-toolbar .bulk-btn-share { background: #fff; color: var(--primary); }
+    .bulk-toolbar .bulk-btn-view { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); }
+    .bulk-toolbar .bulk-btn-clear { background: none; color: rgba(255,255,255,0.8); border: none; font-size: 12px; margin-left: auto; }
+
+    /* Scan card checkbox */
+    .scan-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+    .scan-card-row { display: flex; gap: 10px; }
+    .scan-card-content { flex: 1; min-width: 0; }
+
+    /* Preview modal */
+    .preview-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+      display: flex; align-items: flex-start; justify-content: center;
+      overflow-y: auto; padding: 40px 16px;
+    }
+    .preview-modal {
+      background: #fff; border-radius: 16px; padding: 28px;
+      max-width: 700px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .preview-modal h3 { margin: 0 0 16px; font-size: 18px; }
+    .preview-vehicle { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+    .preview-vehicle h4 { margin: 0 0 8px; font-size: 15px; }
+    .preview-section { margin-top: 8px; }
+    .preview-section summary { font-size: 13px; font-weight: 600; cursor: pointer; color: var(--primary); }
+    .preview-field { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+    .preview-field .pf-label { color: var(--text-secondary); }
+    .preview-field .pf-value { font-weight: 600; text-align: right; }
 
     /* Upgrade prompt */
     .upgrade-prompt {
@@ -287,8 +330,17 @@
       </div>
 
       <!-- Saved scans -->
-      <div class="scans-header">
-        <h2>Your Saved Scans</h2>
+      <div class="scans-header" style="display:flex;align-items:center;gap:10px;">
+        <h2 style="flex:1;margin:0;">Your Saved Scans</h2>
+        <label style="font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="select-all-scans" class="scan-checkbox" onchange="toggleSelectAll(this.checked)"> Select all
+        </label>
+      </div>
+      <div class="bulk-toolbar" id="bulk-toolbar">
+        <span id="bulk-count">0 selected</span>
+        <button class="bulk-btn-view" onclick="bulkViewSelected()">View Selected</button>
+        <button class="bulk-btn-share" onclick="bulkShareSelected()">Share Selected</button>
+        <button class="bulk-btn-clear" onclick="clearSelection()">Clear</button>
       </div>
       <p id="scans-loading" style="color:var(--text-secondary); text-align:center;">Loading your scans...</p>
       <p id="scans-empty" style="display:none; color:var(--text-secondary); text-align:center;">You have no saved scans yet. Use the AutoSpotter app to scan vehicles and they will appear here.</p>
@@ -350,8 +402,239 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     let scansUnsubscribe = null;
     let garageIndex = {}; // scanId -> garageDocId
+    let currentScanDocs = {}; // scanId -> scan data (populated by renderScans)
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
+    }
+
+    /* --- Selection helpers --- */
+    function getSelectedScanIds() {
+      return Array.from(document.querySelectorAll('.scan-select:checked')).map(cb => cb.dataset.scanId);
+    }
+
+    function updateBulkToolbar() {
+      const ids = getSelectedScanIds();
+      const toolbar = document.getElementById('bulk-toolbar');
+      const countEl = document.getElementById('bulk-count');
+      if (ids.length > 0) {
+        toolbar.classList.add('visible');
+        countEl.textContent = ids.length + ' selected';
+      } else {
+        toolbar.classList.remove('visible');
+      }
+    }
+
+    function toggleSelectAll(checked) {
+      document.querySelectorAll('.scan-select').forEach(cb => { cb.checked = checked; });
+      updateBulkToolbar();
+    }
+
+    function clearSelection() {
+      document.querySelectorAll('.scan-select').forEach(cb => { cb.checked = false; });
+      document.getElementById('select-all-scans').checked = false;
+      updateBulkToolbar();
+    }
+
+    /* --- Preview / View --- */
+    function buildPreviewHtml(scanData, label) {
+      const id = scanData.identification || {};
+      const val = scanData.valuation || null;
+      const vd = scanData.vehicle_details || null;
+      const mot = scanData.mot_history || null;
+      const specs = scanData.model_details || null;
+      const tyres = scanData.tyre_details || null;
+      const name = ((id.make || '') + ' ' + (id.model || '')).trim() || 'Unknown Vehicle';
+
+      let h = '<div class="preview-vehicle">';
+      h += '<h4>' + escapeHtml(name) + '</h4>';
+
+      // Identification
+      const idFields = [
+        ['Make', id.make], ['Model', id.model], ['Year Range', id.year_range],
+        ['Generation', id.generation], ['Trim', id.trim_level], ['Colour', id.colour],
+        ['Body Style', id.body_style], ['Number Plate', id.number_plate],
+        ['Confidence', id.confidence ? id.confidence + '%' : null],
+      ];
+      h += renderPreviewFields('Identification', idFields);
+
+      // Valuation
+      if (val) {
+        const valFields = [
+          ['Dealer', val.dealer_price ? '\u00A3' + Number(val.dealer_price).toLocaleString() : null],
+          ['Private', val.private_price ? '\u00A3' + Number(val.private_price).toLocaleString() : null],
+          ['Trade', val.trade_price ? '\u00A3' + Number(val.trade_price).toLocaleString() : null],
+          ['Part Exchange', val.part_exchange_price ? '\u00A3' + Number(val.part_exchange_price).toLocaleString() : null],
+          ['Auction', val.auction_price ? '\u00A3' + Number(val.auction_price).toLocaleString() : null],
+        ];
+        h += renderPreviewFields('Valuation', valFields);
+      }
+
+      // Vehicle details
+      if (vd) {
+        const vdFields = Object.entries(vd).map(([k, v]) => [k.replace(/_/g, ' '), v]);
+        h += renderPreviewFields('Vehicle Details', vdFields);
+      }
+
+      // MOT history
+      if (mot && Array.isArray(mot) && mot.length > 0) {
+        let motHtml = '<details class="preview-section"><summary>MOT History (' + mot.length + ' records)</summary>';
+        mot.slice(0, 5).forEach((t, i) => {
+          motHtml += '<div style="margin-top:6px;padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">';
+          motHtml += '<strong>' + (t.test_date || t.completedDate || 'Test ' + (i + 1)) + '</strong>';
+          motHtml += ' — <span style="color:' + (t.test_result === 'PASSED' || t.testResult === 'PASSED' ? '#2e7d32' : '#c62828') + ';font-weight:600;">' + (t.test_result || t.testResult || 'N/A') + '</span>';
+          if (t.odometer_value || t.odometerValue) motHtml += ' &middot; ' + (t.odometer_value || t.odometerValue) + ' mi';
+          motHtml += '</div>';
+        });
+        if (mot.length > 5) motHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">+ ' + (mot.length - 5) + ' more records</div>';
+        motHtml += '</details>';
+        h += motHtml;
+      }
+
+      // Specs
+      if (specs) {
+        const specFields = Object.entries(specs).map(([k, v]) => [k.replace(/_/g, ' '), v]);
+        h += renderPreviewFields('Specifications', specFields);
+      }
+
+      // Tyres
+      if (tyres) {
+        const tyreFields = Object.entries(tyres).map(([k, v]) => [k.replace(/_/g, ' '), v]);
+        h += renderPreviewFields('Tyres & Wheels', tyreFields);
+      }
+
+      h += '</div>';
+      return h;
+    }
+
+    function renderPreviewFields(title, fields) {
+      const valid = fields.filter(([, v]) => v != null && v !== '');
+      if (valid.length === 0) return '';
+      let h = '<details class="preview-section" open><summary>' + escapeHtml(title) + '</summary>';
+      valid.forEach(([label, value]) => {
+        h += '<div class="preview-field"><span class="pf-label">' + escapeHtml(String(label)) + '</span><span class="pf-value">' + escapeHtml(String(value)) + '</span></div>';
+      });
+      h += '</details>';
+      return h;
+    }
+
+    function showPreviewModal(contentHtml, titleText) {
+      const old = document.getElementById('preview-overlay');
+      if (old) old.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'preview-overlay';
+      overlay.className = 'preview-overlay';
+      overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+      const modal = document.createElement('div');
+      modal.className = 'preview-modal';
+      modal.innerHTML = ''
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        + '  <h3 style="margin:0;">' + escapeHtml(titleText) + '</h3>'
+        + '  <button onclick="document.getElementById(\'preview-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-secondary);">&times;</button>'
+        + '</div>'
+        + '<div style="max-height:70vh;overflow-y:auto;">' + contentHtml + '</div>';
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    }
+
+    function viewReport(scanId) {
+      const data = currentScanDocs[scanId];
+      if (!data) { alert('Scan data not found.'); return; }
+      const id = data.identification || {};
+      const name = ((id.make || '') + ' ' + (id.model || '')).trim() || 'Vehicle';
+      showPreviewModal(buildPreviewHtml(data), name + ' — Preview');
+    }
+
+    /* --- Bulk operations --- */
+    function bulkViewSelected() {
+      const ids = getSelectedScanIds();
+      if (ids.length === 0) return;
+      let html = '';
+      ids.forEach(scanId => {
+        const data = currentScanDocs[scanId];
+        if (data) html += buildPreviewHtml(data);
+      });
+      showPreviewModal(html, 'Preview — ' + ids.length + ' vehicle' + (ids.length > 1 ? 's' : ''));
+    }
+
+    async function bulkShareSelected() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const ids = getSelectedScanIds();
+      if (ids.length === 0) return;
+
+      const toolbar = document.getElementById('bulk-toolbar');
+      const origCount = document.getElementById('bulk-count').textContent;
+      document.getElementById('bulk-count').textContent = 'Sharing ' + ids.length + '...';
+
+      try {
+        const urls = [];
+        for (const scanId of ids) {
+          const scanData = currentScanDocs[scanId];
+          if (!scanData) continue;
+
+          // Check if already shared
+          const existing = await db.collection('shared_reports')
+            .where('source_scan_id', '==', scanId)
+            .where('owner_uid', '==', user.uid)
+            .limit(1).get();
+
+          let reportId;
+          if (!existing.empty) {
+            reportId = existing.docs[0].id;
+          } else {
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 30);
+            const reportDoc = {
+              owner_uid: user.uid,
+              source_scan_id: scanId,
+              identification: scanData.identification || {},
+              valuation: scanData.valuation || null,
+              vehicle_details: scanData.vehicle_details || null,
+              mot_history: scanData.mot_history || null,
+              model_details: scanData.model_details || null,
+              tyre_details: scanData.tyre_details || null,
+              shared_at: firebase.firestore.FieldValue.serverTimestamp(),
+              expires_at: firebase.firestore.Timestamp.fromDate(expiresAt),
+            };
+            const ref = await db.collection('shared_reports').add(reportDoc);
+            reportId = ref.id;
+          }
+          const idData = scanData.identification || {};
+          const vName = ((idData.make || '') + ' ' + (idData.model || '')).trim() || 'Vehicle';
+          urls.push({ url: window.location.origin + '/report.html?id=' + reportId, name: vName });
+        }
+
+        // Show bulk share results
+        showBulkShareResults(urls);
+        document.getElementById('bulk-count').textContent = ids.length + ' shared!';
+        setTimeout(() => { document.getElementById('bulk-count').textContent = origCount; }, 3000);
+      } catch (err) {
+        console.error('Bulk share failed:', err);
+        alert('Bulk share failed: ' + err.message);
+        document.getElementById('bulk-count').textContent = origCount;
+      }
+    }
+
+    function showBulkShareResults(urls) {
+      let html = '';
+      urls.forEach(item => {
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0;">'
+          + '<span style="flex:1;font-size:13px;font-weight:600;">' + escapeHtml(item.name) + '</span>'
+          + '<input type="text" value="' + item.url.replace(/"/g, '&quot;') + '" readonly style="flex:2;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:#f8f9fa;">'
+          + '<button onclick="navigator.clipboard.writeText(\'' + item.url.replace(/'/g, "\\'") + '\').then(()=>{this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy\',1500)})" style="padding:4px 10px;border:1px solid var(--primary);border-radius:6px;background:var(--primary);color:#fff;font-size:11px;cursor:pointer;">Copy</button>'
+          + '</div>';
+      });
+      showPreviewModal(html, 'Shared ' + urls.length + ' Report' + (urls.length > 1 ? 's' : ''));
+    }
 
     async function doSignIn() {
       try { await auth.signInWithPopup(provider); }
@@ -438,6 +721,10 @@
       }
       empty.style.display = 'none';
 
+      // Store snapshot docs for bulk operations
+      currentScanDocs = {};
+      snapshot.docs.forEach(doc => { currentScanDocs[doc.id] = doc.data(); });
+
       list.innerHTML = snapshot.docs.map(doc => {
         const data = doc.data();
         const id = data.identification || {};
@@ -446,6 +733,9 @@
         const date = formatDate(data.saved_at);
 
         let html = '<div style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px;">';
+        html += '<div class="scan-card-row">';
+        html += '<input type="checkbox" class="scan-checkbox scan-select" data-scan-id="' + doc.id + '" onchange="updateBulkToolbar()">';
+        html += '<div class="scan-card-content">';
         html += '<strong>' + (id.make || '') + ' ' + (id.model || '') + '</strong>' + fav;
         if (id.year_range) html += ' <span style="color:var(--text-secondary); font-size:13px;">(' + id.year_range + ')</span>';
         html += '<br><span style="font-size:13px; color:var(--text-secondary);">';
@@ -467,7 +757,8 @@
         }
 
         html += '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">';
-        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--primary-light); color:var(--primary);" onclick="shareReport(\'' + doc.id + '\')">Share Report</button>';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:#e3f2fd; color:var(--primary);" onclick="viewReport(\'' + doc.id + '\')">View</button>';
+        html += '<button class="btn" style="padding:3px 10px; font-size:12px; background:var(--primary-light); color:var(--primary);" onclick="shareReport(\'' + doc.id + '\')">Share</button>';
         if (garageIndex[doc.id]) {
           html += '<button class="btn" id="garage-btn-' + doc.id + '" style="padding:3px 10px; font-size:12px; background:#ffebee; color:#c62828;" onclick="removeFromGarageByScan(\'' + doc.id + '\')">Remove from Garage</button>';
         } else {
@@ -475,9 +766,13 @@
         }
         html += '</div>';
 
+        html += '</div></div>'; // close scan-card-content and scan-card-row
         html += '</div>';
         return html;
       }).join('');
+      // Reset selection state after re-render
+      document.getElementById('select-all-scans').checked = false;
+      updateBulkToolbar();
     }
 
     const GARAGE_LIMITS = { free: 2, basic: 20, trader: Infinity };
@@ -636,7 +931,7 @@
         const url = window.location.origin + '/report.html?id=' + reportId;
         const idData = scanData.identification || {};
         const vehicleName = ((idData.make || '') + ' ' + (idData.model || '')).trim();
-        showSharePopup(url, vehicleName);
+        showSharePopup(url, vehicleName, scanId);
         btn.textContent = 'Shared!';
         btn.style.background = '#e8f5e9';
         btn.style.color = '#2e7d32';
@@ -654,7 +949,7 @@
       }
     }
 
-    function showSharePopup(url, vehicleName) {
+    function showSharePopup(url, vehicleName, scanId) {
       // Remove any existing popup
       const old = document.getElementById('share-popup-overlay');
       if (old) old.remove();
@@ -676,12 +971,18 @@
       const popup = document.createElement('div');
       popup.style.cssText = 'background:#fff;border-radius:16px;padding:28px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
 
+      // View contents button (only if we have the scanId in local cache)
+      const viewBtn = scanId && currentScanDocs[scanId]
+        ? '<button onclick="document.getElementById(\'share-popup-overlay\').remove(); viewReport(\'' + scanId + '\')" style="width:100%;padding:10px;border:1px solid var(--primary);border-radius:8px;background:#e3f2fd;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">View Contents Before Sharing</button>'
+        : '';
+
       popup.innerHTML = ''
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
         + '  <h3 style="margin:0;font-size:18px;">Share Report</h3>'
         + '  <button onclick="this.closest(\'#share-popup-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-secondary);">&times;</button>'
         + '</div>'
         + '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">' + escapeHtml(vehicleName || 'Vehicle Report') + '</p>'
+        + viewBtn
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">'
         + '  <a href="https://wa.me/?text=' + encodedText + '%20' + encodedUrl + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#25D366;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">'
         + '    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'

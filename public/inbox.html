@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Inbox — AutoSpotter</title>
   <meta name="description" content="Your messages and conversations with AutoSpotter support.">
+  <link rel="icon" href="/icon.png" type="image/png">
   <link rel="stylesheet" href="/style.css">
   <style>
     body { background: var(--bg); }
@@ -410,6 +411,7 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
 
   let currentUser = null;
   let isAdmin = false;

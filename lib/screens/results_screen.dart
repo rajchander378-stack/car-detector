@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/car_identification.dart';
 import '../models/mot_history.dart';
 import '../models/saved_scan.dart';
@@ -10,6 +11,7 @@ import '../models/vehicle_report.dart';
 import '../models/vehicle_valuation.dart';
 import '../services/saved_scan_service.dart';
 import '../services/plan_service.dart';
+import '../services/review_prompt_service.dart';
 import '../services/gemini_pricing_service.dart';
 import '../services/valuation_service.dart';
 import '../services/vehicle_cache_service.dart';
@@ -17,11 +19,13 @@ import '../services/vehicle_cache_service.dart';
 class ResultsScreen extends StatefulWidget {
   final String imagePath;
   final CarIdentification identification;
+  final bool trackSuccessfulIdentification;
 
   const ResultsScreen({
     super.key,
     required this.imagePath,
     required this.identification,
+    this.trackSuccessfulIdentification = false,
   });
 
   @override
@@ -38,6 +42,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   bool _reportSubmitted = false;
   bool _saved = false;
   bool _saving = false;
+  bool _sharing = false;
   late CarIdentification _identification;
   ScanAllowance? _allowance;
 
@@ -48,6 +53,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
     super.initState();
     _identification = widget.identification;
     _loadAllowance();
+    if (_identification.identified && widget.trackSuccessfulIdentification) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ReviewPromptService().recordSuccessfulIdentification();
+      });
+    }
   }
 
   Future<void> _loadAllowance() async {
@@ -357,6 +367,62 @@ class _ResultsScreenState extends State<ResultsScreen> {
     }
   }
 
+  Future<void> _shareResult() async {
+    if (!identification.identified || _sharing) return;
+
+    setState(() => _sharing = true);
+
+    try {
+      final imageFile = File(widget.imagePath);
+      if (!await imageFile.exists()) {
+        throw const FileSystemException('Image file missing');
+      }
+
+      await Share.shareXFiles(
+        [XFile(imageFile.path)],
+        text: _buildShareText(),
+        subject: 'AutoSpotter vehicle identification',
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not share this result. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _sharing = false);
+      }
+    }
+  }
+
+  String _buildShareText() {
+    final lines = <String>[
+      'I identified this vehicle with AutoSpotter.',
+    ];
+
+    final vehicleName = identification.displayName.trim();
+    if (vehicleName.isNotEmpty && vehicleName != 'Unknown Vehicle') {
+      lines.add('Vehicle: $vehicleName');
+    }
+
+    if (identification.colour?.isNotEmpty == true) {
+      lines.add('Colour: ${identification.colour}');
+    }
+
+    lines.add(
+      'Confidence: ${(identification.confidence * 100).clamp(0, 100).round()}%',
+    );
+
+    if (identification.numberPlate?.isNotEmpty == true) {
+      lines.add('Number plate: ${identification.numberPlate!.toUpperCase()}');
+    }
+
+    return lines.join('\n');
+  }
+
   @override
   Widget build(BuildContext context) {
     final canPopNow = _saved || _valuation == null || !identification.identified;
@@ -374,6 +440,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
         elevation: 0,
         foregroundColor: Colors.white,
         actions: [
+          if (identification.identified)
+            IconButton(
+              icon: _sharing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.share_outlined),
+              tooltip: 'Share result',
+              onPressed: _sharing ? null : _shareResult,
+            ),
           if (identification.identified)
             IconButton(
               icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border),

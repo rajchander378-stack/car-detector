@@ -76,6 +76,7 @@ class _SampleImagesScreenState extends State<SampleImagesScreen> {
             pageBuilder: (_, _, _) => ResultsScreen(
               imagePath: tempFile.path,
               identification: identification,
+              trackSuccessfulIdentification: true,
             ),
             transitionsBuilder: (_, animation, _, child) =>
                 FadeTransition(opacity: animation, child: child),

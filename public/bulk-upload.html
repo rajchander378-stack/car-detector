@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bulk Upload — AutoSpotter</title>
   <meta name="description" content="Bulk upload car images for AI identification and valuation. Trader plan feature.">
+  <link rel="icon" href="/icon.png" type="image/png">
   <link rel="stylesheet" href="/style.css">
   <style>
     body { background: #fff; }
@@ -343,6 +344,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
 
     // ── Vertex AI model (initialised once) ──
     const vertexAI = getVertexAI(app);

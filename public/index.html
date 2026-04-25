@@ -8,6 +8,7 @@
   <meta property="og:title" content="AutoSpotter — AI Car Identification">
   <meta property="og:description" content="Point your camera at any car for instant AI identification and UK vehicle valuation.">
   <meta property="og:type" content="website">
+  <link rel="icon" href="/icon.png" type="image/png">
   <link rel="stylesheet" href="/style.css">
   <style>
     /* Landing page overrides */
@@ -397,6 +398,7 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
 
     async function doSignIn() {
       try {

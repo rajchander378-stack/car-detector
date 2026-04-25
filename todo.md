@@ -87,7 +87,7 @@
 - [x] **Change applicationId** — Changed to `com.axiomforgesoftware.autospotter` in `build.gradle.kts`, updated namespace and moved `MainActivity.kt` to new package. **ACTION REQUIRED:** Add a new Android app in Firebase Console with package name `com.axiomforgesoftware.autospotter`, add the debug SHA-1 fingerprint, download the new `google-services.json`, and replace `android/app/google-services.json`.
 - [x] **Host a privacy policy** — Full privacy policy created at `public/privacy-policy.html` covering: data collected, third-party sharing (Gemini, UK vehicle data API), retention/deletion, GDPR/UK DPA rights, lawful basis, children's privacy. Will be live at `https://car-detector-833e5.web.app/privacy-policy.html` after deploy. **Review the contact email** (`privacy@axiomforgesoftware.com`) and update if needed before deploying.
 - [ ] **HIGH PRIORITY — Demo credentials for Google reviewer** — Create a new Google account (needs a phone number for setup). Sign into AutoSpotter with it to verify it works. Provide credentials in the "App Access" section of Play Console so the reviewer can test the app.
-- [ ] **HIGH PRIORITY — Update google-services.json** — Add a new Android app in Firebase Console with package name `com.axiomforgesoftware.autospotter`, add the debug SHA-1 fingerprint (`3D:4D:4C:1C:7D:48:81:D1:2D:82:23:FF:61:54:80:39:B4:0D:B7:08`), download the new `google-services.json`, and replace `android/app/google-services.json`. **The app will not build until this is done.**
+- [x] **HIGH PRIORITY — Update google-services.json** — Add a new Android app in Firebase Console with package name `com.axiomforgesoftware.autospotter`, add the debug SHA-1 fingerprint (`3D:4D:4C:1C:7D:48:81:D1:2D:82:23:FF:61:54:80:39:B4:0D:B7:08`), download the new `google-services.json`, and replace `android/app/google-services.json`. **The app will not build until this is done.**
 - [x] **HIGH PRIORITY — Number plate GDPR compliance** — Full compliance audit and remediation completed:
   - Privacy policy rewritten with accurate VRM data flow, retention table, and data processor references
   - Vehicle cache: removed plaintext `vrm_normalized` field; documents keyed by SHA-256 hash only
@@ -205,7 +205,7 @@ Use this checklist each time you release a new version to Google Play.
 - [x] **Design custom app icon** — Replace the default Flutter icon with a branded AutoSpotter icon. Create a 512x512 master PNG and generate all Android densities (mdpi through xxxhdpi) using `flutter_launcher_icons`. This icon is also used for the Play Store listing.
 - [x] **Adaptive icon for Android** — Create foreground and background layers for Android adaptive icons so it looks correct across different device manufacturers.
 - [x] **Custom splash screen** — Replace the blank white launch screen with a branded AutoSpotter splash using `flutter_native_splash` or native Android splash config.
-- [ ] **Replace web favicon** — Replace `web/favicon.png` and `web/icons/` with the AutoSpotter brand icon.
+- [x] **Replace web favicon** — Replace `web/favicon.png` and `web/icons/` with the AutoSpotter brand icon.
   - *Image needed:* The app icon (already generated at `assets/icon/icon.png`) — no new image required, just needs deploying.
 
 ### Google Play Store Listing Assets
@@ -213,8 +213,8 @@ Use this checklist each time you release a new version to Google Play.
   - *Image needed:* 1024x500 banner with the AutoSpotter logo on the left, tagline "Instant AI Car Identification" in the centre, and a phone mockup showing the results screen on the right. Blue gradient background matching app theme (#1565C0).
 - [ ] **Screenshots** (min 4, phone + optional tablet) — Real app screenshots showing: camera viewfinder, AI identification result, valuation card, and login/terms screen. Blur any real number plates in screenshots.
   - *Image needed:* 4+ real screenshots captured from the app on a phone. (1) Camera viewfinder with a car in frame, (2) AI identification results screen, (3) Valuation card with prices, (4) Login/terms screen. Blur any visible number plates.
-- [ ] **Short description** (max 80 chars) — Concise tagline for Play Store, e.g. "Point your camera at any car for instant AI identification and UK valuation."
-- [ ] **Full description** (max 4000 chars) — Detailed Play Store description covering features, how it works, and data usage.
+- [x] **Short description** (max 80 chars) — Concise tagline for Play Store, e.g. "Point your camera at any car for instant AI identification and UK valuation."
+- [x] **Full description** (max 4000 chars) — Detailed Play Store description covering features, how it works, and data usage.
 
 ### Website & Social Assets (Firebase Hosting)
 - [ ] **AutoSpotter logo/brand mark** — Logo for the website header, privacy policy page, account deletion page, and admin dashboard. SVG + PNG versions.
@@ -233,13 +233,59 @@ Use this checklist each time you release a new version to Google Play.
 ### Sharing
 - [x] **Share vehicle report (web)** — "Share Report" on dashboard creates a shared report with all data sections (identification, valuation, vehicle details, MOT, specs, tyres) in `shared_reports` collection. Shows popup with WhatsApp, Facebook, X/Twitter, Email, and Copy Link buttons. Report page also has a share bar so viewers can re-share. Open Graph + Twitter Card meta tags for good link previews.
 - [ ] **Facebook Messenger DM sharing** — Register a Facebook App ID to enable the FB Send Dialog for direct Messenger DMs (currently shares as a public post). Target: next app version release.
-- [ ] **Share identification result (mobile)** — Add a "Share" button on the Flutter results screen that sends the car image + identification summary via the native share sheet (WhatsApp, Instagram, X, etc.).
-- [ ] **Share the app / Tell a friend** — Add a "Tell a friend" option (in about/settings screen) that shares the Play Store link with a short message like "I just identified a car with AutoSpotter! Try it out:".
+- [x] **Share identification result (mobile)** — Add a "Share" button on the Flutter results screen that sends the car image + identification summary via the native share sheet (WhatsApp, Instagram, X, etc.).
+- **Spec — Mobile share result**
+  - Add a share action to `results_screen.dart` app bar beside save/bookmark when a vehicle has been identified.
+  - Share payload should include the captured image plus a short text summary: make/model, year range, colour, confidence, and number plate if available.
+  - Use the native share sheet via existing `share_plus` dependency; avoid introducing a second sharing path.
+  - If the image file is missing or share fails, show a user-friendly snackbar instead of crashing.
+  - Keep the message plain and reusable across WhatsApp, Messages, email, and social apps.
+- **Checklist — Mobile share result**
+  - [x] Add share action/button in `lib/screens/results_screen.dart`
+  - [x] Build share text from current `CarIdentification` data
+  - [x] Attach captured image with `share_plus`
+  - [x] Add error handling and user feedback for failed shares
+  - [ ] Verify share flow on Android
+- [x] **Share the app / Tell a friend** — Added a persistent `Tell a friend` option in Settings using the native share sheet. Currently shares the hosted AutoSpotter URL as a launch-safe fallback until the final Play Store listing URL is live.
+- **Spec — Tell a friend**
+  - Add a persistent `Tell a friend` entry to `settings_screen.dart` near About/Privacy/Terms.
+  - Share a short recommendation message plus the Play Store URL placeholder or live listing URL when available.
+  - Use `share_plus` so the action feels native and consistent with the results-share flow.
+  - Keep the copy generic enough that it still works before launch if the URL needs swapping later.
+- **Checklist — Tell a friend**
+  - [x] Add `Tell a friend` list item in `lib/screens/settings_screen.dart`
+  - [x] Add reusable app-share message text
+  - [x] Wire share action through `share_plus`
+  - [x] Use current store URL or clear placeholder for later replacement
+  - [ ] Verify share sheet opens from Settings
 - [ ] **Deep links** — Configure Firebase Dynamic Links or App Links so shared URLs open directly in the app if installed, or redirect to the Play Store if not.
 
 ### Reviews & Ratings
-- [ ] **In-app review prompt** — After a successful identification (not on first use — e.g. after 3rd scan), prompt the user to rate the app using Google's in-app review API (`in_app_review` package). Keeps them in the app instead of navigating to the store.
-- [ ] **Rate us button** — Add a persistent "Rate us on Google Play" link in the about/settings screen for users who want to leave a review in their own time.
+- [x] **In-app review prompt** — Added a reusable review prompt service backed by `in_app_review` and `SharedPreferences`. Successful identification flows now count toward review eligibility, with the first prompt at 3 successes and later prompts spaced out to avoid nagging.
+- **Spec — In-app review prompt**
+  - Trigger review eligibility only after successful identification events, not on app launch.
+  - Gate the prompt so it appears only after a small threshold (recommended: 3 successful scans) and only occasionally thereafter.
+  - Persist counters and last-prompt state with `SharedPreferences` to avoid nagging users every session.
+  - Use the `in_app_review` package for in-app review flow when available; fail silently if the platform declines.
+  - Keep the prompt logic separate from the results UI so it is easy to tune later.
+- **Checklist — In-app review prompt**
+  - [x] Add `in_app_review` dependency and install packages
+  - [x] Track successful identification count
+  - [x] Persist review gating state in `SharedPreferences`
+  - [x] Trigger review request after threshold is met
+  - [ ] Verify prompt logic does not fire too often
+- [x] **Rate us button** — Added a persistent `Rate AutoSpotter` action in Settings. It tries to open the Google Play listing directly via `market://` and falls back to the browser Play Store URL if needed.
+- **Spec — Rate us button**
+  - Add a `Rate AutoSpotter` entry in `settings_screen.dart` near `Tell a friend`.
+  - Prefer opening the Play Store listing directly; fall back to browser if needed.
+  - Keep the destination URL in one place so it can be updated when the final listing goes live.
+  - If the store URL is not final yet, wire a clearly marked placeholder and note it in the checklist.
+- **Checklist — Rate us button**
+  - [x] Add `Rate AutoSpotter` list item in `lib/screens/settings_screen.dart`
+  - [x] Add centralized Play Store URL constant/helper
+  - [x] Open Play Store or browser via `url_launcher`
+  - [x] Handle missing/failing launch gracefully
+  - [x] Replace placeholder URL once listing is live
 
 ### Social Proof & Presence
 - [ ] **Link to social media accounts** — If social accounts are created (Instagram, X, TikTok), link to them from the about screen. Car content performs well on short-form video platforms.
