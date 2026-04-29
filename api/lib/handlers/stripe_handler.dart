@@ -45,6 +45,14 @@ Future<Response> createCheckoutSession(Request request) async {
       );
     }
 
+    // Block admin and test accounts from purchasing
+    if (await _isAdminOrTestAccount(userEmail)) {
+      return Response(403,
+        body: jsonEncode({'error': 'Purchases are not available for this account type.'}),
+        headers: {'content-type': 'application/json'},
+      );
+    }
+
     // Create Stripe Checkout Session via REST API
     final params = {
       'mode': 'payment',
@@ -224,6 +232,52 @@ Future<void> _creditUserScans(String uid, int scans, String packId, String sessi
       },
     }),
   );
+}
+
+/// Returns true if the email belongs to an admin or test account.
+/// Reads admin_emails from Firestore config/admin via the REST API.
+Future<bool> _isAdminOrTestAccount(String? email) async {
+  if (email == null || email.isEmpty) return false;
+
+  final lower = email.toLowerCase();
+
+  // Block obvious test/demo patterns without a Firestore call
+  if (lower.contains('+test') || lower.contains('+demo') || lower.startsWith('test@') || lower.startsWith('demo@')) {
+    return true;
+  }
+
+  // Check Firestore config/admin for admin_emails list
+  try {
+    String accessToken;
+    final tokenResponse = await http.get(
+      Uri.parse('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token'),
+      headers: {'Metadata-Flavor': 'Google'},
+    ).timeout(const Duration(seconds: 5));
+    accessToken = jsonDecode(tokenResponse.body)['access_token'] as String;
+
+    final projectId = 'car-detector-833e5';
+    final docUrl = 'https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents/config/admin';
+    final docResponse = await http.get(
+      Uri.parse(docUrl),
+      headers: {'Authorization': 'Bearer $accessToken'},
+    ).timeout(const Duration(seconds: 5));
+
+    if (docResponse.statusCode == 200) {
+      final doc = jsonDecode(docResponse.body);
+      final fields = doc['fields'] as Map<String, dynamic>? ?? {};
+      final emailsField = fields['admin_emails'] as Map<String, dynamic>?;
+      final emailValues = emailsField?['arrayValue']?['values'] as List<dynamic>? ?? [];
+      final adminEmails = emailValues
+          .map((v) => (v as Map<String, dynamic>)['stringValue']?.toString().toLowerCase())
+          .whereType<String>()
+          .toList();
+      if (adminEmails.contains(lower)) return true;
+    }
+  } catch (_) {
+    // If we can't reach Firestore (e.g. local dev), fail open so purchases aren't blocked
+  }
+
+  return false;
 }
 
 /// Verify Stripe webhook signature (simplified HMAC-SHA256 check).

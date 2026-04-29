@@ -4,10 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/usage_record.dart';
 import '../services/auth_service.dart';
+import 'delete_account_screen.dart';
+import 'messages_screen.dart';
 import '../services/plan_service.dart';
 import '../services/user_service.dart';
 
@@ -212,6 +213,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => _openUrl('https://car-detector-833e5.web.app/'),
           ),
 
+          ListTile(
+            leading: const Icon(Icons.support_agent),
+            title: const Text('Contact Support'),
+            subtitle: const Text('Send a message to our support team'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const MessagesScreen(openCompose: true),
+              ),
+            ),
+          ),
+
           const Divider(),
 
           // Sign out
@@ -227,7 +240,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: Text('Delete account',
                 style: TextStyle(color: Colors.red[400])),
             subtitle: const Text('Permanently delete your account and all data'),
-            onTap: () => _confirmDeleteAccount(context),
+            onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DeleteAccountScreen()),
+          ),
           ),
 
           // Debug plan switcher — only in debug builds
@@ -470,7 +486,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(width: 8),
                         const Text('Basic', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         const Spacer(),
-                        Text('\u00a35/mo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue[700])),
+                        Text('\u00a39.99/mo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue[700])),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -499,7 +515,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(width: 8),
                       const Text('Trader', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const Spacer(),
-                      Text('\u00a314.99/mo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber[700])),
+                      Text('\u00a359.99/mo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber[700])),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -571,77 +587,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _confirmDeleteAccount(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: Icon(Icons.warning_amber, size: 40, color: Colors.red[400]),
-        title: const Text('Delete Account'),
-        content: const Text(
-          'This will permanently delete your account and all associated data '
-          'including your profile, scan history, and reports.\n\n'
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete permanently'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-    if (!context.mounted) return;
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      // Delete Firestore data first
-      await UserService().deleteUserData(user.uid);
-
-      // Clear local preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-
-      // Delete the Firebase Auth account
-      await user.delete();
-
-      if (context.mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (!context.mounted) return;
-      if (e.code == 'requires-recent-login') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'For security, please sign out and sign back in, '
-              'then try deleting your account again.',
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to delete account right now. Please try again later.'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to delete account right now. Please try again later.'),
-          ),
-        );
-      }
-    }
-  }
 }

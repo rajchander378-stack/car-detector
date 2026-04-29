@@ -709,9 +709,16 @@ class _CameraScreenState extends State<CameraScreen>
     _recentErrors.clear();
   }
 
+  bool _isReviewerSampleAccount(User? user) {
+    final email = (user?.email ?? '').trim().toLowerCase();
+
+    return email == 'rick.sancho1111@gmail.com';
+  }
+
   Widget _buildDrawer(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
+    final showSampleImages = _isReviewerSampleAccount(user);
 
     return Drawer(
       child: ListView(
@@ -760,18 +767,50 @@ class _CameraScreenState extends State<CameraScreen>
               );
             },
           ),
+          if (showSampleImages)
+            ListTile(
+              leading: const Icon(Icons.auto_awesome),
+              title: const Text('Sample Images'),
+              subtitle: const Text('Google Play reviewer only'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SampleImagesScreen(),
+                  ),
+                );
+              },
+            ),
           ListTile(
-            leading: const Icon(Icons.auto_awesome),
-            title: const Text('Sample Images'),
-            subtitle: const Text('Try without a car nearby'),
-            onTap: () {
+            leading: const Icon(Icons.logout),
+            title: const Text('Sign out'),
+            subtitle: const Text('Log out of AutoSpotter'),
+            onTap: () async {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const SampleImagesScreen(),
+              final shouldSignOut = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Sign out?'),
+                  content: const Text(
+                    'You will need to sign in again to access AutoSpotter.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Sign out'),
+                    ),
+                  ],
                 ),
               );
+
+              if (shouldSignOut == true) {
+                await FirebaseAuth.instance.signOut();
+              }
             },
           ),
           const Divider(),

@@ -13,6 +13,7 @@ import '../services/saved_scan_service.dart';
 import '../services/plan_service.dart';
 import '../services/review_prompt_service.dart';
 import '../services/gemini_pricing_service.dart';
+import '../services/valuation_error_handler.dart';
 import '../services/valuation_service.dart';
 import '../services/vehicle_cache_service.dart';
 
@@ -249,8 +250,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('Upgrade Required'),
           content: const Text(
-            'Price valuations are available on the Basic plan (\u00a35/month, 10 scans) '
-            'and Trader plan (\u00a314.99/month, 75 scans).\n\n'
+            'Price valuations are available on the Basic plan (\u00a39.99/month, 10 scans) '
+            'and Trader plan (\u00a359.99/month, 75 scans).\n\n'
             'Upgrade in Settings to unlock valuation estimates.',
           ),
           actions: [
@@ -266,14 +267,42 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
     if (allowance.isOverage) {
       if (!mounted) return;
+      if (allowance.availableCredits <= 0) {
+        // No credits left \u2014 block and direct to pricing
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('No Scans Remaining'),
+            content: const Text(
+              'You\u2019ve used all your monthly valuations and have no scan credits left.\n\nPurchase a credit pack to continue.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pushNamed(context, '/pricing');
+                },
+                child: const Text('Buy Credits'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Has credits \u2014 confirm before consuming one
       final proceed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Scan Limit Reached'),
+          title: const Text('Monthly Allowance Used'),
           content: Text(
-            'You\u2019ve used all ${allowance.monthlyLimit} valuation scans '
-            'this month.\n\nThis scan will cost ${allowance.overagePriceFormatted}. '
-            'Continue?',
+            'You\u2019ve used all ${allowance.monthlyLimit} monthly valuations.\n\n'
+            '1 scan credit will be used. '
+            'You have ${allowance.availableCredits} credit${allowance.availableCredits == 1 ? '' : 's'} remaining.',
           ),
           actions: [
             TextButton(
@@ -282,7 +311,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Continue'),
+              child: const Text('Use Credit'),
             ),
           ],
         ),
@@ -314,15 +343,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
       _loadAllowance();
     } on ValuationException catch (e) {
       // Invalid plate errors — show directly, no fallback
-      if (e.message.contains('InvalidSearchTerm') ||
-          e.message.contains('not found') ||
-          e.message.contains('No vehicle') ||
-          e.message.contains('authentication')) {
+      if (ValuationErrorHandler.isTerminalError(e.message)) {
         if (!mounted) return;
         setState(() {
-          _error = e.message.contains('InvalidSearchTerm')
-              ? 'Registration not recognised \u2014 check the plate and try again.'
-              : e.message;
+          _error = ValuationErrorHandler.toUserMessage(e.message);
           _loading = false;
           _retryStatus = null;
         });
@@ -645,7 +669,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       !_allowance!.valuationEnabled
                           ? 'Upgrade to Basic or Trader to unlock valuations'
                           : _allowance!.isOverage
-                              ? '${_allowance!.overagePriceFormatted} per scan (allowance used)'
+                              ? '${_allowance!.availableCredits} credit${_allowance!.availableCredits == 1 ? '' : 's'} remaining'
                               : '${_allowance!.remainingFree} of ${_allowance!.monthlyLimit} scans remaining',
                       style: TextStyle(
                         fontSize: 12,
@@ -770,22 +794,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
             title: const Text('Report Result'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('What is wrong with this result?'),
-                const SizedBox(height: 12),
-                ...reasons.map((reason) => RadioListTile<String>(
+            content: RadioGroup<String>(
+              groupValue: chosen,
+              onChanged: (value) => setDialogState(() => chosen = value),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('What is wrong with this result?'),
+                  const SizedBox(height: 12),
+                  ...reasons.map(
+                    (reason) => RadioListTile<String>(
                       title: Text(reason, style: const TextStyle(fontSize: 14)),
                       value: reason,
-                      groupValue: chosen,
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      onChanged: (value) =>
-                          setDialogState(() => chosen = value),
-                    )),
-              ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(

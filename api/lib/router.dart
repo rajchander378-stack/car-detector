@@ -32,14 +32,23 @@ Handler buildRouter() {
 }
 
 Middleware _corsMiddleware() {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-API-Secret, Stripe-Signature',
+    'Access-Control-Max-Age': '86400',
+  };
+
   return createMiddleware(
+    requestHandler: (Request request) {
+      // Respond to preflight OPTIONS requests immediately with 200
+      if (request.method == 'OPTIONS') {
+        return Response.ok('', headers: corsHeaders);
+      }
+      return null;
+    },
     responseHandler: (Response response) {
-      return response.change(headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers':
-            'Content-Type, X-API-Secret, Stripe-Signature',
-      });
+      return response.change(headers: corsHeaders);
     },
   );
 }

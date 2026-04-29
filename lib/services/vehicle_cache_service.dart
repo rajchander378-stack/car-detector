@@ -1,8 +1,7 @@
 import 'dart:convert';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
-import '../models/utils/constants.dart';
 import '../models/vehicle_report.dart';
 import '../models/vehicle_valuation.dart';
 import '../models/vehicle_details.dart';
@@ -191,46 +190,35 @@ class VehicleCacheService {
     }
   }
 
-  // ───────────────── private: raw VDGL HTTP call ─────────────────
+  // ───────────────── private: VDGL call via Cloud Function ─────────────────
 
   Future<Map<String, dynamic>> _callVdgl(
     String normalizedVrm,
     String packageName,
   ) async {
-    final queryParams = {
-      'ApiKey': Constants.vdglApiKey,
-      'PackageName': packageName,
-      'Vrm': normalizedVrm,
-    };
-
-    final uri = Uri.parse('${Constants.vdglBaseUrl}/r2/lookup')
-        .replace(queryParameters: queryParams);
-
-    final response = await http.get(uri).timeout(
-          const Duration(seconds: 15),
-          onTimeout: () =>
-              throw ValuationException('Request timed out'),
-        );
-
-    if (response.statusCode != 200) {
-      throw ValuationException(
-        'API returned status ${response.statusCode}',
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'vdglLookup',
+        options: HttpsCallableOptions(timeout: const Duration(seconds: 20)),
       );
+      final result = await callable.call({
+        'vrm': normalizedVrm,
+        'package': packageName,
+      });
+      return _deepCast(result.data as Map);
+    } on FirebaseFunctionsException catch (e) {
+      throw ValuationException(e.message ?? 'Lookup failed');
     }
+  }
 
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+  static Map<String, dynamic> _deepCast(Map<dynamic, dynamic> map) {
+    return map.map((k, v) => MapEntry(k.toString(), _castValue(v)));
+  }
 
-    final responseInfo =
-        json['ResponseInformation'] as Map<String, dynamic>? ?? {};
-    final isSuccess = responseInfo['IsSuccessStatusCode'] as bool? ?? false;
-
-    if (!isSuccess) {
-      final statusMsg =
-          responseInfo['StatusMessage']?.toString() ?? 'Unknown error';
-      throw ValuationException(statusMsg);
-    }
-
-    return json;
+  static dynamic _castValue(dynamic value) {
+    if (value is Map) return _deepCast(value);
+    if (value is List) return value.map(_castValue).toList();
+    return value;
   }
 
   // ───────────────── private: helpers ─────────────────

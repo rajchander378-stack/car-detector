@@ -7,7 +7,7 @@ class ScanAllowance {
   final bool valuationEnabled;
   final int remainingFree;
   final int monthlyLimit;
-  final int overagePricePence;
+  final int availableCredits;
   final String plan;
 
   ScanAllowance({
@@ -16,12 +16,9 @@ class ScanAllowance {
     required this.valuationEnabled,
     required this.remainingFree,
     required this.monthlyLimit,
-    required this.overagePricePence,
+    required this.availableCredits,
     required this.plan,
   });
-
-  String get overagePriceFormatted =>
-      '\u00a3${(overagePricePence / 100).toStringAsFixed(2)}';
 }
 
 class PlanConfig {
@@ -125,17 +122,24 @@ class PlanService {
     final config = await getPlanConfig(plan);
     final usage = await getCurrentUsage(uid);
 
-    // Free plan users cannot use valuations at all
     final valuationEnabled = plan != 'free';
     final remaining = config.monthlyScans - usage.valuationScans;
+    final isOverage = valuationEnabled && remaining <= 0;
+
+    // Only fetch credits when needed (monthly allowance exhausted)
+    int availableCredits = 0;
+    if (isOverage) {
+      final userDoc = await _firestore.collection('users').doc(uid).get();
+      availableCredits = (userDoc.data()?['scan_credits'] as int?) ?? 0;
+    }
 
     return ScanAllowance(
-      allowed: valuationEnabled,
-      isOverage: valuationEnabled && remaining <= 0,
+      allowed: valuationEnabled && (remaining > 0 || availableCredits > 0),
+      isOverage: isOverage,
       valuationEnabled: valuationEnabled,
       remainingFree: remaining > 0 ? remaining : 0,
       monthlyLimit: config.monthlyScans,
-      overagePricePence: config.overagePricePence,
+      availableCredits: availableCredits,
       plan: plan,
     );
   }
@@ -147,15 +151,18 @@ class PlanService {
 
     final isOverage = usage.valuationScans >= config.monthlyScans;
 
-    final updates = <String, dynamic>{
+    // Always increment monthly usage counter
+    await _usageDoc(uid).set({
       'valuation_scans': FieldValue.increment(1),
       'last_scan_at': FieldValue.serverTimestamp(),
-    };
-    if (isOverage) {
-      updates['overage_scans'] = FieldValue.increment(1);
-    }
+    }, SetOptions(merge: true));
 
-    await _usageDoc(uid).set(updates, SetOptions(merge: true));
+    // If over monthly limit, consume one scan credit atomically
+    if (isOverage) {
+      await _firestore.collection('users').doc(uid).update({
+        'scan_credits': FieldValue.increment(-1),
+      });
+    }
   }
 
   Future<void> recordAiOnlyScan(String uid) async {

@@ -16,11 +16,6 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow update: if request.auth != null && request.auth.uid == userId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'plan_started_at', 'plan_expires_at']);
-      // TEMPORARY: allow users to self-switch plans during testing.
-      // TODO: Remove this rule before production — plan changes should only
-      // come from the server after Stripe payment confirmation.
-      allow update: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['plan']);
       allow update: if isAdmin();
       allow create: if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null && request.auth.uid == userId;
@@ -68,6 +63,10 @@ service cloud.firestore {
       // Only existing admins can update the admin list
       allow update: if isAdmin();
       allow delete: if false;
+    }
+
+    match /config/vdgl {
+      allow read, write: if isAdmin();
     }
 
     // --- Shared Vehicle Reports ---
@@ -137,6 +136,13 @@ service cloud.firestore {
     // --- VDGL Daily Counters ---
     // Only admins can read. Written by Cloud Functions (admin SDK bypasses rules).
     match /vdgl_counters/{dayId} {
+      allow read: if isAdmin();
+      allow write: if false; // Written by Cloud Function via admin SDK
+    }
+
+    // --- VDGL Per-User Monthly Counters ---
+    // Only admins can read. Written by Cloud Functions (admin SDK bypasses rules).
+    match /vdgl_user_counters/{docId} {
       allow read: if isAdmin();
       allow write: if false; // Written by Cloud Function via admin SDK
     }

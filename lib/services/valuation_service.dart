@@ -1,8 +1,7 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../models/utils/constants.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/vehicle_report.dart';
 import '../models/vehicle_valuation.dart';
+import '../models/utils/constants.dart';
 
 class ValuationService {
   static final ValuationService _instance = ValuationService._internal();
@@ -13,7 +12,8 @@ class ValuationService {
   static const Duration _retryDelay = Duration(seconds: 3);
 
   /// Fetches a full vehicle report (valuation + MOT + specs + tyres).
-  /// Returns a [VehicleReport] containing all available data sections.
+  /// Routes through the Firebase callable function so every call is logged
+  /// server-side with the authenticated user's uid.
   Future<VehicleReport> getReport(
     String vrm, {
     int? mileage,
@@ -61,54 +61,37 @@ class ValuationService {
   }
 
   Future<VehicleReport> _attemptReport(String cleanVrm, {int? mileage}) async {
-    final queryParams = {
-      'ApiKey': Constants.vdglApiKey,
-      'PackageName': Constants.vdglPackageName,
-      'Vrm': cleanVrm,
-      if (mileage != null) 'Mileage': mileage.toString(),
-    };
-
-    final uri = Uri.parse('${Constants.vdglBaseUrl}/r2/lookup')
-        .replace(queryParameters: queryParams);
-
-    final response = await http.get(uri).timeout(
-      const Duration(seconds: 15),
-      onTimeout: () => throw ValuationException('Request timed out'),
-    );
-
-    if (response.statusCode == 401) {
-      throw ValuationException('API authentication failed');
-    }
-    if (response.statusCode == 429) {
-      throw ValuationException('Rate limit exceeded — try again later');
-    }
-    if (response.statusCode != 200) {
-      throw ValuationException(
-        'API returned status ${response.statusCode}',
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'vdglLookup',
+        options: HttpsCallableOptions(
+          timeout: const Duration(seconds: 20),
+        ),
       );
+
+      final result = await callable.call({
+        'vrm': cleanVrm,
+        'package': Constants.vdglPackageName,
+        if (mileage != null) 'mileage': mileage,
+      });
+
+      final json = _deepCast(result.data as Map);
+      return VehicleReport.fromApiJson(json);
+    } on FirebaseFunctionsException catch (e) {
+      throw ValuationException(e.message ?? 'Lookup failed');
     }
+  }
 
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+  /// Recursively converts a Map returned by the Firebase callable SDK
+  /// into a fully-typed Map with String keys and dynamic values.
+  static Map<String, dynamic> _deepCast(Map<dynamic, dynamic> map) {
+    return map.map((k, v) => MapEntry(k.toString(), _castValue(v)));
+  }
 
-    final responseInfo =
-        json['ResponseInformation'] as Map<String, dynamic>? ?? {};
-    final statusCode = responseInfo['StatusCode'] as int? ?? -1;
-    final isSuccess = responseInfo['IsSuccessStatusCode'] as bool? ?? false;
-
-    if (!isSuccess) {
-      final statusMsg =
-          responseInfo['StatusMessage']?.toString() ?? 'Unknown error';
-      throw ValuationException(statusMsg);
-    }
-
-    // StatusCode 0 = Success, 1 = SuccessWithWarnings
-    if (statusCode != 0 && statusCode != 1) {
-      final statusMsg =
-          responseInfo['StatusMessage']?.toString() ?? 'Lookup failed';
-      throw ValuationException(statusMsg);
-    }
-
-    return VehicleReport.fromApiJson(json);
+  static dynamic _castValue(dynamic value) {
+    if (value is Map) return _deepCast(value);
+    if (value is List) return value.map(_castValue).toList();
+    return value;
   }
 }
 

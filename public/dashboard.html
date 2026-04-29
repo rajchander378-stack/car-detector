@@ -246,6 +246,12 @@
     </div>
   </div>
 
+  <!-- Purchase success banner (shown when redirected back from Stripe) -->
+  <div id="purchase-banner" style="display:none; background:#e8f5e9; border-bottom:2px solid #a5d6a7; padding:12px 20px; text-align:center; font-size:14px; color:#2e7d32; position:relative;">
+    <strong>&#10003; Purchase complete</strong> — your scan credits have been added to your account.
+    <button onclick="document.getElementById('purchase-banner').style.display='none'" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;color:#2e7d32;line-height:1;">&times;</button>
+  </div>
+
   <!-- Dashboard content -->
   <div id="dash-content" style="display:none;">
     <div class="dash-header">
@@ -1208,6 +1214,11 @@
         document.getElementById('gate-auth').style.display = 'none';
         document.getElementById('dash-content').style.display = 'block';
         document.getElementById('inbox-link').style.display = '';
+        // Show purchase success banner if redirected back from Stripe
+        if (new URLSearchParams(window.location.search).get('purchase') === 'success') {
+          document.getElementById('purchase-banner').style.display = 'block';
+          window.history.replaceState({}, '', window.location.pathname);
+        }
         await loadDashboard(user);
         // Inbox badge
         db.collection('messages').where('to_uid','==',user.uid).where('read','==',false)

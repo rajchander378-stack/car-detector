@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:flutter/foundation.dart';
 import '../models/car_identification.dart';
 import '../models/vehicle_valuation.dart';
 
@@ -95,18 +96,31 @@ If you cannot provide a reasonable estimate, return 0 for that category.''';
       if (text == null || text.isEmpty) return null;
 
       final json = jsonDecode(text) as Map<String, dynamic>;
-
-      return VehicleValuation(
-        dealerForecourt: _parseInt(json['dealer_forecourt']),
-        privateClean: _parseInt(json['private_clean']),
-        tradeRetail: _parseInt(json['trade_retail']),
-        partExchange: _parseInt(json['part_exchange']),
-        auction: _parseInt(json['auction']),
-      );
+      return parseGeminiResponse(json);
     } catch (e) {
       return null;
     }
   }
+
+  /// Parses a Gemini JSON response map into a [VehicleValuation].
+  /// Returns null if the response contains no usable price data.
+  /// Exposed for testing.
+  @visibleForTesting
+  static VehicleValuation? parseGeminiResponse(Map<String, dynamic> json) {
+    final valuation = VehicleValuation(
+      dealerForecourt: _parseInt(json['dealer_forecourt']),
+      privateClean: _parseInt(json['private_clean']),
+      tradeRetail: _parseInt(json['trade_retail']),
+      partExchange: _parseInt(json['part_exchange']),
+      auction: _parseInt(json['auction']),
+    );
+    return valuation.hasData ? valuation : null;
+  }
+
+  /// Parses a price field from Gemini JSON. Treats 0 as absent (no estimate).
+  /// Exposed for testing.
+  @visibleForTesting
+  static int? parseIntField(dynamic value) => _parseInt(value);
 
   static int? _parseInt(dynamic value) {
     if (value == null) return null;

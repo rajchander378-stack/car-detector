@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/message_service.dart';
 
 class MessagesScreen extends StatefulWidget {
-  const MessagesScreen({super.key});
+  const MessagesScreen({super.key, this.openCompose = false});
+
+  final bool openCompose;
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -17,6 +19,9 @@ class _MessagesScreenState extends State<MessagesScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    if (widget.openCompose) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showComposeSheet());
+    }
   }
 
   @override
@@ -209,8 +214,10 @@ class _MessagesScreenState extends State<MessagesScreen>
       },
     );
 
-    subjectCtl.dispose();
-    bodyCtl.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      subjectCtl.dispose();
+      bodyCtl.dispose();
+    });
 
     if (sent == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -79,6 +79,112 @@
 
 ## Uncompleted — Google Play Release Preparation
 
+### Reviewer Readiness Audit
+- **Met** — Privacy policy is hosted and reachable at `https://car-detector-833e5.web.app/privacy-policy.html`
+- **Met** — Account deletion path exists both in-app and on the web at `https://car-detector-833e5.web.app/delete-account.html`
+- **Met** — Camera permission is paired with a prominent pre-permission disclosure in `lib/screens/camera_screen.dart`
+- **Met** — Required Android permissions are declared in `android/app/src/main/AndroidManifest.xml`
+- **Met** — App package id is set to `com.axiomforgesoftware.autospotter` in `android/app/build.gradle.kts`
+- **Met** — Firebase Android config exists for that package in `android/app/google-services.json`
+- **Met** — Google Sign-In flow exists in `lib/screens/login_screen.dart`
+- **Met** — Terms acceptance is persisted in `lib/main.dart`
+- **Met** — AI-result reporting exists to support AI-content accountability
+- **Met** — Hosted landing page exists at `https://car-detector-833e5.web.app/`
+
+### Reviewer Readiness Audit — Partially Met
+- **Partially met** — Store listing text is complete (`store_listing.txt`, short description, and full description), but the Play listing visuals are still missing
+- **Partially met** — Brand icon and splash are done, but the remaining Play listing assets are specifically screenshots and the feature graphic (1024x500)
+- **Partially met** — Reviewer access path exists via Google Sign-In, but no dedicated reviewer account is prepared yet
+- **Partially met** — Firebase Android setup is present, but release SHA-1 setup is still pending
+
+### Reviewer Readiness Audit — Not Met
+- **Not met** — Reviewer demo credentials / App Access submission are missing
+- **Not met** — Release signing keystore is not configured; release still uses debug signing at `android/app/build.gradle.kts:39`
+- **Not met** — ProGuard / R8 rules have not been verified for release safety
+- **Not met** — Release AAB has not been built (blocked by release signing keystore)
+- **Not met** — Real-device release validation has not been completed (blocked by release signing keystore and release build)
+- **Not met** — Release SHA-1 has not been added to Firebase (blocked by release signing keystore)
+- **Not met** — Data Safety declaration in Play Console is still incomplete
+- **Not met** — Content rating questionnaire is still incomplete
+- **Not met** — Feature graphic is still missing
+- **Not met** — Play screenshots are still missing
+- **Not met** — Google Play Developer account is still unchecked here until confirmed
+- **Not met** — Firebase Hosting production deploy should be re-run before submission so the live privacy/deletion URLs match the current state
+
+### Reviewer Readiness Audit — Cannot Verify From Repo
+- **Cannot verify** — Whether the Play Console app has already been created
+- **Cannot verify** — Whether App Access details have been filled in correctly
+- **Cannot verify** — Whether Data Safety answers match the final production behavior
+- **Cannot verify** — Whether the IARC content rating questionnaire has been submitted
+- **Cannot verify** — Whether reviewer login works on a signed release build
+- **Cannot verify** — Whether camera, Gemini, valuation, and Google Sign-In all work correctly in release mode
+
+### Reviewer Readiness Audit — Closest Path To Submission
+1. [ ] Register the Google Play Developer account
+2. [ ] Create a dedicated Google reviewer account and test login end-to-end
+3. [ ] Generate the release signing keystore and wire `key.properties` / signing config
+4. [ ] Add ProGuard / R8 keep rules for Firebase, Google Sign-In, ML Kit, and related plugins
+5. [ ] Build the signed Android App Bundle (`.aab`) — depends on item 3
+6. [ ] Test the release build on a physical Android device — depends on items 3-5
+7. [ ] Add the release SHA-1 fingerprint to Firebase — depends on item 3
+8. [ ] Complete Play Console `Data safety` declaration
+9. [ ] Complete Play Console `Content rating` questionnaire
+10. [ ] Capture Play Store screenshots and create the feature graphic (1024x500)
+11. [ ] Run `firebase deploy --only hosting` so the production privacy/deletion pages reflect the latest state
+
+### Top 5 Blockers — Execution Notes
+
+#### 1) Google Play Developer account
+- **Goal** — Create the Play Console account so submission, policy forms, and app tracks are available.
+- **Steps**
+  - [ ] Register at `play.google.com/console`
+  - [ ] Pay the one-time developer registration fee
+  - [ ] Create the `AutoSpotter` app entry in Play Console
+  - [ ] Confirm the package name is `com.axiomforgesoftware.autospotter`
+  - [ ] Record the app/dashboard URL for reuse later
+
+#### 2) Demo credentials for Google reviewer
+- **Goal** — Give Google a working login they can use to access the app during review.
+- **Steps**
+  - [x] Create a fresh Google account dedicated to review access (`rick.sancho1111@gmail.com`)
+  - [ ] Sign into AutoSpotter with that account on Android
+  - [ ] Confirm the account reaches the camera screen successfully
+  - [ ] Confirm the account can access the flows reviewers need to inspect, including the reviewer-only `Sample Images` fallback in the app drawer
+  - [ ] Add the email, password, and any reviewer notes to Play Console `App Access`
+
+- **Reviewer note draft for Play Console `App Access`**
+  - Test account: `rick.sancho1111@gmail.com`
+  - After sign-in, the primary experience is the live camera flow.
+  - As a fallback for review, this account also sees a `Sample Images` option in the app drawer so the core identification flow can be tested without using the camera if needed.
+
+#### 3) Release signing keystore
+- **Goal** — Replace debug signing with a proper upload key so release builds are valid and updateable.
+- **Steps**
+  - [ ] Generate the upload keystore with `keytool -genkeypair`
+  - [ ] Store the keystore file somewhere backed up and safe
+  - [ ] Create `android/key.properties` with keystore path, alias, and passwords
+  - [ ] Update `android/app/build.gradle.kts` to load `key.properties`
+  - [ ] Replace `signingConfigs.getByName("debug")` in `android/app/build.gradle.kts:39` with a real release signing config
+  - [ ] Verify a release build can start without signing errors
+
+#### 4) ProGuard / R8 keep rules
+- **Goal** — Prevent release-only crashes caused by stripping required classes during optimization.
+- **Steps**
+  - [ ] Add `android/app/proguard-rules.pro`
+  - [ ] Enable and/or verify minification settings for the release build path you intend to ship
+  - [ ] Add keep rules for Firebase/Auth, Google Sign-In, ML Kit, and any reflection-heavy libraries in use
+  - [ ] Build a release artifact with the intended shrinker settings enabled
+  - [ ] Confirm sign-in, camera, and AI flows still work in the release build
+
+#### 5) Build release AAB
+- **Goal** — Produce the signed bundle that will be uploaded to Play Console.
+- **Steps**
+  - [ ] Confirm items 3 and 4 are complete first
+  - [ ] Run `flutter build appbundle --release`
+  - [ ] Confirm output exists at `build/app/outputs/bundle/release/app-release.aab`
+  - [ ] Note any build warnings/errors and resolve them before proceeding
+  - [ ] Preserve the exact build/version that will be tested and uploaded
+
 ### BLOCKERS — Must fix before submission
 - [x] **Prominent Disclosure dialog for camera** — Show a custom dialog explaining camera usage ("AutoSpotter uses your camera to capture vehicle images for AI identification and valuation") BEFORE the system permission prompt. Without this, Google will reject the app. Add to camera_screen.dart on first launch.
 - [x] **Account and data deletion** — In-app deletion via Settings screen + web-based deletion page at `public/delete-account.html` with email request option. Will be live at `https://car-detector-833e5.web.app/delete-account.html` after deploy.
@@ -101,21 +207,23 @@
 - [x] **Set up Firebase Hosting** — Added hosting config to `firebase.json` with `public/` directory. Created landing page, privacy policy, account deletion page, shared CSS, and 404 page. **To deploy:** run `firebase deploy --only hosting` to publish to `https://car-detector-833e5.web.app/`.
 
 ### Technical (we can do these)
-- [ ] **Release signing keystore** — Generate an upload keystore (`keytool -genkey`), create a `key.properties` file, and configure `signingConfigs` in `build.gradle.kts` for release builds. Keep the keystore safe — losing it means you cannot update the app.
+- [ ] **Release signing keystore** — Generate an upload keystore (`keytool -genkey`), create a `key.properties` file, and configure `signingConfigs` in `build.gradle.kts` for release builds. The current release build still uses debug signing at `android/app/build.gradle.kts:39`. Keep the keystore safe — losing it means you cannot update the app.
 - [x] **Update app metadata** — Changed pubspec.yaml description to "Instant AI car identification and UK vehicle valuation by Axiom Forge Software."
 - [x] **App icon** — Design and configure a proper launcher icon (adaptive icon for Android). Consider using the `flutter_launcher_icons` package.
 - [x] **Splash screen** — Configure a branded splash screen using `flutter_native_splash` or native Android splash.
-- [ ] **Build release APK/AAB** — Run `flutter build appbundle --release` to produce the Android App Bundle for Play Store upload.
-- [ ] **Test release build** — Install and test the release build on a physical device before submission. Verify camera, Google Sign-In, Gemini API, and valuation all work in release mode.
-- [ ] **ProGuard / R8 rules** — Ensure minification doesn't break Firebase, ML Kit, or other plugins. Add keep rules if needed.
-- [ ] **Add SHA-1 for release keystore to Firebase** — The release keystore will have a different SHA-1 from debug. Add it in Firebase Console for Google Sign-In to work in release builds.
+- [ ] **ProGuard / R8 rules** — Ensure minification doesn't break Firebase, Google Sign-In, ML Kit, or other plugins. Add keep rules if needed before release testing. No `proguard-rules.pro` is currently present.
+- [ ] **Build release APK/AAB** — Run `flutter build appbundle --release` to produce the Android App Bundle for Play Store upload. Depends on the release signing keystore being configured first.
+- [ ] **Test release build** — Install and test the release build on a physical device before submission. Verify camera, Google Sign-In, Gemini API, and valuation all work in release mode. Depends on release signing, ProGuard/R8 checks, and a successful release build.
+- [ ] **Add SHA-1 for release keystore to Firebase** — The release keystore will have a different SHA-1 from debug. Add it in Firebase Console for Google Sign-In to work in release builds. Depends on the release signing keystore existing first.
+- [ ] **Firebase Hosting production deploy** — Run `firebase deploy --only hosting` before submission so the public privacy policy and delete-account URLs reflect the latest production state.
 
 ### Policy & Compliance (ask Gemini — see prompt below)
 - [x] **Privacy policy** — Required by Google Play for apps using camera, user accounts, and network requests. Must be hosted at a public URL.
 - [ ] **Data safety declaration** — Google Play requires you to declare what data is collected, shared, and how it is secured.
 - [ ] **Content rating questionnaire** — Complete the IARC rating questionnaire in Play Console.
 - [x] **Camera and permissions disclosure** — Ensure compliance with Google Play's photo/video permissions policy.
-- [ ] **Store listing assets** — Screenshots (phone + tablet), feature graphic (1024x500). Short and full descriptions drafted in `store_listing.txt`.
+- [ ] **Play screenshots** — Capture at least 4 phone screenshots for the Play listing. Short and full descriptions are already drafted in `store_listing.txt`.
+- [ ] **Feature graphic** — Create the required Play Store feature graphic (1024x500).
 - [ ] **Google Play Developer account** — Register at play.google.com/console (one-time fee).
 
 ### Gemini Prompt for Google Play Policy Guidance

@@ -95,7 +95,6 @@ void _drawCar(img.Image image, int size, int color) {
   // Inner wheel circles (hub) — draw slightly smaller transparent circles
   // to give a "tire + rim" look
   final hubRadius = (wheelRadius * 0.55).round();
-  final hubColor = img.ColorRgba8(0, 0, 0, 0); // transparent for foreground
   // For combined icon, we want the blue to show through
   // Since this function is generic, let's just draw a smaller accent circle
   _fillCircle(image, wheel1X, wheelY, hubRadius, img.ColorRgba8(
@@ -137,11 +136,9 @@ void _drawCar(img.Image image, int size, int color) {
     (s * 0.015).round(), img.ColorRgba8(100, 181, 246, 255));
 
   // Add "crosshair" / spotter element — a subtle targeting reticle around the car
-  final reticleColor = img.ColorRgba8(255, 255, 255, 180);
   final cx = (s * 0.50).round();
   final cy = (s * 0.50).round();
   final rOuter = (s * 0.38).round();
-  final rInner = (s * 0.35).round();
   // Draw corner brackets of a targeting reticle
   final bracketLen = (s * 0.08).round();
   final thick = (s * 0.008).round().clamp(2, 10);

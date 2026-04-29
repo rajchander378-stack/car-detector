@@ -14,6 +14,9 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<User?> signInWithGoogle() async {
+    // Always sign out of the Google session first so the account picker
+    // appears every time rather than silently reusing the cached account.
+    await _googleSignIn.signOut();
     final googleUser = await _googleSignIn.signIn();
     if (googleUser == null) return null; // user cancelled
 

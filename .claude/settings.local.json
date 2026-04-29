@@ -66,7 +66,10 @@
       "Bash(magick identify *)",
       "Bash(powershell *)",
       "Bash(identify /c/car_detector/web/favicon.png)",
-      "Bash(identify /c/car_detector/web/icons/Icon-192.png)"
+      "Bash(identify /c/car_detector/web/icons/Icon-192.png)",
+      "PowerShell(Copy-Item *)",
+      "Bash(flutter test *)",
+      "Bash(xargs wc *)"
     ]
   }
 }

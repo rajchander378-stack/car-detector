@@ -9,7 +9,8 @@ COPY . .
 RUN dart compile exe bin/server.dart -o bin/server
 
 # --- Runtime stage ---
-FROM dart:3.3-slim
+# dart:3.3-slim does not exist; use debian-slim which provides glibc for the compiled binary
+FROM debian:bookworm-slim
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app

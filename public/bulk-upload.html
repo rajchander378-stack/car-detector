@@ -207,7 +207,7 @@
     </div>
 
     <!-- Debug panel (toggle with bottom-right button) -->
-    <div id="debug-panel" class="debug-panel">
+    <div id="debug-panel" class="debug-panel" style="display:none;">
       <h3>&#9881; Freshness Debug Panel</h3>
 
       <div class="debug-section">
@@ -279,7 +279,7 @@
       <div id="retry-toast-msg">Retrying plate lookup...</div>
     </div>
 
-    <button class="debug-toggle" id="debug-toggle" onclick="document.getElementById('debug-panel').style.display = document.getElementById('debug-panel').style.display === 'none' ? 'block' : 'none'" title="Toggle debug panel">&#9881;</button>
+    <button class="debug-toggle" id="debug-toggle" style="display:none;" onclick="document.getElementById('debug-panel').style.display = document.getElementById('debug-panel').style.display === 'none' ? 'block' : 'none'" title="Toggle debug panel">&#9881;</button>
 
     <!-- Forecourt totals -->
     <div id="totals-card" class="totals-card" style="display:none;">
@@ -491,6 +491,16 @@ If you cannot provide a reasonable estimate, return 0 for that category.`;
         badge.className = 'plan-badge plan-badge-' + userPlan;
         badge.style.display = 'inline-block';
 
+        // Show debug panel only for admin users
+        try {
+          const adminSnap = await getDoc(doc(db, 'config', 'admin'));
+          const adminEmails = (adminSnap.data()?.admin_emails || []).map(e => e.toLowerCase());
+          const isAdmin = adminEmails.includes((user.email || '').toLowerCase());
+          document.getElementById('debug-toggle').style.display = isAdmin ? 'block' : 'none';
+        } catch (e) {
+          document.getElementById('debug-toggle').style.display = 'none';
+        }
+
         if (userPlan === 'trader') {
           document.getElementById('gate-auth').style.display = 'none';
           document.getElementById('gate-plan').style.display = 'none';
@@ -511,6 +521,8 @@ If you cannot provide a reasonable estimate, return 0 for that category.`;
       } else {
         userPlan = null;
         document.getElementById('user-plan-badge').style.display = 'none';
+        document.getElementById('debug-toggle').style.display = 'none';
+        document.getElementById('debug-panel').style.display = 'none';
         document.getElementById('gate-auth').style.display = 'block';
         document.getElementById('gate-plan').style.display = 'none';
         document.getElementById('bulk-content').style.display = 'none';

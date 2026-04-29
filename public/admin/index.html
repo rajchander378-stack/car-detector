@@ -566,6 +566,60 @@
       font-weight: 600;
       margin-bottom: 16px;
     }
+    .vdgl-balance-banner {
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      background: #f5f5f5;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .vdgl-balance-banner.warning {
+      background: #fff3e0;
+      border-color: #ffcc80;
+      color: #e65100;
+    }
+    .vdgl-balance-banner.danger {
+      background: #ffebee;
+      border-color: #ef9a9a;
+      color: var(--danger);
+    }
+    .vdgl-settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .vdgl-settings-grid label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .vdgl-settings-grid input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .vdgl-settings-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .vdgl-settings-status {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .vdgl-settings-status.success { color: var(--success); }
+    .vdgl-settings-status.error { color: var(--danger); }
     .vdgl-period-btns {
       display: inline-flex;
       border: 1px solid var(--border);
@@ -764,6 +818,14 @@
       <!-- Stats -->
       <div class="stats">
         <div class="stat-card">
+          <div class="number vdgl-cost-big" id="vdgl-estimated-remaining">-</div>
+          <div class="label">Estimated Remaining</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="vdgl-low-threshold">-</div>
+          <div class="label">Low-Balance Threshold</div>
+        </div>
+        <div class="stat-card">
           <div class="number" id="vdgl-calls-today">-</div>
           <div class="label">Calls Today</div>
         </div>
@@ -789,6 +851,29 @@
         </div>
       </div>
 
+      <div id="vdgl-balance-banner" class="vdgl-balance-banner">Loading estimated balance...</div>
+
+      <div class="vdgl-chart-wrap">
+        <h3>Estimated Balance Tracking</h3>
+        <p style="margin:8px 0 0;color:var(--text-secondary);font-size:14px;">
+          Enter the current VDGL balance after a top-up. AutoSpotter will subtract tracked API spend to estimate the remaining balance and warn when it drops below your threshold.
+        </p>
+        <div class="vdgl-settings-grid">
+          <div>
+            <label for="vdgl-starting-balance">Current balance after top-up (GBP)</label>
+            <input id="vdgl-starting-balance" type="number" min="0" step="0.01" placeholder="e.g. 100.00">
+          </div>
+          <div>
+            <label for="vdgl-low-balance-threshold">Low-balance threshold (GBP)</label>
+            <input id="vdgl-low-balance-threshold" type="number" min="0" step="0.01" placeholder="e.g. 15.00">
+          </div>
+        </div>
+        <div class="vdgl-settings-actions">
+          <button class="admin-action-btn success" onclick="saveVdglConfig()">Save VDGL Balance Settings</button>
+          <span id="vdgl-settings-status" class="vdgl-settings-status">No saved balance settings yet.</span>
+        </div>
+      </div>
+
       <!-- Daily chart -->
       <div class="vdgl-chart-wrap">
         <h3 style="display:inline;">Daily API Calls
@@ -806,6 +891,12 @@
         <div id="vdgl-pkg-breakdown" style="font-size:14px;">Loading...</div>
       </div>
 
+      <!-- Top users this month -->
+      <div class="vdgl-chart-wrap">
+        <h3>Top Users by Cost (This Month)</h3>
+        <div id="vdgl-top-users" style="font-size:14px;">Loading...</div>
+      </div>
+
       <!-- Recent calls table -->
       <div id="vdgl-loading" class="loading">Loading VDGL usage data...</div>
       <div id="vdgl-table-section" style="display:none;">
@@ -819,6 +910,7 @@
                 <th>Package</th>
                 <th>Cost</th>
                 <th>Source</th>
+                <th>User</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -941,6 +1033,8 @@
     if (unsubscribeMessages) unsubscribeMessages();
     if (unsubscribeVdgl) unsubscribeVdgl();
     if (unsubscribeVdglCalls) unsubscribeVdglCalls();
+    if (unsubscribeVdglUsers) unsubscribeVdglUsers();
+    if (unsubscribeVdglConfig) unsubscribeVdglConfig();
     if (window._inboxBadgeUnsub) { window._inboxBadgeUnsub(); window._inboxBadgeUnsub = null; }
     document.getElementById('inbox-link').style.display = 'none';
     auth.signOut();
@@ -1643,13 +1737,54 @@
 
   let vdglCounters = [];
   let vdglRecentCalls = [];
+  let vdglUserCounters = [];
   let vdglPeriodDays = 14;
+  let vdglConfig = null;
   let unsubscribeVdgl = null;
   let unsubscribeVdglCalls = null;
+  let unsubscribeVdglUsers = null;
+  let unsubscribeVdglConfig = null;
+
+  function formatGbp(value) {
+    return '\u00A3' + Number(value || 0).toFixed(2);
+  }
+
+  function setVdglSettingsStatus(message, type) {
+    const el = document.getElementById('vdgl-settings-status');
+    el.textContent = message;
+    el.className = 'vdgl-settings-status' + (type ? ' ' + type : '');
+  }
 
   function startListeningVdgl() {
     const now = new Date();
     const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+    unsubscribeVdglConfig = db.collection('config').doc('vdgl')
+      .onSnapshot((doc) => {
+        vdglConfig = doc.exists ? doc.data() : null;
+        document.getElementById('vdgl-starting-balance').value =
+          vdglConfig && typeof vdglConfig.starting_balance_gbp === 'number'
+            ? vdglConfig.starting_balance_gbp.toFixed(2)
+            : '';
+        document.getElementById('vdgl-low-balance-threshold').value =
+          vdglConfig && typeof vdglConfig.low_balance_threshold_gbp === 'number'
+            ? vdglConfig.low_balance_threshold_gbp.toFixed(2)
+            : '';
+
+        if (vdglConfig && typeof vdglConfig.starting_balance_gbp === 'number') {
+          const updatedAt = vdglConfig.updated_at && vdglConfig.updated_at.toDate
+            ? formatTimestamp(vdglConfig.updated_at.toDate())
+            : 'recently';
+          setVdglSettingsStatus('Saved. Last updated ' + updatedAt + '.', 'success');
+        } else {
+          setVdglSettingsStatus('No saved balance settings yet.', '');
+        }
+
+        updateVdglStats();
+      }, (err) => {
+        console.error('VDGL config listener error:', err);
+        setVdglSettingsStatus('Could not load VDGL balance settings.', 'error');
+      });
 
     // Listen to daily counters for current month
     unsubscribeVdgl = db.collection('vdgl_counters')
@@ -1677,18 +1812,28 @@
         console.error('VDGL calls listener error:', err);
         document.getElementById('vdgl-loading').textContent = 'Failed to load VDGL data. Check Firestore rules.';
       });
+
+    // Listen to per-user monthly counters
+    unsubscribeVdglUsers = db.collection('vdgl_user_counters')
+      .where('month', '==', monthKey)
+      .orderBy('cost_gbp', 'desc')
+      .limit(20)
+      .onSnapshot((snapshot) => {
+        vdglUserCounters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderVdglTopUsers();
+      }, (err) => {
+        console.error('VDGL user counters listener error:', err);
+      });
   }
 
   function updateVdglStats() {
     const now = new Date();
     const todayKey = now.toISOString().split('T')[0];
-    const monthKey = todayKey.substring(0, 7);
 
     // Today's stats
     const todayCounter = vdglCounters.find(c => c.id === todayKey);
     const callsToday = todayCounter ? (todayCounter.calls || 0) : 0;
     const costToday = todayCounter ? (todayCounter.cost_gbp || 0) : 0;
-    const errorsToday = todayCounter ? (todayCounter.error_count || 0) : 0;
 
     // Month totals (sum all counters)
     let callsMonth = 0, costMonth = 0, errorsMonth = 0, successMonth = 0;
@@ -1703,12 +1848,70 @@
       ? Math.round((successMonth / callsMonth) * 100) + '%'
       : '-';
 
+    const startingBalance = vdglConfig && typeof vdglConfig.starting_balance_gbp === 'number'
+      ? vdglConfig.starting_balance_gbp
+      : null;
+    const lowThreshold = vdglConfig && typeof vdglConfig.low_balance_threshold_gbp === 'number'
+      ? vdglConfig.low_balance_threshold_gbp
+      : null;
+    const estimatedRemaining = startingBalance == null ? null : startingBalance - costMonth;
+    const banner = document.getElementById('vdgl-balance-banner');
+
     document.getElementById('vdgl-calls-today').textContent = callsToday;
-    document.getElementById('vdgl-cost-today').textContent = '\u00A3' + costToday.toFixed(2);
+    document.getElementById('vdgl-cost-today').textContent = formatGbp(costToday);
     document.getElementById('vdgl-calls-month').textContent = callsMonth;
-    document.getElementById('vdgl-cost-month').textContent = '\u00A3' + costMonth.toFixed(2);
+    document.getElementById('vdgl-cost-month').textContent = formatGbp(costMonth);
     document.getElementById('vdgl-errors-month').textContent = errorsMonth;
     document.getElementById('vdgl-success-rate').textContent = successRate;
+
+    document.getElementById('vdgl-estimated-remaining').textContent =
+      estimatedRemaining == null ? 'Set balance' : formatGbp(Math.max(estimatedRemaining, 0));
+    document.getElementById('vdgl-low-threshold').textContent =
+      lowThreshold == null ? 'Not set' : formatGbp(lowThreshold);
+
+    banner.className = 'vdgl-balance-banner';
+    if (estimatedRemaining == null) {
+      banner.textContent = 'Enter the current VDGL balance above to start estimated low-balance alerts.';
+    } else if (estimatedRemaining <= 0) {
+      banner.classList.add('danger');
+      banner.textContent = 'Estimated VDGL balance is exhausted. Top up now to avoid valuation lookup failures.';
+    } else if (lowThreshold != null && estimatedRemaining <= lowThreshold) {
+      banner.classList.add('warning');
+      banner.textContent = 'Estimated VDGL balance is low at ' + formatGbp(estimatedRemaining) + '. Consider topping up soon.';
+    } else {
+      banner.textContent = 'Estimated VDGL balance is ' + formatGbp(estimatedRemaining) + ' based on tracked API spend of ' + formatGbp(costMonth) + ' this month.';
+    }
+  }
+
+  async function saveVdglConfig() {
+    const startingBalanceInput = document.getElementById('vdgl-starting-balance');
+    const thresholdInput = document.getElementById('vdgl-low-balance-threshold');
+    const startingBalance = parseFloat(startingBalanceInput.value);
+    const lowThreshold = parseFloat(thresholdInput.value);
+
+    if (Number.isNaN(startingBalance) || startingBalance < 0) {
+      setVdglSettingsStatus('Enter a valid current balance in GBP.', 'error');
+      startingBalanceInput.focus();
+      return;
+    }
+
+    if (Number.isNaN(lowThreshold) || lowThreshold < 0) {
+      setVdglSettingsStatus('Enter a valid low-balance threshold in GBP.', 'error');
+      thresholdInput.focus();
+      return;
+    }
+
+    try {
+      await db.collection('config').doc('vdgl').set({
+        starting_balance_gbp: Number(startingBalance.toFixed(2)),
+        low_balance_threshold_gbp: Number(lowThreshold.toFixed(2)),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      setVdglSettingsStatus('VDGL balance settings saved.', 'success');
+    } catch (e) {
+      console.error('Failed to save VDGL config:', e);
+      setVdglSettingsStatus('Failed to save VDGL balance settings: ' + e.message, 'error');
+    }
   }
 
   function setVdglPeriod(days, btn) {
@@ -1786,6 +1989,33 @@
       + '</tbody></table>';
   }
 
+  function renderVdglTopUsers() {
+    const el = document.getElementById('vdgl-top-users');
+    if (vdglUserCounters.length === 0) {
+      el.innerHTML = '<p style="color:var(--text-secondary);">No attributed calls this month. Flutter calls will appear here once the updated app is deployed.</p>';
+      return;
+    }
+    el.innerHTML = '<table style="width:100%;font-size:14px;">'
+      + '<thead><tr><th>User</th><th>Calls</th><th>Cost</th><th>Last Call</th></tr></thead>'
+      + '<tbody>'
+      + vdglUserCounters.map(counter => {
+        const user = allUsers.find(u => u.id === counter.uid);
+        const label = user
+          ? escapeHtml(user.email || user.display_name || counter.uid)
+          : '<span style="font-family:monospace;font-size:12px;">' + escapeHtml(counter.uid.substring(0, 12)) + '…</span>';
+        const calls = counter.calls || 0;
+        const cost = '£' + (counter.cost_gbp || 0).toFixed(2);
+        const lastCall = counter.last_call ? formatTimestamp(counter.last_call.toDate()) : '-';
+        return '<tr>'
+          + '<td>' + label + '</td>'
+          + '<td>' + calls + '</td>'
+          + '<td style="font-weight:600;">' + cost + '</td>'
+          + '<td style="white-space:nowrap;">' + lastCall + '</td>'
+          + '</tr>';
+      }).join('')
+      + '</tbody></table>';
+  }
+
   function renderVdglTable() {
     const tbody = document.getElementById('vdgl-body');
     const empty = document.getElementById('vdgl-empty');
@@ -1802,11 +2032,19 @@
       const hash = escapeHtml(call.vrm_hash || '-');
       const pkg = call.package || '-';
       const pkgBadge = '<span class="pkg-badge pkg-' + pkg + '">' + pkg + '</span>';
-      const cost = '\u00A3' + (call.cost_gbp || 0).toFixed(2);
+      const cost = '£' + (call.cost_gbp || 0).toFixed(2);
       const source = escapeHtml(call.source || '-');
       const statusBadge = call.success
         ? '<span class="status status-resolved">OK</span>'
         : '<span class="status status-new">Error</span>';
+
+      let userCell = '-';
+      if (call.uid) {
+        const user = allUsers.find(u => u.id === call.uid);
+        userCell = user
+          ? escapeHtml(user.email || user.display_name || call.uid)
+          : '<span style="font-family:monospace;font-size:11px;">' + escapeHtml(call.uid.substring(0, 10)) + '…</span>';
+      }
 
       return '<tr>'
         + '<td style="white-space:nowrap;">' + ts + '</td>'
@@ -1814,6 +2052,7 @@
         + '<td>' + pkgBadge + '</td>'
         + '<td>' + cost + '</td>'
         + '<td>' + source + '</td>'
+        + '<td>' + userCell + '</td>'
         + '<td>' + statusBadge + '</td>'
         + '</tr>';
     }).join('');

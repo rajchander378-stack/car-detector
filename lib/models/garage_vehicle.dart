@@ -65,41 +65,51 @@ class GarageVehicle {
     }
 
     // --- MOT ---
-    // Web stores as 'mot' (not 'mot_history')
+    // Web stores as 'mot' (not 'mot_history') in raw VDGL API format (PascalCase).
+    // Cached/stored docs use snake_case with a 'tests' list.
     MotHistory? motHistory;
     final motRaw = data['mot'] ?? data['mot_history'];
     if (motRaw != null) {
       final motMap = Map<String, dynamic>.from(motRaw as Map);
-      // Normalise the due-date key — web writes MotDueDate or mot_due_date
-      if (motMap['MotDueDate'] != null && motMap['mot_due_date'] == null) {
-        motMap['mot_due_date'] = motMap['MotDueDate'];
+      if (motMap.containsKey('MotTestDetailsList')) {
+        motHistory = MotHistory.fromApiJson(motMap);
+      } else {
+        // Normalise the due-date key — older stored docs may use MotDueDate or mot_due
+        if (motMap['MotDueDate'] != null && motMap['mot_due_date'] == null) {
+          motMap['mot_due_date'] = motMap['MotDueDate'];
+        }
+        if (motMap['mot_due'] != null && motMap['mot_due_date'] == null) {
+          motMap['mot_due_date'] = motMap['mot_due'];
+        }
+        motHistory = MotHistory.fromStoredJson(motMap);
       }
-      if (motMap['mot_due'] != null && motMap['mot_due_date'] == null) {
-        motMap['mot_due_date'] = motMap['mot_due'];
-      }
-      motHistory = MotHistory.fromStoredJson(motMap);
     }
 
     // --- extra data sections ---
+    // The web app writes raw VDGL API format (PascalCase top-level keys).
+    // Stored/cached docs use snake_case. Detect by the presence of the API key.
     VehicleDetailsData? vehicleDetails;
     if (data['vehicle_details'] != null) {
-      vehicleDetails = VehicleDetailsData.fromStoredJson(
-        Map<String, dynamic>.from(data['vehicle_details'] as Map),
-      );
+      final vdMap = Map<String, dynamic>.from(data['vehicle_details'] as Map);
+      vehicleDetails = vdMap.containsKey('VehicleIdentification')
+          ? VehicleDetailsData.fromApiJson(vdMap)
+          : VehicleDetailsData.fromStoredJson(vdMap);
     }
 
     ModelDetailsData? modelDetails;
     if (data['model_details'] != null) {
-      modelDetails = ModelDetailsData.fromStoredJson(
-        Map<String, dynamic>.from(data['model_details'] as Map),
-      );
+      final mdMap = Map<String, dynamic>.from(data['model_details'] as Map);
+      modelDetails = mdMap.containsKey('ModelIdentification')
+          ? ModelDetailsData.fromApiJson(mdMap)
+          : ModelDetailsData.fromStoredJson(mdMap);
     }
 
     TyreDetailsData? tyreDetails;
     if (data['tyre_details'] != null) {
-      tyreDetails = TyreDetailsData.fromStoredJson(
-        Map<String, dynamic>.from(data['tyre_details'] as Map),
-      );
+      final tdMap = Map<String, dynamic>.from(data['tyre_details'] as Map);
+      tyreDetails = tdMap.containsKey('TyreDetailsList')
+          ? TyreDetailsData.fromApiJson(tdMap)
+          : TyreDetailsData.fromStoredJson(tdMap);
     }
 
     // --- timestamps ---

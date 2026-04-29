@@ -44,6 +44,7 @@ dependencies:
   permission_handler: ^11.3.0
   google_sign_in: ^6.2.1
   cloud_firestore: ^5.0.0
+  cloud_functions: ^5.0.0
   connectivity_plus: ^6.0.0
   package_info_plus: ^8.0.0
   url_launcher: ^6.2.0
@@ -76,19 +77,20 @@ flutter_launcher_icons:
     generate: true
   macos:
     generate: true
-  image_path: "assets/icon/icon.png"
+  image_path: "assets/icon/autospotter_icon.PNG"
   adaptive_icon_background: "#1565C0"
-  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  adaptive_icon_foreground: "assets/icon/autospotter_icon.PNG"
+  remove_alpha_ios: true
 
 flutter_native_splash:
   color: "#1565C0"
-  image: "assets/icon/icon_foreground.png"
+  image: "assets/icon/autospotter_icon.PNG"
   android: true
   ios: true
   web: true
   android_12:
     color: "#1565C0"
-    image: "assets/icon/icon_foreground.png"
+    image: "assets/icon/autospotter_icon.PNG"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -2062,6 +2062,113 @@
       if (btn) btn.classList.add('active');
     }
 
+    // ── Format normalisation helpers ──
+    // The web app stores raw VDGL API data (PascalCase). Detect and flatten to
+    // the same field names the render functions already use.
+
+    function normalizeVehicleDetails(vd) {
+      if (!vd) return null;
+      if (!vd.VehicleIdentification) return vd; // already stored format
+      const id   = vd.VehicleIdentification || {};
+      const st   = vd.VehicleStatus || {};
+      const hist = vd.VehicleHistory || {};
+      const tech = vd.DvlaTechnicalDetails || {};
+      const col  = hist.ColourDetails || {};
+      const ved  = st.VehicleExciseDutyDetails || {};
+      const vedRate = (ved.VedRate || {}).Standard || {};
+      const keepers = hist.KeeperChangeList || [];
+      return {
+        vrm: id.Vrm, vin: id.Vin,
+        dvla_make: id.DvlaMake, dvla_model: id.DvlaModel,
+        dvla_fuel_type: id.DvlaFuelType, dvla_body_type: id.DvlaBodyType,
+        year_of_manufacture: id.YearOfManufacture,
+        date_first_registered: id.DateFirstRegistered,
+        current_colour: col.CurrentColour,
+        engine_capacity_cc: tech.EngineCapacityCc,
+        number_of_previous_keepers: keepers.length > 0 ? keepers[0].NumberOfPreviousKeepers : null,
+        dvla_co2: ved.DvlaCo2,
+        ved_standard_12_months: vedRate.TwelveMonths,
+        is_imported: st.IsImported || false,
+        is_exported: st.IsExported || false,
+        is_scrapped: st.IsScrapped || false,
+      };
+    }
+
+    function normalizeModelDetails(md) {
+      if (!md) return null;
+      if (!md.ModelIdentification) return md; // already stored format
+      const id   = md.ModelIdentification || {};
+      const body = md.BodyDetails || {};
+      const dims = md.Dimensions || {};
+      const wts  = md.Weights || {};
+      const pt   = md.Powertrain || {};
+      const ice  = pt.IceDetails || {};
+      const tx   = pt.Transmission || {};
+      const perf = md.Performance || {};
+      const pwr  = perf.Power || {};
+      const stats = perf.Statistics || {};
+      const eco  = perf.FuelEconomy || {};
+      const emis = md.Emissions || {};
+      const safety = md.Safety || {};
+      const ncap = safety.EuroNcap || {};
+      return {
+        make: id.Make, model: id.Model, country_of_origin: id.CountryOfOrigin,
+        body_style: body.BodyStyle, number_of_doors: body.NumberOfDoors, number_of_seats: body.NumberOfSeats,
+        height_mm: dims.HeightMm, length_mm: dims.LengthMm, width_mm: dims.WidthMm,
+        kerb_weight_kg: wts.KerbWeightKg,
+        fuel_type: pt.FuelType,
+        engine_capacity_cc: ice.EngineCapacityCc,
+        engine_capacity_litres: ice.EngineCapacityLitres,
+        aspiration: ice.Aspiration,
+        transmission_type: tx.TransmissionType, number_of_gears: tx.NumberOfGears,
+        drive_type: tx.DriveType,
+        bhp: pwr.Bhp,
+        zero_to_sixty_mph: stats.ZeroToSixtyMph, max_speed_mph: stats.MaxSpeedMph,
+        combined_mpg: eco.CombinedMpg,
+        manufacturer_co2: emis.ManufacturerCo2, euro_status: emis.EuroStatus,
+        ncap_star_rating: ncap.NcapStarRating,
+      };
+    }
+
+    function normalizeTyreDetails(td) {
+      if (!td) return null;
+      if (!td.TyreDetailsList) return td; // already stored format
+      return {
+        fitments: (td.TyreDetailsList || []).map(function(t) {
+          const fr = t.Front || {}, rr = t.Rear || {}, hub = t.Hub || {};
+          function tyreSize(s) {
+            return s.SectionWidth ? s.SectionWidth + '/' + s.AspectRatio + 'R' + s.RimDiameter : null;
+          }
+          return {
+            is_standard_fitment: t.IsStandardFitment || false,
+            front: fr.SectionWidth ? { size_description: tyreSize(fr), pressure_psi: fr.TyrePressurePsi, is_run_flat: fr.IsRunFlat || false } : null,
+            rear:  rr.SectionWidth ? { size_description: tyreSize(rr), pressure_psi: rr.TyrePressurePsi, is_run_flat: rr.IsRunFlat || false } : null,
+            hub_pcd: hub.Pcd, fixing_torque_nm: hub.FixingTorqueNm,
+          };
+        })
+      };
+    }
+
+    function normalizeMot(mot) {
+      if (!mot) return null;
+      if (!mot.MotTestDetailsList) return mot; // already stored format
+      const tests = (mot.MotTestDetailsList || []).map(function(t) {
+        const passed = (t.TestResult || '').toUpperCase() === 'PASSED';
+        return {
+          test_date: t.CompletedDate || t.completedDate,
+          passed: passed,
+          odometer_value: t.OdometerValue,
+          defects: (t.MotTestItemList || []).map(function(d) {
+            return { type: d.DefectType, text: d.DefectText };
+          }),
+        };
+      });
+      return {
+        mot_due_date: mot.MotDueDate || mot.mot_due_date,
+        tests: tests,
+      };
+    }
+
     // ── Preview / View ──
     function renderPreviewFields(title, fields) {
       const valid = fields.filter(function(f) { return f[1] != null && f[1] !== ''; });
@@ -2077,10 +2184,15 @@
     function buildGaragePreviewHtml(item) {
       const id = item.id || {};
       const val = item.val || {};
-      const mot = item.mot || null;
-      const vd = item.vehicle_details || null;
-      const specs = item.model_details || null;
-      const tyres = item.tyre_details || null;
+      console.log('[garage] raw item keys:', Object.keys(item));
+      console.log('[garage] vehicle_details raw:', item.vehicle_details);
+      console.log('[garage] model_details raw:', item.model_details);
+      const vd    = normalizeVehicleDetails(item.vehicle_details || null);
+      const specs = normalizeModelDetails(item.model_details || null);
+      const tyres = normalizeTyreDetails(item.tyre_details || null);
+      const mot   = normalizeMot(item.mot || item.mot_history || null);
+      console.log('[garage] normalized vd:', vd);
+      console.log('[garage] normalized specs:', specs);
       const name = ((id.make || '') + ' ' + (id.model || '')).trim() || 'Unknown Vehicle';
 
       let h = '<div class="preview-vehicle">';
@@ -2109,38 +2221,77 @@
 
       // Vehicle details
       if (vd) {
-        var vdFields = Object.entries(vd).map(function(e) { return [e[0].replace(/_/g, ' '), e[1]]; });
+        var vdFields = [
+          ['VRM', vd.vrm], ['VIN', vd.vin],
+          ['Make', vd.dvla_make], ['Model', vd.dvla_model],
+          ['Fuel Type', vd.dvla_fuel_type], ['Body Type', vd.dvla_body_type],
+          ['Colour', vd.current_colour],
+          ['Year', vd.year_of_manufacture],
+          ['First Registered', vd.date_first_registered],
+          ['Engine', vd.engine_capacity_cc ? vd.engine_capacity_cc + ' cc' : null],
+          ['Previous Keepers', vd.number_of_previous_keepers],
+          ['CO2', vd.dvla_co2 ? vd.dvla_co2 + ' g/km' : null],
+          ['Road Tax (12m)', vd.ved_standard_12_months ? '£' + Math.round(vd.ved_standard_12_months) : null],
+          ['Imported', vd.is_imported ? 'Yes' : null],
+          ['Exported', vd.is_exported ? 'Yes' : null],
+          ['Scrapped', vd.is_scrapped ? 'Yes' : null],
+        ];
         h += renderPreviewFields('Vehicle Details', vdFields);
       }
 
       // MOT history
       if (mot && mot.tests && mot.tests.length > 0) {
-        var tests = mot.tests;
-        var motHtml = '<details class="preview-section"><summary>MOT History (' + tests.length + ' records)</summary>';
-        tests.slice(0, 5).forEach(function(t, i) {
+        var motHtml = '<details class="preview-section"><summary>MOT History (' + mot.tests.length + ' records)</summary>';
+        mot.tests.slice(0, 5).forEach(function(t, i) {
           motHtml += '<div style="margin-top:6px;padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">';
-          motHtml += '<strong>' + (t.test_date || t.completedDate || 'Test ' + (i + 1)) + '</strong>';
-          var result = t.test_result || t.testResult || 'N/A';
-          motHtml += ' — <span style="color:' + (result === 'PASSED' ? '#2e7d32' : '#c62828') + ';font-weight:600;">' + result + '</span>';
-          if (t.odometer_value || t.odometerValue) motHtml += ' &middot; ' + (t.odometer_value || t.odometerValue) + ' mi';
+          motHtml += '<strong>' + (t.test_date || 'Test ' + (i + 1)) + '</strong>';
+          motHtml += ' — <span style="color:' + (t.passed ? '#2e7d32' : '#c62828') + ';font-weight:600;">' + (t.passed ? 'PASS' : 'FAIL') + '</span>';
+          if (t.odometer_value) motHtml += ' &middot; ' + t.odometer_value + ' mi';
           motHtml += '</div>';
         });
-        if (tests.length > 5) motHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">+ ' + (tests.length - 5) + ' more records</div>';
+        if (mot.tests.length > 5) motHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">+ ' + (mot.tests.length - 5) + ' more records</div>';
         motHtml += '</details>';
         h += motHtml;
-      } else if (mot && mot.latest_result) {
-        h += renderPreviewFields('MOT', [['Latest Result', mot.latest_result], ['Expiry', mot.expiry_date], ['Mileage', mot.latest_mileage]]);
       }
 
       // Specs
       if (specs) {
-        var specFields = Object.entries(specs).map(function(e) { return [e[0].replace(/_/g, ' '), e[1]]; });
+        var makeModel = ((specs.make || '') + ' ' + (specs.model || '')).trim();
+        var specFields = [
+          ['Make / Model', makeModel || null],
+          ['Body', specs.body_style ? specs.body_style + (specs.number_of_doors ? ', ' + specs.number_of_doors + ' door' : '') : null],
+          ['Seats', specs.number_of_seats],
+          ['Engine', specs.engine_capacity_litres ? specs.engine_capacity_litres + 'L' + (specs.aspiration && specs.aspiration !== 'Naturally Aspirated' ? ' ' + specs.aspiration : '') + (specs.bhp ? ' ' + Math.round(specs.bhp) + ' BHP' : '') : null],
+          ['Fuel', specs.fuel_type],
+          ['Transmission', specs.transmission_type ? specs.transmission_type + (specs.number_of_gears ? ', ' + specs.number_of_gears + ' speed' : '') : null],
+          ['Drive', specs.drive_type],
+          ['0-60 mph', specs.zero_to_sixty_mph ? specs.zero_to_sixty_mph.toFixed(1) + 's' : null],
+          ['Top Speed', specs.max_speed_mph ? specs.max_speed_mph + ' mph' : null],
+          ['Fuel Economy', specs.combined_mpg ? specs.combined_mpg.toFixed(1) + ' mpg' : null],
+          ['CO2', specs.manufacturer_co2 ? specs.manufacturer_co2 + ' g/km' : null],
+          ['Euro Status', specs.euro_status],
+          ['NCAP Rating', specs.ncap_star_rating ? '★'.repeat(specs.ncap_star_rating) + '☆'.repeat(5 - specs.ncap_star_rating) : null],
+          ['Kerb Weight', specs.kerb_weight_kg ? specs.kerb_weight_kg + ' kg' : null],
+          ['Dimensions', specs.length_mm ? specs.length_mm + 'L x ' + (specs.width_mm || '?') + 'W x ' + (specs.height_mm || '?') + 'H mm' : null],
+          ['Country', specs.country_of_origin],
+        ];
         h += renderPreviewFields('Specifications', specFields);
       }
 
       // Tyres
-      if (tyres) {
-        var tyreFields = Object.entries(tyres).map(function(e) { return [e[0].replace(/_/g, ' '), e[1]]; });
+      if (tyres && tyres.fitments && tyres.fitments.length > 0) {
+        var fitment = tyres.fitments[0];
+        var tyreFields = [];
+        if (fitment.front) {
+          tyreFields.push(['Front Size', fitment.front.size_description]);
+          if (fitment.front.pressure_psi) tyreFields.push(['Front Pressure', fitment.front.pressure_psi + ' PSI']);
+        }
+        if (fitment.rear) {
+          tyreFields.push(['Rear Size', fitment.rear.size_description]);
+          if (fitment.rear.pressure_psi) tyreFields.push(['Rear Pressure', fitment.rear.pressure_psi + ' PSI']);
+        }
+        if (fitment.hub_pcd) tyreFields.push(['PCD', fitment.hub_pcd]);
+        if (fitment.fixing_torque_nm) tyreFields.push(['Wheel Torque', fitment.fixing_torque_nm + ' Nm']);
         h += renderPreviewFields('Tyres & Wheels', tyreFields);
       }
 
